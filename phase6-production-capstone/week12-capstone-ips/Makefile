@@ -1,0 +1,19 @@
+CLANG ?= clang
+CFLAGS ?= -O2 -g -Wall -target bpf -D__TARGET_ARCH_x86
+
+.PHONY: all generate build run clean
+
+all: generate build
+
+generate:
+	cd cmd/ips-agent && go generate ./...
+
+build:
+	mkdir -p bin
+	go build -v -o bin/ips-agent ./cmd/ips-agent
+
+run: build
+	sudo ./bin/ips-agent -iface lo -ban-ttl 30s
+
+clean:
+	rm -rf bin/ cmd/ips-agent/bpf_bpf*.go cmd/ips-agent/bpf_bpf*.o

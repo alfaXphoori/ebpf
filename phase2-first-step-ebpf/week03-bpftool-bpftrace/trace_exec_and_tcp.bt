@@ -1,0 +1,131 @@
+#!/usr/bin/env bpftrace
+/*
+ * ==============================================================================
+ * eBPF Noob to Hero - Week 03: Kernel Observability with bpftrace
+ * Script: trace_exec_and_tcp.bt
+ * Description: Instruments process execution (sys_enter_execve), TCP socket
+ *              payload throughput (tcp_sendmsg), and network packet retransmissions
+ *              (tcp_retransmit_skb) using kernel tracepoints and kprobes.
+ * Author: eBPF Mastery Team
+ * ==============================================================================
+ */
+
+BEGIN
+{
+    printf("\n");
+    printf("====================================================================\n");
+    printf("  eBPF Noob to Hero - Week 03: Process Execution & TCP Observability\n");
+    printf("====================================================================\n");
+    printf("  Active Probes:\n");
+    printf("    1. tracepoint:syscalls:sys_enter_execve (New process launches)\n");
+    printf("    2. kprobe:tcp_sendmsg                  (TCP payload histogram)\n");
+    printf("    3. tracepoint:tcp:tcp_retransmit_skb   (TCP packet drops/retrans)\n");
+    printf("    4. interval:s:10                       (Periodic live stats report)\n");
+    printf("--------------------------------------------------------------------\n");
+    printf("  Tracing started! Press Ctrl+C to terminate and view full summary.\n\n");
+    printf("%-9s %-6s %-6s %-16s %s\n", "TIME", "UID", "PID", "COMM", "ARGS / EVENT");
+    printf("--------------------------------------------------------------------\n");
+}
+
+/*
+ * Probe 1: Process Execution Tracepoint
+ * Hook into sys_enter_execve whenever a process executes a new binary image.
+ */
+tracepoint:syscalls:sys_enter_execve
+{
+    time("%H:%M:%S  ");
+    printf("%-6d %-6d %-16s ", uid, pid, comm);
+    join(args->argv);
+    @process_exec_count[comm] = count();
+}
+
+/*
+ * Probe 2: Dynamic Kernel Function Probe on tcp_sendmsg
+ * Signature: int tcp_sendmsg(struct sock *sk, struct msghdr *msg, size_t size)
+ * On x86_64 / arm64 calling conventions:
+ *   arg0 = struct sock *sk
+ *   arg1 = struct msghdr *msg
+ *   arg2 = size_t size (payload size in bytes)
+ */
+kprobe:tcp_sendmsg
+{
+    $size = arg2;
+
+    // Record payload bytes distribution into a power-of-two logarithmic histogram
+    @tcp_send_bytes = hist($size);
+
+    // Count number of TCP send calls per process name
+    @tcp_send_calls[comm] = count();
+
+    // Accumulate total bytes transmitted per process
+    @tcp_send_total_bytes[comm] = sum($size);
+}
+
+/*
+ * Probe 3: TCP Packet Retransmission Tracepoint
+ * Triggered when TCP stack detects a packet loss and retransmits an sk_buff.
+ */
+tracepoint:tcp:tcp_retransmit_skb
+{
+    time("%H:%M:%S  ");
+    printf("%-6d %-6d %-16s [TCP RETRANSMIT] %s:%d -> %s:%d (State: %d)\n",
+           uid, pid, comm,
+           ntop(args->saddr), args->sport,
+           ntop(args->daddr), args->dport,
+           args->state);
+
+    @tcp_retransmit_count[comm] = count();
+}
+
+/*
+ * Probe 4: 10-Second Periodic Interval
+ * Prints real-time intermediate summaries of network activity and resets counters.
+ */
+interval:s:10
+{
+    printf("\n--- [Intermediate Periodic Report: Past 10s Activity] ---\n");
+    
+    printf("\nTop Processes by TCP Transmit Calls:\n");
+    print(@tcp_send_calls);
+
+    printf("\nTCP Payload Size Distribution (Bytes):\n");
+    print(@tcp_send_bytes);
+
+    if (count(@tcp_retransmit_count) > 0) {
+        printf("\nTCP Retransmissions Observed:\n");
+        print(@tcp_retransmit_count);
+    } else {
+        printf("\n(No TCP Retransmissions detected in this interval)\n");
+    }
+
+    printf("----------------------------------------------------------\n\n");
+}
+
+/*
+ * Probe 5: Clean Exit Handler
+ * Displays final aggregations upon user interruption (Ctrl+C).
+ */
+END
+{
+    printf("\n\n====================================================================\n");
+    printf("                    FINAL OBSERVABILITY SUMMARY                     \n");
+    printf("====================================================================\n");
+
+    printf("\n[1] Executed Processes Count:\n");
+    print(@process_exec_count);
+
+    printf("\n[2] TCP Transmit Calls per Application:\n");
+    print(@tcp_send_calls);
+
+    printf("\n[3] Total TCP Transmitted Bytes per Application:\n");
+    print(@tcp_send_total_bytes);
+
+    printf("\n[4] Overall TCP Send Payload Distribution (Histogram):\n");
+    print(@tcp_send_bytes);
+
+    printf("\n[5] TCP Retransmissions Encountered:\n");
+    print(@tcp_retransmit_count);
+
+    printf("====================================================================\n");
+    printf("Observation complete. All kernel probes detached safely.\n\n");
+}

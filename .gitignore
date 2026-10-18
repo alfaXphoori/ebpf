@@ -1,0 +1,44 @@
+# Compiled eBPF & C artifacts
+*.o
+*.so
+*.ll
+*.bc
+vmlinux.h
+
+# bpf2go generated files
+*_bpfel.go
+*_bpfeb.go
+*_bpfel.o
+*_bpfeb.o
+*_bpf*.go
+*_bpf*.o
+
+# Go binaries and build cache
+bin/
+dist/
+*.exe
+*.test
+*.out
+vendor/
+
+# Python bytecode and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# OS and IDE files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
