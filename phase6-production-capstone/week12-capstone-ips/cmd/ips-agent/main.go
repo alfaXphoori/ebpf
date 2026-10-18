@@ -98,7 +98,7 @@ func protoToString(p uint8) string {
 
 func uint32ToIP(ipInt uint32) string {
 	ip := make(net.IP, 4)
-	binary.BigEndian.PutUint32(ip, ipInt)
+	binary.LittleEndian.PutUint32(ip, ipInt)
 	return ip.String()
 }
 
@@ -107,7 +107,7 @@ func ipToUint32(ipStr string) (uint32, error) {
 	if parsed == nil {
 		return 0, fmt.Errorf("invalid IPv4 address: %s", ipStr)
 	}
-	return binary.BigEndian.Uint32(parsed), nil
+	return binary.LittleEndian.Uint32(parsed), nil
 }
 
 // Thread-safe manager for tracking banned IP lifetimes
@@ -374,7 +374,7 @@ func main() {
 	}()
 
 	// 8. Prometheus Setup
-	numCPUs, err := ebpf.PossibleCPUs()
+	numCPUs, err := ebpf.PossibleCPU()
 	if err != nil {
 		numCPUs = 1
 	}

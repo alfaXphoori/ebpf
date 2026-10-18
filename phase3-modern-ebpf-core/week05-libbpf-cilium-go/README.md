@@ -317,7 +317,44 @@ sudo bpftool map dump name exec_count
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 การคอมไพล์ด้วย `bpf2go` และรัน `./bin/exec-counter`
+```text
+===> Generating Go bindings from counter.c via bpf2go...
+go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase3-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfel.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase3-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfel.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase3-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfel.go
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase3-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfeb.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase3-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfeb.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase3-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfeb.go
+===> Building userspace binary bin/exec-counter...
+mkdir -p bin
+go build -v -o bin/exec-counter .
+
+======================================================================
+ eBPF Syscall Execve Monitor (Cilium ebpf-go + CO-RE)
+======================================================================
+2026/10/18 13:38:00 Successfully hooked tracepoint 'syscalls/sys_enter_execve'!
+2026/10/18 13:38:00 Monitoring active processes... Press Ctrl+C to terminate.
+
+[13:38:01] Total execve() invocations: 0        | Rate: 0    calls/sec
+[13:38:02] Total execve() invocations: 0        | Rate: 0    calls/sec
+[13:38:03] Total execve() invocations: 10       | Rate: 10   calls/sec
+[13:38:04] Total execve() invocations: 20       | Rate: 10   calls/sec
+[13:38:05] Total execve() invocations: 34       | Rate: 14   calls/sec
+
+Received signal 'terminated'. Shutting down cleanly...
+Final cumulative execve() syscall count: 34
+eBPF program and tracepoint links detached successfully.
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] เข้าใจสถาปัตยกรรม Modern eBPF, BTF, และความต่างของ CO-RE เทียบกับ BCC
 - [x] เขียนโปรแกรม eBPF C ดักจับ Kernel Tracepoint `syscalls/sys_enter_execve`

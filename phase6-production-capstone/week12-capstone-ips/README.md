@@ -267,7 +267,60 @@ ips_total_bytes 16716
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การคอมไพล์และรัน `./bin/ips-agent` (ตรวจจับ Flood, Auto-Ban, Auto-Unban TTL และ Manual Ban)
+```text
+rm -rf bin/ cmd/ips-agent/bpf_bpf*.go cmd/ips-agent/bpf_bpf*.o
+cd cmd/ips-agent && go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase6-production-capstone/week12-capstone-ips/cmd/ips-agent/bpf_bpf.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase6-production-capstone/week12-capstone-ips/cmd/ips-agent/bpf_bpf.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase6-production-capstone/week12-capstone-ips/cmd/ips-agent/bpf_bpf.go
+mkdir -p bin
+go build -v -o bin/ips-agent ./cmd/ips-agent
+
+2026/10/18 13:52:42 [CONFIG] SYN Limit=10 pps, ICMP Limit=5 pps, Window=1s, Auto-Ban TTL=6s
+2026/10/18 13:52:42 [INFO] Smart IPS attached to interface lo (index 1)
+2026/10/18 13:52:42 [INFO] Smart IPS Daemon active! Web/API running at http://0.0.0.0:2112
+2026/10/18 13:52:44 [IPS ALERT] ICMP_FLOOD  | Proto=ICMP | Src=127.0.0.1:0 -> Dst=127.0.0.1:0 | Rate=6 PPS | Action=AUTO-BANNED
+2026/10/18 13:52:50 [IPS UNBAN] IP 127.0.0.1 unbanned after 6s TTL expiration
+2026/10/18 13:52:50 [CONTROL] IP 203.0.113.99 manually blacklisted (reason=4)
+2026/10/18 13:52:57 
+[INFO] Termination signal received. Stopping Smart IPS Daemon...
+2026/10/18 13:52:57 [INFO] Smart IPS cleanly shut down.
+```
+
+### 4.2 ผลลัพธ์ REST API (`/api/blacklist`) และ Prometheus Metrics (`/metrics`)
+```text
+--- POST /api/blacklist (203.0.113.99) ---
+{"status":"banned","ip":"203.0.113.99"}
+
+--- GET /api/blacklist ---
+[{"ip":"203.0.113.99","drop_count":0,"drop_bytes":0,"reason":"MANUAL_BAN"}]
+
+--- GET /metrics ---
+# HELP ips_active_blacklisted_ips Current number of active blacklisted IP addresses
+# TYPE ips_active_blacklisted_ips gauge
+ips_active_blacklisted_ips 1
+# HELP ips_dropped_blacklist_total Total packets dropped due to active IP blacklisting
+# TYPE ips_dropped_blacklist_total counter
+ips_dropped_blacklist_total 19
+# HELP ips_dropped_ratelimit_total Total packets dropped due to rate limit threshold violations
+# TYPE ips_dropped_ratelimit_total counter
+ips_dropped_ratelimit_total 1
+# HELP ips_passed_packets_total Total packets inspected and passed by Smart IPS
+# TYPE ips_passed_packets_total counter
+ips_passed_packets_total 45
+# HELP ips_total_bytes Total network bytes processed by Smart IPS
+# TYPE ips_total_bytes counter
+ips_total_bytes 6096
+```
+
+---
+
+## 5. Milestone Checklist
 
 | หัวข้อที่ตรวจสอบ | รายละเอียดความถูกต้อง | สถานะ |
 | :--- | :--- | :---: |

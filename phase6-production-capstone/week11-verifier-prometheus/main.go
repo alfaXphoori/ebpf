@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -47,7 +48,7 @@ type xdpCollector struct {
 }
 
 func newXDPCollector(m *ebpf.Map, ifaceName string) *xdpCollector {
-	numCPUs, err := ebpf.PossibleCPUs()
+	numCPUs, err := ebpf.PossibleCPU()
 	if err != nil {
 		log.Printf("[WARN] Failed to get possible CPUs, defaulting to 1: %v", err)
 		numCPUs = 1

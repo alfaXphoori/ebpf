@@ -330,7 +330,50 @@ eBPF session concluded safely. All kernel maps freed.
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การรัน `sudo python3 tcp_v4_latency.py` และสร้าง Outbound TCP Connections
+```text
+========================================================================
+  eBPF Noob to Hero - Week 04: TCP IPv4 Connect Latency Tracker (BCC)   
+========================================================================
+ Compiling embedded C eBPF code via LLVM/Clang and attaching kprobes...
+ JIT compilation & Kernel attach completed in 927.0 ms.
+
+ Tracing active IPv4 TCP outbound connection latency (SYN initiation).
+ Hit Ctrl+C to terminate and view microsecond latency histogram.
+
+TIME      PID     COMM             SRC ADDR:PORT          DST ADDR:PORT          LATENCY (us)
+--------------------------------------------------------------------------------------------
+13:36:49  2497    curl             192.168.5.15:57950     1.1.1.1:80             74          
+13:36:49  2498    curl             192.168.5.15:55304     172.66.147.243:443     37          
+13:36:49  2500    curl             192.168.5.15:36650     142.251.150.119:443    45          
+13:36:50  2502    curl             192.168.5.15:35296     20.205.243.166:443     139         
+
+
+[!] Detaching eBPF probes and generating latency distribution...
+
+========================================================================
+           TCP Outbound Connection Latency Histogram (usecs)           
+========================================================================
+     Latency (us)        : count     distribution
+         0 -> 1          : 0        |                                        |
+         2 -> 3          : 0        |                                        |
+         4 -> 7          : 0        |                                        |
+         8 -> 15         : 0        |                                        |
+        16 -> 31         : 0        |                                        |
+        32 -> 63         : 2        |****************************************|
+        64 -> 127        : 1        |********************                    |
+       128 -> 255        : 1        |********************                    |
+========================================================================
+eBPF session concluded safely. All kernel maps freed.
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] **BCC Architecture In-Depth**: เข้าใจขั้นตอนที่ Python นำโค้ดภาษา C ไปแปลงผ่าน LLVM JIT และโหลดเข้าสู่เคอร์เนล
 - [x] **Production Trade-offs**: วิเคราะห์ข้อดีของ BCC ในการทดลอง และข้อจำกัดใน Production (CPU/RAM spike, dependency on kernel headers) จนเข้าใจเหตุผลที่ต้องมี CO-RE ใน Phase 3

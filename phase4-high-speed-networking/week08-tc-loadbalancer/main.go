@@ -172,8 +172,8 @@ func renderDashboard(lbObjs *xdplbObjects, tcObjs *tcegressObjects, iface, vip s
 	if err := lbObjs.LbStats.Lookup(&cfgKey, &stats); err == nil {
 		fmt.Printf(" [ VIP: %s (XDP_TX Hairpin Forwarding) ]\n", vip)
 		fmt.Printf("  Total Ingress Packets:       %-12d\n", stats.RxPackets)
-		fmt.Printf("  Forwarded to Backend #0:     %-12d\n", stats.ForwardedBackend_0)
-		fmt.Printf("  Forwarded to Backend #1:     %-12d\n", stats.ForwardedBackend_1)
+		fmt.Printf("  Forwarded to Backend #0:     %-12d\n", stats.ForwardedBackend0)
+		fmt.Printf("  Forwarded to Backend #1:     %-12d\n", stats.ForwardedBackend1)
 	} else {
 		fmt.Printf(" [ VIP: %s ] Waiting for ingress traffic...\n", vip)
 	}

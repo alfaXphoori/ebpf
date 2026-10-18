@@ -96,7 +96,7 @@ func main() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
-	possibleCPUs := ebpf.MustPossibleCPUs()
+	possibleCPUs := ebpf.MustPossibleCPU()
 
 	for {
 		select {

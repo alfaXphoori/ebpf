@@ -367,7 +367,63 @@ sudo ip netns del ns-b1 2>/dev/null || true
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การคอมไพล์และรัน XDP Load Balancer + TC Egress (`./bin/xdp-tc-lb`)
+```text
+===> Generating Go bindings from xdp_lb.c and tc_egress.c via bpf2go...
+go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfel.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfel.go
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfel.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfel.go
+===> Building userspace binary bin/xdp-tc-lb...
+mkdir -p bin
+go build -v -o bin/xdp-tc-lb .
+
+--- BPFTOOL MAP DUMP (lb_stats & egress_stats) ---
+[{
+        "key": 0,
+        "value": {
+            "rx_packets": 6,
+            "forwarded_backend_0": 6,
+            "forwarded_backend_1": 0
+        }
+    }
+]
+[{
+        "key": 80,
+        "value": {
+            "packets": 6,
+            "bytes": 444
+        }
+    }
+]
+
+=================================================================================
+ eBPF XDP Load Balancer & TC Monitor | Interface: veth-ns-lb | Time: 13:42:48
+=================================================================================
+ [ VIP: 10.10.1.100 (XDP_TX Hairpin Forwarding) ]
+  Total Ingress Packets:       6           
+  Forwarded to Backend #0:     6           
+  Forwarded to Backend #1:     0           
+
+ [ TC Egress Port Telemetry (BPF_MAP_TYPE_HASH) ]
+  DEST PORT         PACKETS           BYTES           
+  ----------------------------------------------------
+  Port 80           6                 444             
+=================================================================================
+ Press Ctrl+C to terminate and detach hooks.
+
+Received signal 'terminated'. Detaching XDP and TC hooks...
+Cleanup complete. Load Balancer and TC Egress stopped.
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] เข้าใจความแตกต่างเชิงสถาปัตยกรรมระหว่าง XDP (`struct xdp_md`) และ TC (`struct __sk_buff`)
 - [x] เข้าใจการส่งต่อแพ็กเก็ตความเร็วสูงแบบ Hairpin Routing ด้วยคำสั่ง `XDP_TX`

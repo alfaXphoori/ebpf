@@ -91,12 +91,8 @@ interval:s:10
     printf("\nTCP Payload Size Distribution (Bytes):\n");
     print(@tcp_send_bytes);
 
-    if (count(@tcp_retransmit_count) > 0) {
-        printf("\nTCP Retransmissions Observed:\n");
-        print(@tcp_retransmit_count);
-    } else {
-        printf("\n(No TCP Retransmissions detected in this interval)\n");
-    }
+    printf("\nTCP Retransmissions Observed:\n");
+    print(@tcp_retransmit_count);
 
     printf("----------------------------------------------------------\n\n");
 }

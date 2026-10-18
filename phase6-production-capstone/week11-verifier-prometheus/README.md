@@ -250,7 +250,46 @@ ebpf_xdp_packets_total{interface="lo",protocol="udp"} 1
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การคอมไพล์และรัน `./bin/metrics_exporter -iface lo -addr :2112`
+```text
+rm -rf bin/ bpf_*.go bpf_*.o
+go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase6-production-capstone/week11-verifier-prometheus/bpf_bpf.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase6-production-capstone/week11-verifier-prometheus/bpf_bpf.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase6-production-capstone/week11-verifier-prometheus/bpf_bpf.go
+mkdir -p bin
+go build -v -o bin/metrics_exporter .
+
+2026/10/18 13:52:36 [INFO] Attached XDP metrics program to interface lo (index 1)
+2026/10/18 13:52:36 [INFO] Starting Prometheus metrics exporter at http://0.0.0.0:2112/metrics
+2026/10/18 13:52:41 
+[INFO] Termination signal received. Stopping HTTP server and detaching XDP...
+2026/10/18 13:52:41 [INFO] Server stopped gracefully. Cleaned up.
+```
+
+### 4.2 ผลลัพธ์การดึง Metrics จริงจาก `http://127.0.0.1:2112/metrics`
+```text
+# HELP ebpf_xdp_bytes_total Total number of bytes observed by eBPF XDP hook aggregated across all CPU cores
+# TYPE ebpf_xdp_bytes_total counter
+ebpf_xdp_bytes_total{interface="lo",protocol="icmp"} 784
+ebpf_xdp_bytes_total{interface="lo",protocol="other"} 0
+ebpf_xdp_bytes_total{interface="lo",protocol="tcp"} 1430
+ebpf_xdp_bytes_total{interface="lo",protocol="udp"} 0
+# HELP ebpf_xdp_packets_total Total number of packets observed by eBPF XDP hook aggregated across all CPU cores
+# TYPE ebpf_xdp_packets_total counter
+ebpf_xdp_packets_total{interface="lo",protocol="icmp"} 8
+ebpf_xdp_packets_total{interface="lo",protocol="other"} 0
+ebpf_xdp_packets_total{interface="lo",protocol="tcp"} 15
+ebpf_xdp_packets_total{interface="lo",protocol="udp"} 0
+```
+
+---
+
+## 5. Milestone Checklist
 
 | หัวข้อที่ตรวจสอบ | รายละเอียดความถูกต้อง | สถานะ |
 | :--- | :--- | :---: |

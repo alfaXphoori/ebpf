@@ -191,6 +191,11 @@ capture_demo() {
         exit 1
     fi
 
+    if ! ip netns list | grep -q "^${NS2}\b"; then
+        log_info "Namespaces not found. Running setup first..."
+        setup_lab
+    fi
+
     log_info "Spawning raw_sniffer.py inside namespace '${NS2}' capturing on '${VETH2}' (count: 4)..."
     ip netns exec "${NS2}" python3 "${sniffer_script}" --interface "${VETH2}" --count 4 &
     local sniffer_pid=$!

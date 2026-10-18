@@ -1,22 +1,13 @@
 // +build ignore
 
+#include <linux/types.h>
+#include <linux/bpf.h>
+
 #ifndef __VMLINUX_H__
 #define __VMLINUX_H__
 
-typedef unsigned char __u8;
-typedef short int __s16;
-typedef unsigned short __u16;
-typedef int __s32;
-typedef unsigned int __u32;
-typedef long long int __s64;
-typedef unsigned long long __u64;
-
 typedef __u32 u32;
 typedef __u64 u64;
-
-#define BPF_NOEXIST 1
-#define BPF_EXIST   2
-#define BPF_ANY     0
 
 /* Minimal CO-RE compatible struct definitions with preserve_access_index */
 

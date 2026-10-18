@@ -39,8 +39,7 @@ except ImportError:
 EBPF_C_PROGRAM = r"""
 #include <uapi/linux/ptrace.h>
 #include <net/sock.h>
-#include <net/tcp.h>
-#include <linux/inet.h>
+#include <linux/in.h>
 
 // Struct storing active connection initiation metadata in kernel memory
 struct conn_info_t {
@@ -71,7 +70,7 @@ BPF_HASH(start_ts, u64, struct conn_info_t);
 BPF_PERF_OUTPUT(events);
 
 // 3. Logarithmic histogram tracking connection latency in microseconds
-BPF_HISTOGRAM(dist, "Latency (us)");
+BPF_HISTOGRAM(dist);
 
 /**
  * Hook 1: Entry probe for tcp_v4_connect()
@@ -216,12 +215,21 @@ def main():
     # Open Perf Event Ring Buffer
     b["events"].open_perf_buffer(handle_event, page_cnt=64)
 
+    stop_flag = False
+    def sig_handler(signum, frame):
+        nonlocal stop_flag
+        stop_flag = True
+
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
+
     # Main event polling loop
     try:
-        while True:
-            b.perf_buffer_poll()
+        while not stop_flag:
+            b.perf_buffer_poll(timeout=200)
     except KeyboardInterrupt:
-        print("\n\n\033[1;33m[!] Detaching eBPF probes and generating latency distribution...\033[0m\n")
+        pass
+    print("\n\n\033[1;33m[!] Detaching eBPF probes and generating latency distribution...\033[0m\n")
 
     # Output log2 histogram
     print("\033[1;36m========================================================================\033[0m")

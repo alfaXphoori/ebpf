@@ -10,10 +10,10 @@ generate:
 
 build:
 	mkdir -p bin
-	go build -v -o bin/ringbuf_events main.go
+	go build -v -o bin/ringbuf_events .
 
 run: build
 	sudo ./bin/ringbuf_events
 
 clean:
-	rm -rf bin/ bpf_bpf*.go bpf_bpf*.o
+	rm -rf bin/ bpf_*.go bpf_*.o

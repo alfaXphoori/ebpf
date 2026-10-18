@@ -234,7 +234,103 @@ sudo ./bridge_router_lab.sh clean
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 การสร้าง Linux Bridge Topology และตรวจสอบตาราง FDB (`setup`, `test`, `status`)
+```text
+===> Building Multi-Namespace Bridge Topology (ns1, ns2, ns3 <-> br0)...
+
+===> Tearing down Bridge and Namespaces...
+[SUCCESS] Cleanup finished cleanly.
+[INFO] Step 1: Creating Linux Bridge 'br0'
+[INFO] Step 2: Creating namespaces and interconnecting with veth pairs
+[INFO]   - Provisioning ns1 (10.20.0.11/24) connected via veth-ns1 <---> veth-br1
+[INFO]   - Provisioning ns2 (10.20.0.12/24) connected via veth-ns2 <---> veth-br2
+[INFO]   - Provisioning ns3 (10.20.0.13/24) connected via veth-ns3 <---> veth-br3
+[SUCCESS] Bridge topology provisioned successfully!
+
+===> Testing Cross-Namespace and Host Bridge Connectivity...
+[INFO] Testing ns1 -> Bridge Gateway (10.20.0.1)...
+[SUCCESS] ns1 -> Bridge Gateway reached!
+[INFO] Testing ns1 (10.20.0.11) -> ns2 (10.20.0.12)...
+[SUCCESS] ns1 -> ns2 reached!
+[INFO] Testing ns2 (10.20.0.12) -> ns3 (10.20.0.13)...
+[SUCCESS] ns2 -> ns3 reached!
+[INFO] Testing ns3 (10.20.0.13) -> ns1 (10.20.0.11)...
+[SUCCESS] ns3 -> ns1 reached!
+[SUCCESS] All bridge L2 switching tests succeeded!
+
+===> Current Topology and Bridge Forwarding Database (FDB)
+Linux Bridge [br0]:
+br0              UP             10.20.0.1/24 fe80::5484:70ff:fe0a:ea78/64 
+
+Interfaces attached to br0:
+veth-br1@if14    UP             be:b3:b8:78:9c:2d <BROADCAST,MULTICAST,UP,LOWER_UP> 
+veth-br2@if16    UP             66:47:17:f7:47:d1 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+veth-br3@if18    UP             96:83:51:9c:55:56 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+
+Bridge Forwarding Database (FDB) Entries:
+a2:c8:f8:14:3a:b0 dev veth-br1 master br0 
+72:05:1b:cc:9f:82 dev veth-br2 master br0 
+ee:06:cb:92:a2:7e dev veth-br3 master br0 
+
+Namespace Status:
+  [ns1]: veth-ns1@if13    UP             10.20.0.11/24 fe80::a0c8:f8ff:fe14:3ab0/64 
+  [ns2]: veth-ns2@if15    UP             10.20.0.12/24 fe80::7005:1bff:fecc:9f82/64 
+  [ns3]: veth-ns3@if17    UP             10.20.0.13/24 fe80::ec06:cbff:fe92:a27e/64 
+```
+
+### 4.2 การตรวจสอบ Kernel Network Stack, SoftIRQ, `strace` และ `perf stat` (`./bridge_router_lab.sh trace`)
+```text
+===> Diagnostic Tracing: Kernel Network Stack & SoftIRQ Traversal
+[1. /proc/net/softnet_stat Inspection]
+Columns: [CPU] [Processed] [Dropped] [TimeSqueeze] [CPUCollision] [ReceivedRps] [FlowLimitCount]
+------------------------------------------------------------------------------------------------
+  CPU  0 : Processed=0x00000247 Dropped=0x00000000 TimeSqueeze=0x00000000
+  CPU  1 : Processed=0x000000eb Dropped=0x00000000 TimeSqueeze=0x00000000
+  CPU  2 : Processed=0x000000ce Dropped=0x00000000 TimeSqueeze=0x00000000
+  CPU  3 : Processed=0x00000085 Dropped=0x00000000 TimeSqueeze=0x00000000
+Note: 'TimeSqueeze' increments when SoftIRQ runs out of budget before draining RX Ring.
+
+[2. /proc/softirqs (NET_RX / NET_TX Activity)]
+      NET_TX:          2          4          7          3
+      NET_RX:        841        117         98         76
+
+[3. Bridge Device Interface Counters (ip -s link)]
+12: br0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 56:84:70:0a:ea:78 brd ff:ff:ff:ff:ff:ff
+    RX:  bytes packets errors dropped  missed   mcast           
+          1576      24      0       0       0      18 
+    TX:  bytes packets errors dropped carrier collsns           
+          2273      22      0       0       0       0 
+
+[4. System Call Tracing with strace (Socket Send & Recv)]
+[INFO] Executing strace on a 1-packet ICMP ping from ns1 to ns2...
+  [syscall] socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP) = -1 EACCES (Permission denied) <0.000016>
+  [syscall] socket(AF_INET, SOCK_RAW, IPPROTO_ICMP) = 3 <0.000011>
+  [syscall] socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6) = -1 EACCES (Permission denied) <0.000012>
+  [syscall] socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6) = 4 <0.000010>
+  [syscall] socket(AF_INET, SOCK_DGRAM, IPPROTO_IP) = 5 <0.000026>
+  [syscall] sendto(3, "\10\0\n\30\10;\0\1iD\324j\0\0\0\0\341)\10\0\0\0\0\0\20\21\22\23\24\25\26\27"..., 64, 0, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("10.20.0.12")}, 16) = 64 <0.000032>
+  [syscall] recvmsg(3, {msg_name={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("10.20.0.12")}, msg_namelen=128 => 16, msg_iov=[{iov_base="E\0\0TS\307\0\0@\1\22\244\n\24\0\f\n\24\0\v\0\0\22\30\10;\0\1iD\324j"..., iov_len=192}], msg_iovlen=1, msg_control=[{cmsg_len=32, cmsg_level=SOL_SOCKET, cmsg_type=SO_TIMESTAMP_OLD, cmsg_data={tv_sec=1792296041, tv_usec=535088}}], msg_controllen=32, msg_flags=0}, 0) = 84 <0.000009>
+
+[5. Kernel Tracepoint Inspection (perf stat / trace)]
+[INFO] Running perf stat tracking net:* events during cross-bridge traffic...
+  [perf]                 12      net:net_dev_queue                                                     
+  [perf]                 12      net:net_dev_xmit                                                      
+  [perf]                 12      net:netif_rx                                                          
+  [perf]                 12      net:netif_receive_skb                                                 
+  [perf]        2.044158437 seconds time elapsed
+  [perf]        0.000000000 seconds user
+  [perf]        0.001695000 seconds sys
+[SUCCESS] Diagnostic trace complete.
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] **Kernel Network Lifecycle**: เข้าใจขั้นตอนครบถ้วนตั้งแต่ Hardware Interrupt -> SoftIRQ -> NAPI Loop -> `sk_buff` -> L2/L3/L4 -> Socket
 - [x] **sk_buff Cost Analysis**: ตระหนักถึงความซับซ้อนและภาระ overhead ของ `struct sk_buff` และเข้าใจว่าทำไม eBPF / XDP จึงเร็วกว่า

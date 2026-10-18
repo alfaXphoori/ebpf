@@ -356,7 +356,65 @@ sudo ip netns del ns2
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การคอมไพล์และรัน XDP Firewall (`-iface veth-s -block-ip 10.10.1.10`)
+```text
+===> Generating Go bindings from xdp_firewall.c via bpf2go...
+go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week07-xdp-parsing/bpf_bpfel.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week07-xdp-parsing/bpf_bpfel.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase4-high-speed-networking/week07-xdp-parsing/bpf_bpfel.go
+===> Building userspace binary bin/xdp-firewall...
+mkdir -p bin
+go build -v -o bin/xdp-firewall .
+
+--- CLIENT PING TEST (sudo ip netns exec ns1 ping -c 5 -W 1 10.10.1.20) ---
+PING 10.10.1.20 (10.10.1.20) 56(84) bytes of data.
+
+--- 10.10.1.20 ping statistics ---
+5 packets transmitted, 0 received, 100% packet loss, time 829ms
+
+--- IP LINK SHOW (sudo ip netns exec ns2 ip link show veth-s) ---
+34: veth-s@if35: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 xdp qdisc noqueue state UP mode DEFAULT group default qlen 1000
+    link/ether 96:c6:7f:b5:0b:78 brd ff:ff:ff:ff:ff:ff link-netns ns1
+    prog/xdp id 74 name xdp_firewall_pr tag 56de7376c05d858a jited 
+
+--- BPFTOOL MAP DUMP (sudo ip netns exec ns2 bpftool map dump name blocked_ips) ---
+[{
+        "key": 167840266,
+        "value": {
+            "dropped_packets": 5,
+            "dropped_bytes": 490
+        }
+    }
+]
+
+=================================================================================
+ eBPF XDP Live Monitor | Interface: veth-s     | Host CPUs: 4 | Time: 13:42:42
+=================================================================================
+ [ Protocol Activity (Per-CPU Array Sum) ]
+  PROTOCOL    CODE          TOTAL PACKETS   
+  ---------------------------------------------
+  ICMP        1             5               
+  TCP         6             0               
+  UDP         17            0               
+
+ [ Blocked IP Drop Telemetry (BPF_MAP_TYPE_HASH) ]
+  IP ADDRESS          DROPPED PACKETS   DROPPED BYTES   
+  -------------------------------------------------------------
+  10.10.1.10          5                 490             
+=================================================================================
+ Press Ctrl+C to detach XDP program and exit.
+
+Received signal 'terminated'. Detaching XDP link and exiting cleanly...
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] เข้าใจสถาปัตยกรรมระดับฮาร์ดแวร์และไดรเวอร์ของ XDP เทียบกับ Netfilter/iptables
 - [x] แยกความแตกต่างของ 3 โหมดใน XDP (Offloaded, Native Driver, Generic SKB)

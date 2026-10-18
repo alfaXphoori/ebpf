@@ -86,7 +86,7 @@ BASE_PACKAGES=(
     libelf-dev
     zlib1g-dev
     linux-tools-common
-    bpftool
+    ethtool
     bpftrace
     golang-go
     python3-bpfcc
@@ -120,6 +120,15 @@ if ! apt-get install -y "linux-tools-${CURRENT_KERNEL}"; then
 fi
 
 log_success "All prerequisite packages successfully installed."
+
+# Ensure /usr/include/{asm,sys,bits,gnu} symlinks exist for clang -target bpf
+ARCH_TRIPLET="$(gcc -dumpmachine 2>/dev/null || echo "$(uname -m)-linux-gnu")"
+for dir in asm sys bits gnu; do
+    if [[ ! -e "/usr/include/${dir}" && -d "/usr/include/${ARCH_TRIPLET}/${dir}" ]]; then
+        ln -sf "/usr/include/${ARCH_TRIPLET}/${dir}" "/usr/include/${dir}"
+        log_success "Linked /usr/include/${dir} -> /usr/include/${ARCH_TRIPLET}/${dir} for clang -target bpf."
+    fi
+done
 
 # 5. Generate vmlinux.h
 log_info "5. Generating vmlinux.h for CO-RE development..."

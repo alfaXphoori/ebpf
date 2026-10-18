@@ -227,7 +227,45 @@ sudo ./bin/lsm_file_guard -block-all
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`, LSM=`lockdown,capability,landlock,yama,apparmor,bpf`)
+
+### 4.1 ผลลัพธ์การรัน `./bin/lsm_file_guard` และทดสอบการบล็อกระดับ VFS (`-EPERM`)
+```text
+rm -rf bin/ bpf_*.go bpf_*.o
+go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase5-security-observability/week10-bpf-lsm/bpf_bpf.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase5-security-observability/week10-bpf-lsm/bpf_bpf.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase5-security-observability/week10-bpf-lsm/bpf_bpf.go
+mkdir -p bin
+go build -v -o bin/lsm_file_guard .
+
+2026/10/18 13:50:40 [INFO] Active Linux Security Modules: lockdown,capability,landlock,yama,apparmor,bpf
+2026/10/18 13:50:40 [POLICY] Enforce Mode: BLOCK NON-ROOT (root UID 0 allowed)
+2026/10/18 13:50:40 [INFO] Successfully attached BPF LSM hook to 'file_open'!
+2026/10/18 13:50:40 [INFO] Watching for unauthorized attempts to access 'secret*' files...
+SECURITY_ACTION    PID     UID    COMM             FILENAME             RESULT
+-------------------------------------------------------------------------------------
+[BLOCKED -EPERM]   9982    501    cat              secret.txt           EPERM (Blocked)
+2026/10/18 13:50:43 
+[INFO] Termination signal received. Detaching LSM hook and exiting...
+2026/10/18 13:50:43 [INFO] Ringbuf reader closed. Goodbye.
+
+--- ผลลัพธ์ฝั่งผู้ใช้งาน (User Terminal Output) ---
+$ sudo -u phoori cat /tmp/secret.txt (Non-Root User)
+cat: /tmp/secret.txt: Operation not permitted
+
+$ sudo cat /tmp/secret.txt (Root UID 0)
+TOP_SECRET_CREDENTIAL=admin123
+
+$ sudo -u phoori cat /tmp/secret.txt (After detaching BPF LSM)
+TOP_SECRET_CREDENTIAL=admin123
+```
+
+---
+
+## 5. Milestone Checklist
 
 | หัวข้อที่ตรวจสอบ | รายละเอียดความถูกต้อง | สถานะ |
 | :--- | :--- | :---: |

@@ -25,7 +25,7 @@
  */
 struct proc_stat {
     __u64 count;
-    char comm[16];
+    __u8 comm[16];
 };
 
 /*

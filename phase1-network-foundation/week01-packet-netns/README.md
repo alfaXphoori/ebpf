@@ -344,7 +344,118 @@ sudo ./lab_netns.sh clean
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 การตั้งค่า Topology และทดสอบ Connectivity (`./lab_netns.sh setup && ./lab_netns.sh test`)
+```text
+===> Setting up isolated Network Namespaces (ns1 <-> ns2)...
+
+===> Cleaning up existing Network Namespaces and veth interfaces...
+[SUCCESS] Cleanup completed successfully.
+[INFO] Step 1: Creating network namespaces 'ns1' and 'ns2'
+[INFO] Step 2: Creating virtual Ethernet pair 'veth1' <---> 'veth2'
+[INFO] Step 3: Moving 'veth1' to namespace 'ns1' and 'veth2' to 'ns2'
+[INFO] Step 4: Assigning IP addresses
+[INFO]         ns1:veth1 -> 10.10.1.1/24
+[INFO]         ns2:veth2 -> 10.10.1.2/24
+[INFO] Step 5: Bringing up loopback and veth interfaces in both namespaces
+[INFO] Step 6: Disabling TX/RX checksum and segment offloading (TSO/GSO/GRO)
+[SUCCESS] Lab topology successfully established!
+
+===> Current Network Namespaces & Interface Topology
+Active Namespaces:
+  - ns2 (id: 1)
+  - ns1 (id: 0)
+
+[Namespace ns1] Interfaces:
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+veth1@if10       UP             10.10.1.1/24 fe80::c03a:e0ff:fe48:8430/64 
+
+[Namespace ns2] Interfaces:
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+veth2@if11       UP             10.10.1.2/24 fe80::bc1f:6fff:fead:4f28/64 
+
+===> Testing bidirectional ICMP connectivity...
+[INFO] Pinging from ns1 (10.10.1.1) -> ns2 (10.10.1.2)...
+PING 10.10.1.2 (10.10.1.2) 56(84) bytes of data.
+64 bytes from 10.10.1.2: icmp_seq=1 ttl=64 time=0.024 ms
+64 bytes from 10.10.1.2: icmp_seq=2 ttl=64 time=0.040 ms
+64 bytes from 10.10.1.2: icmp_seq=3 ttl=64 time=0.056 ms
+
+--- 10.10.1.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2055ms
+rtt min/avg/max/mdev = 0.024/0.040/0.056/0.013 ms
+[SUCCESS] Ping ns1 -> ns2 succeeded!
+[INFO] Pinging from ns2 (10.10.1.2) -> ns1 (10.10.1.1)...
+PING 10.10.1.1 (10.10.1.1) 56(84) bytes of data.
+64 bytes from 10.10.1.1: icmp_seq=1 ttl=64 time=0.023 ms
+64 bytes from 10.10.1.1: icmp_seq=2 ttl=64 time=0.036 ms
+64 bytes from 10.10.1.1: icmp_seq=3 ttl=64 time=0.036 ms
+
+--- 10.10.1.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2041ms
+rtt min/avg/max/mdev = 0.023/0.031/0.036/0.006 ms
+[SUCCESS] Ping ns2 -> ns1 succeeded!
+[SUCCESS] All connectivity tests passed!
+```
+
+### 4.2 การดักจับแพ็กเก็ตระดับไบต์ด้วย `raw_sniffer.py`
+```text
+======================================================
+ eBPF Noob to Hero - Week 01: Low-Level Raw Sniffer   
+======================================================
+ Capturing on : interface 'veth2'
+ Filter       : ALL
+ Count limit  : 8
+ Verbose dump : Enabled
+ Press Ctrl+C at any time to stop and view statistics.
+------------------------------------------------------
+
+[11:00:36] [ARP] be:1f:6f:ad:4f:28 -> c2:3a:e0:48:84:30 | ARP Request: Who has 10.10.1.1? Tell 10.10.1.2
+    0000:  00 01 08 00 06 04 00 01 be 1f 6f ad 4f 28 0a 0a  |..........o.O(..|
+    0010:  01 02 00 00 00 00 00 00 0a 0a 01 01              |............|
+[11:00:36] [ARP] c2:3a:e0:48:84:30 -> be:1f:6f:ad:4f:28 | ARP Reply: Who has 10.10.1.2? Tell 10.10.1.1
+    0000:  00 01 08 00 06 04 00 02 c2 3a e0 48 84 30 0a 0a  |.........:.H.0..|
+    0010:  01 01 be 1f 6f ad 4f 28 0a 0a 01 02              |....o.O(....|
+[11:00:36] [ICMP] 10.10.1.1 -> 10.10.1.2 | Echo Request (Code 0) TTL=64 Len=84
+    0000:  07 96 00 01 64 44 d4 6a 00 00 00 00 25 47 03 00  |....dD.j....%G..|
+    0010:  00 00 00 00 10 11 12 13 14 15 16 17 18 19 1a 1b  |................|
+    0020:  1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a 2b  |.... !"#$%&'()*+|
+    0030:  2c 2d 2e 2f 30 31 32 33 34 35 36 37              |,-./01234567|
+[11:00:36] [ICMP] 10.10.1.2 -> 10.10.1.1 | Echo Reply (Code 0) TTL=64 Len=84
+    0000:  07 96 00 01 64 44 d4 6a 00 00 00 00 25 47 03 00  |....dD.j....%G..|
+    0010:  00 00 00 00 10 11 12 13 14 15 16 17 18 19 1a 1b  |................|
+    0020:  1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a 2b  |.... !"#$%&'()*+|
+    0030:  2c 2d 2e 2f 30 31 32 33 34 35 36 37              |,-./01234567|
+[11:00:36] [L2-Other] EtherType=0x86dd be:1f:6f:ad:4f:28 -> 33:33:00:00:00:02
+[11:00:37] [L2-Other] EtherType=0x86dd c2:3a:e0:48:84:30 -> 33:33:00:00:00:02
+[11:00:37] [ICMP] 10.10.1.1 -> 10.10.1.2 | Echo Request (Code 0) TTL=64 Len=84
+    0000:  07 96 00 02 65 44 d4 6a 00 00 00 00 40 01 04 00  |....eD.j....@...|
+    0010:  00 00 00 00 10 11 12 13 14 15 16 17 18 19 1a 1b  |................|
+    0020:  1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a 2b  |.... !"#$%&'()*+|
+    0030:  2c 2d 2e 2f 30 31 32 33 34 35 36 37              |,-./01234567|
+[11:00:37] [ICMP] 10.10.1.2 -> 10.10.1.1 | Echo Reply (Code 0) TTL=64 Len=84
+    0000:  07 96 00 02 65 44 d4 6a 00 00 00 00 40 01 04 00  |....eD.j....@...|
+    0010:  00 00 00 00 10 11 12 13 14 15 16 17 18 19 1a 1b  |................|
+    0020:  1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a 2b  |.... !"#$%&'()*+|
+    0030:  2c 2d 2e 2f 30 31 32 33 34 35 36 37              |,-./01234567|
+
+========== Packet Capture Statistics ==========
+  Total Packets Captured : 8
+  IPv4 Packets           : 4
+    - TCP Packets        : 0
+    - UDP Packets        : 0
+    - ICMP Packets       : 4
+    - Other L4 Protocols : 0
+  ARP Packets            : 2
+===============================================
+```
+
+---
+
+## 5. Milestone Checklist
 
 ตรวจเช็คความเข้าใจและทักษะที่คุณได้รับในสัปดาห์นี้ก่อนก้าวเข้าสู่สัปดาห์ถัดไป:
 

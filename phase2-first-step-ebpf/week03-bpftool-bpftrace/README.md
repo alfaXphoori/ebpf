@@ -302,7 +302,117 @@ sudo bpftool prog show | grep -E "tracepoint|kprobe"
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การรัน `sudo bpftrace trace_exec_and_tcp.bt`
+```text
+Attaching 6 probes...
+
+====================================================================
+  eBPF Noob to Hero - Week 03: Process Execution & TCP Observability
+====================================================================
+  Active Probes:
+    1. tracepoint:syscalls:sys_enter_execve (New process launches)
+    2. kprobe:tcp_sendmsg                  (TCP payload histogram)
+    3. tracepoint:tcp:tcp_retransmit_skb   (TCP packet drops/retrans)
+    4. interval:s:10                       (Periodic live stats report)
+--------------------------------------------------------------------
+  Tracing started! Press Ctrl+C to terminate and view full summary.
+
+TIME      UID    PID    COMM             ARGS / EVENT
+--------------------------------------------------------------------
+11:02:31  0      2199   bash             ls -la /tmp
+11:02:31  0      2200   bash             whoami
+11:02:31  0      2201   bash             curl -4 -s https://example.com
+11:02:31  0      2203   bash             curl -4 -s https://www.google.com
+11:02:31  0      2205   bash             bpftool prog show
+11:02:31  0      2206   bash             grep -E tracepoint|kprobe -A 2
+11:02:31  0      2207   bpftool          uname -r
+11:02:31  0      2208   bpftool          basename /usr/sbin/bpftool
+11:02:31  0      2205   bpftool          /usr/lib/linux-tools/6.8.0-142-generic/bpftool prog show
+11:02:31  0      2209   bash             bpftool map show
+11:02:31  0      2210   bash             head -n 15
+11:02:31  0      2211   bpftool          uname -r
+11:02:31  0      2212   bpftool          basename /usr/sbin/bpftool
+11:02:31  0      2209   bpftool          /usr/lib/linux-tools/6.8.0-142-generic/bpftool map show
+11:02:31  0      2213   bash             sleep 8
+
+--- [Intermediate Periodic Report: Past 10s Activity] ---
+
+Top Processes by TCP Transmit Calls:
+@tcp_send_calls[sshd]: 7
+@tcp_send_calls[curl]: 13
+
+TCP Payload Size Distribution (Bytes):
+@tcp_send_bytes: 
+[16, 32)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                  |
+[32, 64)               3 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[64, 128)              6 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[128, 256)             3 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[256, 512)             1 |@@@@@@@@                                            |
+[512, 1K)              3 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+
+====================================================================
+                    FINAL OBSERVABILITY SUMMARY                     
+====================================================================
+
+[1] Executed Processes Count:
+@process_exec_count[bpftool]: 6
+@process_exec_count[bash]: 9
+
+[2] TCP Transmit Calls per Application:
+@tcp_send_calls[sshd]: 7
+@tcp_send_calls[curl]: 13
+
+[3] Total TCP Transmitted Bytes per Application:
+@tcp_send_total_bytes[curl]: 1636
+@tcp_send_total_bytes[sshd]: 1820
+
+[4] Overall TCP Send Payload Distribution (Histogram):
+@tcp_send_bytes: 
+[16, 32)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                  |
+[32, 64)               3 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[64, 128)              6 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[128, 256)             3 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[256, 512)             1 |@@@@@@@@                                            |
+[512, 1K)              3 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+
+[5] TCP Retransmissions Encountered:
+====================================================================
+Observation complete. All kernel probes detached safely.
+```
+
+### 4.2 การตรวจสอบ eBPF Programs และ Maps ขณะทำงานด้วย `bpftool`
+```text
+--- sudo bpftool prog show ---
+50: tracepoint  name tracepoint_syscalls_sys_enter_execve  tag d37c5749f0076715  gpl
+	loaded_at 2026-10-18T11:02:28+0700  uid 0
+	xlated 2376B  jited 2096B  memlock 4096B  map_ids 13,14,12,7
+51: tracepoint  name tracepoint_tcp_tcp_retransmit_skb  tag 30b4939b5e9ad07a  gpl
+	loaded_at 2026-10-18T11:02:28+0700  uid 0
+	xlated 1128B  jited 880B  memlock 4096B  map_ids 13,14,8
+54: kprobe  name tcp_sendmsg  tag 6c08db3f2218de30  gpl
+	loaded_at 2026-10-18T11:02:28+0700  uid 0
+	xlated 936B  jited 768B  memlock 4096B  map_ids 9,10,11
+
+--- sudo bpftool map show ---
+7: percpu_hash  name AT_process_exec  flags 0x0
+	key 16B  value 8B  max_entries 4096  memlock 492608B
+8: percpu_hash  name AT_tcp_retransm  flags 0x0
+	key 16B  value 8B  max_entries 4096  memlock 492608B
+9: percpu_hash  name AT_tcp_send_byt  flags 0x0
+	key 8B  value 8B  max_entries 4096  memlock 459840B
+10: percpu_hash  name AT_tcp_send_cal  flags 0x0
+	key 16B  value 8B  max_entries 4096  memlock 492608B
+11: percpu_hash  name AT_tcp_send_tot  flags 0x0
+	key 16B  value 8B  max_entries 4096  memlock 492608B
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] **eBPF VM Architecture**: เข้าใจหลักการทำงานของ eBPF Registers, In-Kernel Verifier, และ JIT Compiler
 - [x] **Probe Selection Mastery**: เข้าใจความแตกต่าง ข้อดี และข้อจำกัดระหว่าง `tracepoint`, `kprobe`, `kretprobe`, และ `uprobe`

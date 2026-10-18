@@ -297,7 +297,61 @@ sudo bpftool map dump name syscall_map
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การรัน `./bin/syscall-top` ขณะจำลอง Syscall Load
+```text
+======================================================================
+ eBPF Syscall Top Monitor (BPF_MAP_TYPE_HASH + Cilium ebpf-go)
+======================================================================
+2026/10/18 13:38:52 Successfully attached to tracepoint 'raw_syscalls/sys_enter'!
+2026/10/18 13:38:52 Collecting syscall frequencies across all processes... (Press Ctrl+C to stop)
+
+=================================================================================
+ eBPF Syscall Monitor | Time: 13:38:54 | Total Invocations: 50934
+=================================================================================
+RANK   PID       COMM                SYSCALLS          SHARE (%)   
+---------------------------------------------------------------------------------
+#1     4062      bash                50547              99.24%
+#2     4063      bash                117                 0.23%
+#3     996       containerd          106                 0.21%
+#4     4054      syscall-top         79                  0.16%
+#5     3917      bash                45                  0.09%
+#6     359       multipathd          16                  0.03%
+#7     886       rootlesskit         9                   0.02%
+#8     3542      gmain               6                   0.01%
+#9     725       gmain               4                   0.01%
+#10    4055      sleep               3                   0.01%
+---------------------------------------------------------------------------------
+ Tracking 11 active processes in BPF_MAP_TYPE_HASH
+
+Received signal 'terminated'. Rendering final report...
+=================================================================================
+ eBPF Syscall Monitor | Time: 13:38:56 | Total Invocations: 53064
+=================================================================================
+RANK   PID       COMM                SYSCALLS          SHARE (%)   
+---------------------------------------------------------------------------------
+#1     4062      bash                50547              95.26%
+#2     4068      bash                403                 0.76%
+#3     4065      bash                347                 0.65%
+#4     996       containerd          239                 0.45%
+#5     4054      syscall-top         235                 0.44%
+#6     723       lima-guestagent     159                 0.30%
+#7     4069      bash                152                 0.29%
+#8     4070      bpftool             149                 0.28%
+#9     4066      bpftool             148                 0.28%
+#10    4071      bpftool             148                 0.28%
+---------------------------------------------------------------------------------
+ Tracking 21 active processes in BPF_MAP_TYPE_HASH
+
+Shutting down eBPF monitor cleanly.
+```
+
+---
+
+## 5. Milestone Checklist
 
 - [x] เข้าใจโครงสร้างและการทำงานภายในของ `BPF_MAP_TYPE_HASH` ในระดับเคอร์เนล
 - [x] ทำความเข้าใจกฎ Struct Padding, Memory Alignment ระหว่าง C และ Go

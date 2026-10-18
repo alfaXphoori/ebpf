@@ -11,14 +11,14 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
+	_ "time"
 
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -target bpf bpf ringbuf_events.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -target native bpf ringbuf_events.c
 
 // secEvent mirrors the C struct sec_event definition
 type secEvent struct {

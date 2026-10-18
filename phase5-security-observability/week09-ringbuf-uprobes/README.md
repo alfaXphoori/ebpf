@@ -259,13 +259,44 @@ curl -s https://example.com > /dev/null
 
 ---
 
-## 4. Milestone Checklist
+## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
+
+> **Environment**: Ubuntu 24.04 LTS (`Linux ebpf-lab 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC aarch64`)
+
+### 4.1 ผลลัพธ์การคอมไพล์และรัน `./bin/ringbuf_events` (ดักจับ `sys_enter_execve` และ `SSL_write` Plaintext)
+```text
+rm -rf bin/ bpf_*.go bpf_*.o
+go generate ./...
+Compiled /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase5-security-observability/week09-ringbuf-uprobes/bpf_arm64_bpfel.o
+Stripped /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase5-security-observability/week09-ringbuf-uprobes/bpf_arm64_bpfel.o
+Wrote /Volumes/ExDisk/Google Drive Ksu/KSU/Git/EBPF/phase5-security-observability/week09-ringbuf-uprobes/bpf_arm64_bpfel.go
+mkdir -p bin
+go build -v -o bin/ringbuf_events .
+
+2026/10/18 13:49:01 [INFO] Tracepoint attached: syscalls/sys_enter_execve
+2026/10/18 13:49:01 [INFO] Uprobe attached: SSL_write on /lib/aarch64-linux-gnu/libssl.so.3
+2026/10/18 13:49:01 [INFO] Successfully listening for events from eBPF Ring Buffer (16MB)...
+EVENT_TYPE      PID     UID    COMM             DETAILS
+--------------------------------------------------------------------------------
+[EXECVE]        9517    0      bash             binary=/bin/echo
+[EXECVE]        9518    0      bash             binary=/usr/bin/id
+[EXECVE]        9519    0      bash             binary=/usr/bin/curl
+[TLS_PLAINTEXT] 9519    0      curl             len=75 plaintext="HEAD / HTTP/1.1  Host: example.com  User-Agent: curl/8.5.0  Accept: */*"
+[EXECVE]        9521    0      bash             binary=/usr/bin/sleep
+2026/10/18 13:49:05 
+[INFO] Received termination signal. Closing ring buffer reader...
+2026/10/18 13:49:05 [INFO] Ringbuf reader closed. Exiting.
+```
+
+---
+
+## 5. Milestone Checklist
 
 | หัวข้อที่ตรวจสอบ | รายละเอียดความถูกต้อง | สถานะ |
 | :--- | :--- | :---: |
 | **Ring Buffer Structure** | ประกาศแมป `BPF_MAP_TYPE_RINGBUF` ขนาด 16MB ถูกต้องตาม Power of 2 | [x] ผ่าน |
 | **Tracepoint Execve** | ดักจับ `sys_enter_execve` อ่าน User pointer filename ผ่าน `bpf_probe_read_user_str` | [x] ผ่าน |
 | **Uprobe SSL_write** | สกัด Registers พารามิเตอร์ `buf` และ `num` คัดลอก Plaintext ก่อนเข้ารหัส | [x] ผ่าน |
-| **Verifier Bounds Check** | ตรวจสอบขนาดข้อมูล `copy_len` ป้องกัน Out-of-bounds Read/Write | [x] ผ่าน |
+| **Verifier Bounds Check** | ตรวจสอบขนาดข้อมูล `copy_len &= 0x7F` ป้องกัน Out-of-bounds Read/Write | [x] ผ่าน |
 | **Go Ringbuf Consumer** | วนลูปอ่านข้อมูลผ่าน `ringbuf.NewReader` รองรับ Graceful Shutdown | [x] ผ่าน |
 | **Fallback Handling** | ทำงานต่อได้แม้เครื่องไม่มี `libssl.so` โดยยังคงดักจับ `execve` ตามปกติ | [x] ผ่าน |

@@ -10,10 +10,10 @@ generate:
 
 build:
 	mkdir -p bin
-	go build -v -o bin/lsm_file_guard main.go
+	go build -v -o bin/lsm_file_guard .
 
 run: build
 	sudo ./bin/lsm_file_guard
 
 clean:
-	rm -rf bin/ bpf_bpf*.go bpf_bpf*.o
+	rm -rf bin/ bpf_*.go bpf_*.o

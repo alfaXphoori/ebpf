@@ -2,6 +2,7 @@
 
 #include <linux/types.h>
 #include <linux/bpf.h>
+#include <asm/ptrace.h>
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 
@@ -131,11 +132,12 @@ int uprobe_ssl_write(struct pt_regs *ctx)
 
     bpf_get_current_comm(&e->comm, sizeof(e->comm));
 
-    /* Bound payload size strictly to avoid buffer overflow */
+    /* Bound payload size strictly to avoid buffer overflow and satisfy eBPF verifier */
     __u32 copy_len = (__u32)num;
-    if (copy_len > sizeof(e->payload) - 1) {
-        copy_len = sizeof(e->payload) - 1;
+    if (copy_len > 127) {
+        copy_len = 127;
     }
+    copy_len &= 0x7F;
     e->data_len = copy_len;
 
     __builtin_memset(e->payload, 0, sizeof(e->payload));

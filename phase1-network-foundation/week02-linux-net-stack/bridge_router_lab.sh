@@ -157,10 +157,10 @@ print_status() {
     ip -brief addr show "${BRIDGE}"
 
     echo -e "\n${BOLD}Interfaces attached to ${BRIDGE}:${NC}"
-    bridge link show dev "${BRIDGE}" 2>/dev/null || ip link show master "${BRIDGE}"
+    ip -brief link show master "${BRIDGE}"
 
     echo -e "\n${BOLD}Bridge Forwarding Database (FDB) Entries:${NC}"
-    bridge fdb show dev "${BRIDGE}" 2>/dev/null | grep -v "permanent" || true
+    bridge fdb show br "${BRIDGE}" 2>/dev/null | grep -v "permanent" || true
 
     echo -e "\n${BOLD}Namespace Status:${NC}"
     for ns in "${NAMESPACES[@]}"; do
