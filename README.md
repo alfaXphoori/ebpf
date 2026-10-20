@@ -42,11 +42,17 @@
 |  - Week 11: การรับมือ Verifier ขั้นสูง, การปรับแต่งประสิทธิภาพ และการส่ง Metrics สู่ Prometheus      |
 |  - Week 12: โครงการจบ: ระบบป้องกันการบุกรุก eBPF IPS (Intrusion Prevention System) แบบเรียลไทม์    |
 +----------------------------------------------------------------------------------------------------+
+| เฟส 7: ความปลอดภัยขั้นสูงและการตรวจจับภัยคุกคามเคอร์เนล (Advanced Kernel Security & Fleet Defense)    |
+|  - Week 13: วินิจฉัยแพ็กเก็ตสูญหายในเคอร์เนลด้วย Dropwatch (tracepoint:skb:kfree_skb)               |
+|  - Week 14: ระบบความปลอดภัย Zero-Trust Socket Egress Control ด้วย cgroup/connect4                  |
+|  - Week 15: ตรวจจับ Reverse Shell และ Web RCE ทันทีในเคอร์เนลด้วย task_struct real_parent          |
+|  - Week 16: ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล (sys_enter_bpf Integrity)   |
++----------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 📑 สารบัญห้องทดลองปฏิบัติการทั้ง 12 สัปดาห์ (Weekly Labs & Source Code Index)
+## 📑 สารบัญห้องทดลองปฏิบัติการทั้ง 16 สัปดาห์ (Weekly Labs & Source Code Index)
 
 | สัปดาห์ | หัวข้อปฏิบัติการ | เอกสารคู่มือ (Lab Guide) | โค้ดต้นฉบับและสคริปต์ (Source Code & Scripts) |
 | :---: | :--- | :--- | :--- |
@@ -62,6 +68,10 @@
 | **10** | Proactive Kernel Security with BPF LSM | [`week10/README.md`](phase5-security-observability/week10-bpf-lsm/README.md) | • [`lsm_file_guard.c`](phase5-security-observability/week10-bpf-lsm/lsm_file_guard.c)<br>• [`main.go`](phase5-security-observability/week10-bpf-lsm/main.go)<br>• [`Makefile`](phase5-security-observability/week10-bpf-lsm/Makefile)<br>• [`go.mod`](phase5-security-observability/week10-bpf-lsm/go.mod) |
 | **11** | Verifier Invariant Optimization & Prometheus Metrics | [`week11/README.md`](phase6-production-capstone/week11-verifier-prometheus/README.md) | • [`metrics_exporter.c`](phase6-production-capstone/week11-verifier-prometheus/metrics_exporter.c)<br>• [`main.go`](phase6-production-capstone/week11-verifier-prometheus/main.go)<br>• [`Makefile`](phase6-production-capstone/week11-verifier-prometheus/Makefile)<br>• [`go.mod`](phase6-production-capstone/week11-verifier-prometheus/go.mod) |
 | **12** | Production Capstone: Autonomous eBPF IPS Engine | [`week12/README.md`](phase6-production-capstone/week12-capstone-ips/README.md) | • [`ips_kern.c`](phase6-production-capstone/week12-capstone-ips/bpf/ips_kern.c)<br>• [`ips-agent/main.go`](phase6-production-capstone/week12-capstone-ips/cmd/ips-agent/main.go)<br>• [`Makefile`](phase6-production-capstone/week12-capstone-ips/Makefile)<br>• [`go.mod`](phase6-production-capstone/week12-capstone-ips/go.mod) |
+| **13** | Kernel Dropwatch & Packet Loss Diagnostics | [`week13/README.md`](phase7-advanced-security-observability/week13-kfree-skb-dropwatch/README.md) | • [`dropwatch.c`](phase7-advanced-security-observability/week13-kfree-skb-dropwatch/dropwatch.c)<br>• [`main.go`](phase7-advanced-security-observability/week13-kfree-skb-dropwatch/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week13-kfree-skb-dropwatch/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week13-kfree-skb-dropwatch/go.mod) |
+| **14** | Zero-Trust Socket Egress Control | [`week14/README.md`](phase7-advanced-security-observability/week14-cgroup-sock-addr/README.md) | • [`sock_enforce.c`](phase7-advanced-security-observability/week14-cgroup-sock-addr/sock_enforce.c)<br>• [`main.go`](phase7-advanced-security-observability/week14-cgroup-sock-addr/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week14-cgroup-sock-addr/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week14-cgroup-sock-addr/go.mod) |
+| **15** | Reverse Shell & Interactive Threat Guard | [`week15/README.md`](phase7-advanced-security-observability/week15-reverse-shell-guard/README.md) | • [`revshell_detect.c`](phase7-advanced-security-observability/week15-reverse-shell-guard/revshell_detect.c)<br>• [`main.go`](phase7-advanced-security-observability/week15-reverse-shell-guard/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week15-reverse-shell-guard/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week15-reverse-shell-guard/go.mod) |
+| **16** | eBPF Rootkit Detector & Integrity Scanner | [`week16/README.md`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/README.md) | • [`bpf_audit.c`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/bpf_audit.c)<br>• [`main.go`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/go.mod) |
 
 ---
 
@@ -91,6 +101,11 @@
 ├── phase6-production-capstone/
 │   ├── week11-verifier-prometheus/        # Prometheus Exporter ผสานรวม eBPF
 │   └── week12-capstone-ips/               # โครงการจบ: Full Production-grade eBPF IPS Engine
+├── phase7-advanced-security-observability/
+│   ├── week13-kfree-skb-dropwatch/        # วินิจฉัยแพ็กเก็ตสูญหายในเคอร์เนลด้วย kfree_skb Dropwatch
+│   ├── week14-cgroup-sock-addr/           # นโยบาย Zero-Trust Egress Socket Control ด้วย cgroup/connect4
+│   ├── week15-reverse-shell-guard/        # ตรวจจับ Reverse Shell และ Web RCE ผ่าน task_struct real_parent
+│   └── week16-ebpf-integrity-audit/       # ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล
 ├── .gitignore                             # การยกเว้นไฟล์ Binary, Object, และ Cache
 └── README.md                              # เอกสารแนะนำโครงการนี้
 ```
