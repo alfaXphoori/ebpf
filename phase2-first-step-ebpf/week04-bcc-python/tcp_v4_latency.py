@@ -38,8 +38,30 @@ except ImportError:
 # --- eBPF C Source Code (Compiled at runtime by embedded Clang/LLVM inside BCC) ---
 EBPF_C_PROGRAM = r"""
 #include <uapi/linux/ptrace.h>
-#include <net/sock.h>
 #include <linux/in.h>
+
+/*
+ * Minimal socket structures for Linux 6.8+ and 7.0+ compatibility,
+ * avoiding full net/sock.h header conflicts in BCC Clang compiler.
+ */
+struct sock_common {
+    union {
+        struct {
+            __be32 skc_daddr;
+            __be32 skc_rcv_saddr;
+        };
+    };
+    union {
+        struct {
+            __be16 skc_dport;
+            __u16  skc_num;
+        };
+    };
+};
+
+struct sock {
+    struct sock_common __sk_common;
+};
 
 // Struct storing active connection initiation metadata in kernel memory
 struct conn_info_t {
