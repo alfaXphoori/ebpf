@@ -35,6 +35,21 @@
    - 6.1 สถาปัตยกรรม Pure Go eBPF Loader และการใช้งาน `bpf2go`
    - 6.2 พิมพ์เขียว Go Control Plane: การปลดล็อค Memlock, การโหลด, การผูก Hooks และการอ่าน Ring Buffer
    - 6.3 Complete Cheat Sheet: `bpftool`, `ip link`, `tc` และ 20 BPF Helper Functions สำคัญ
+7. [บทที่ 7: ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ Fleet (เฟส 7)](#บทที่-7-ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ-fleet-เฟส-7)
+   - 7.1 วินิจฉัยและสืบสวน Packet Drops ด้วย `tracepoint:skb:kfree_skb`
+   - 7.2 Zero-Trust Socket Egress Control ด้วย `cgroup/connect4`
+   - 7.3 การตรวจจับ Reverse Shell และ Web RCE ผ่าน `task_struct real_parent`
+   - 7.4 การตรวจจับ eBPF Rootkits และการ Audit ความปลอดภัยผ่าน `sys_enter_bpf`
+8. [บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 8)](#บทที่-8-การวัดประสิทธิภาพระบบ-การแกะรอย-stack-และการวิเคราะห์ฮาร์ดแวร์-เฟส-8)
+   - 8.1 การวัด Storage Block I/O Latency ด้วย Log2 Histograms
+   - 8.2 การทำ CPU Profiling และถอดรหัส Kernel Call Stack ด้วย `perf_event`
+   - 8.3 การเฝ้าระวัง Page Faults และการส่งสัญญาณเตือน OOM Killer
+9. [บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 9)](#บทที่-9-การเร่งความเร็ว-socket-และสถาปัตยกรรม-kernel-bypass-เฟส-9)
+   - 9.1 TCP Sockops และ `sk_msg` Fastpath Socket Bypass (ข้าม TCP/IP Stack)
+   - 9.2 สถาปัตยกรรม AF_XDP Zero-Copy Kernel-Bypass Packet Redirect
+10. [บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)](#บทที่-10-เทคโนโลยี-ebpf-ยุคใหม่ระดับแนวหน้า-เฟส-10)
+    - 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Zero-Overhead Tracing
+    - 10.2 BPF Iterators (`bpf_iter_task`) การท่องเคอร์เนลโดยตรงระดับ Memory
 
 ---
 
@@ -1224,5 +1239,93 @@ sudo tc qdisc del dev eth0 clsact
 
 ---
 
+# บทที่ 7: ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ Fleet (เฟส 7)
+
+ในระบบปฏิบัติการลินุกซ์ระดับโปรดักชัน ภัยคุกคามและการสูญหายของข้อมูลมักเกิดขึ้นลึกเกินกว่าที่เครื่องมือ User Space ทั่วไปจะตรวจจับได้ เฟสนี้จะนำเทคนิค eBPF ขั้นสูงมาใช้เพื่อสร้างเกราะป้องกันและการสืบสวนเชิงลึก
+
+### 7.1 วินิจฉัยและสืบสวน Packet Drops ด้วย `tracepoint:skb:kfree_skb`
+เมื่อแพ็กเก็ตเน็ตเวิร์กสูญหายในลินุกซ์ เคอร์เนลจะไม่ทิ้งแพ็กเก็ตเงียบๆ แต่จะเรียกฟังก์ชันภายใน `kfree_skb()` หรือปล่อยอีเวนต์ Tracepoint `skb:kfree_skb` พร้อมด้วยรหัสสาเหตุ (Drop Reason):
+- โครงสร้างอีเวนต์มีฟิลด์ `reason` (เช่น `SKB_DROP_REASON_TCP_CSUM`, `SKB_DROP_REASON_NO_SOCKET`, `SKB_DROP_REASON_NETFILTER_DROP`)
+- การดักฟัง ณ จุดนี้ทำให้เราทราบว่าแพ็กเก็ตคู่สนทนาใด (Src/Dst IP และ Port) ถูกดรอป และถูกดรอปด้วยเหตุผลใดในระดับ Subsystem
+
+### 7.2 Zero-Trust Socket Egress Control ด้วย `cgroup/connect4`
+การควบคุมความปลอดภัยของคอนเทนเนอร์และโพรเซสที่แท้จริงต้องควบคุมตั้งแต่ชั้น Socket Creation:
+- eBPF Hook ประเภท `cgroup/connect4` ทำงานในจังหวะที่ Application เรียกคำสั่ง `connect()` ระบบจะส่ง `struct bpf_sock_addr` เข้ามาในโปรแกรม
+- โปรแกรม eBPF สามารถอ่านปลายทาง `user_ip4`, `user_port` และส่งคืนค่า `1` (อนุญาต) หรือ `0` (บล็อก)
+- หากส่งคืน `0` เคอร์เนลจะปฏิเสธการเชื่อมต่อทันทีด้วยข้อผิดพลาด `EPERM` (Operation not permitted) โดยที่แพ็กเก็ต SYN ไม่เคยถูกสร้างหรือส่งออกจากการ์ดเครือข่ายเลย
+
+### 7.3 การตรวจจับ Reverse Shell และ Web RCE ผ่าน `task_struct real_parent`
+ผู้บุกรุกที่สามารถเจาะผ่าน Web Application (เช่น Nginx, Apache, Node.js) มักจะรัน Interactive Shell (เช่น `/bin/bash`, `sh`, `python -c ...`) เพื่อเปิดช่องทางย้อนกลับ (Reverse Shell):
+- เราใช้ Tracepoint `sched_process_exec` ร่วมกับ CO-RE เพื่อเข้าถึงโครงสร้าง `task_struct` ของเคอร์เนล
+- อ่านค่า `bpf_get_current_task()` แล้วสำรวจตัวแปรบรรพบุรุษ `task->real_parent->comm`
+- หากโพรเซสลูกคือ Shell หรือสคริปต์คอมมานด์ไลน์ แต่โพรเซสพ่อคือ Daemon หรือ Web Server เช่น `nginx`, `httpd`, `python`, `node` ระบบจะยกระดับเป็นแจ้งเตือนวิกฤต (Critical Threat Event) ทันที
+
+### 7.4 การตรวจจับ eBPF Rootkits และการ Audit ความปลอดภัยผ่าน `sys_enter_bpf`
+มัลแวร์ยุคใหม่ (เช่น Symbiote, TripleCross, BPFDoor) เริ่มนำ eBPF มาใช้เป็น Rootkit ซ่อนตัว:
+- มัลแวร์เหล่านี้จะเรียกคำสั่ง Syscall `__NR_bpf` ด้วยคำสั่ง `BPF_PROG_LOAD` หรือ `BPF_RAW_TRACEPOINT_OPEN`
+- เราสามารถใช้ `tracepoint/syscalls/sys_enter_bpf` เพื่อดักจับทุกคำสั่ง Syscall `bpf()`
+- ตรวจสอบชนิดโปรแกรม (`ins.prog_type`) และตรวจสอบสิทธิการเข้าถึงของผู้สั่งการ หากพบโพรเซสที่ไม่ได้รับอนุญาต พยายามโหลดโปรแกรมประเภท Kprobe หรือ XDP จะส่งสัญญาณแจ้งเตือนไปยังระบบ SIEM ทันที
+
+---
+
+# บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 8)
+
+### 8.1 การวัด Storage Block I/O Latency ด้วย Log2 Histograms
+การทำความเข้าใจความเร็วของดิสก์ระดับ Sub-millisecond จำเป็นต้องวัดความหน่วงของคำขอ I/O ตั้งแต่จังหวะส่งเข้าคิวจนถึงฮาร์ดแวร์ตอบสนอง:
+- จับคู่ Tracepoint `block:block_rq_issue` (บันทึก Timestamp ขาเริ่ม) กับ `block:block_rq_complete` (คำนวณ Delta เวลา) โดยใช้ `struct request *` หรือ Sector Number เป็นกุญแจ
+- คำนวณความหน่วงในระดับ Microseconds และจัดเก็บลงใน **Log2 Histogram Array Map**
+- User Space ดึงตารางแจกแจงความถี่มาพล็อตเป็นกราฟแท่ง ASCII แสดงการกระจายตัวของ Latency อย่างชัดเจน
+
+### 8.2 การทำ CPU Profiling และถอดรหัส Kernel Call Stack ด้วย `perf_event`
+การหาคอขวดบน CPU ที่กินเวลาเคอร์เนลสูง:
+- ผูกโปรแกรม eBPF เข้ากับ `perf_event` แบบ Periodic Sampling (เช่น 99Hz เพื่อหลีกเลี่ยงการ Lockstep กับ Clock รอบการทำงาน)
+- ใช้ eBPF Helper `bpf_get_stackid(ctx, &stack_traces, BPF_F_FAST_STACK_CMP)` เพื่อเก็บรวบรวม Instruction Pointers ทั้งหมดใน Kernel Call Stack ลงใน `BPF_MAP_TYPE_STACK_TRACE`
+- ข้อพึงระวังของเคอร์เนลลินุกซ์: ค่า `value_size` ของ Stack Map ต้องจำกัดอยู่ที่ `127 * sizeof(__u64)` เสมอ (`PERF_MAX_STACK_DEPTH = 127`)
+- User Space อ่าน Address จาก Map และเปิดเทียบกับตารางสัญลักษณ์เคอร์เนล `/proc/kallsyms` เพื่อสร้าง Flamegraph
+
+### 8.3 การเฝ้าระวัง Page Faults และการส่งสัญญาณเตือน OOM Killer
+การบริหารหน่วยความจำในระบบ High-load:
+- สังเกตการณ์ User-space Page Faults ผ่าน `tracepoint:exceptions:page_fault_user` เพื่อวัดอัตราการขอหน่วยความจำใหม่ของโพรเซส
+- ติดตั้งตัวตรวจจับหายนะหน่วยความจำผ่าน `tracepoint:oom:mark_victim` ซึ่งเคอร์เนลจะยิงอีเวนต์ทันทีที่ OOM Killer ตัดสินใจสังหารโพรเซส พร้อมสกัดชื่อโพรเซสและคะแนน `oom_score` เพื่อแจ้งเตือนก่อนที่แอปพลิเคชันหลักจะล่ม
+
+---
+
+# บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 9)
+
+### 9.1 TCP Sockops และ `sk_msg` Fastpath Socket Bypass (ข้าม TCP/IP Stack)
+ในระบบ Microservices หรือ Sidecar Proxy (เช่น Envoy, Istio) ที่รันบนเครื่องโฮสต์เดียวกัน แพ็กเก็ต TCP ท้องถิ่น (`127.0.0.1` หรือ Intra-node Pods) ต้องเดินทางผ่าน TCP/IP Stack สองรอบ (Egress IP/TCP -> Loopback -> Ingress IP/TCP):
+- เราใช้คู่หู **Sockops** (`sockops` hook) ดักจับจังหวะ `BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB` และ `ACTIVE_ESTABLISHED_CB` เพื่อบันทึกคู่ Socket ลงใน `BPF_MAP_TYPE_SOCKHASH`
+- ติดตั้งโปรแกรม **sk_msg** (`SEC("sk_msg")`) เข้ากับ Socket Map
+- เมื่อแอปพลิเคชันเรียก `sendmsg()` โค้ด eBPF จะเรียก `bpf_msg_redirect_hash()` เพื่อส่ง Payload เข้าสู่ RX Queue ของ Socket ปลายทางโดยตรง ข้าม Routing, TCP State Machine, IP Packetization และ Netfilter ทั้งหมด ส่งผลให้ Throughput สูงขึ้นเกือบ 3 เท่า และ Latency ลดลงอย่างมีนัยสำคัญ
+
+### 9.2 สถาปัตยกรรม AF_XDP Zero-Copy Kernel-Bypass Packet Redirect
+เมื่อเครือข่ายต้องการความเร็วระดับ 10G / 40G / 100G:
+- สร้าง Address Family ใหม่ที่ชื่อว่า `AF_XDP` (XSK - XDP Sockets)
+- แอปพลิเคชันจัดสรรพื้นที่หน่วยความจำขนาดใหญ่ที่เรียกว่า **UMEM** (User Memory) ร่วมกับไดรเวอร์การ์ดเครือข่าย
+- eBPF โปรแกรมที่ XDP Hook จะตรวจสอบเงื่อนไขแพ็กเก็ต และเรียก `bpf_redirect_map(&xsks_map, queue_id, 0)`
+- แพ็กเก็ตจะถูก DMA (Direct Memory Access) ส่งตรงเข้าสู่ Fill/Rx Ring ของ UMEM ใน User Space ทันทีโดยไม่ต้องสร้าง `struct sk_buff` และไม่ต้องผ่าน Kernel Network Stack แม้แต่บรรทัดเดียว
+
+---
+
+# บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)
+
+### 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Zero-Overhead Tracing
+ในอดีต การใช้ Kprobes / Kretprobes ต้องพึ่งพาการสลับบริบท Breakpoint Interrupt (`int 3`) ทำให้มี Overhead ต่อการเรียกฟังก์ชันอยู่ที่ประมาณ 100ns - 300ns:
+- เทคโนโลยี **BPF Trampoline** ใช้ประโยชน์จาก ftrace nop instruction (5-byte NOP) ที่คอมไพเลอร์เตรียมไว้หน้าฟังก์ชันเคอร์เนลทุกตัว
+- เคอร์เนลจะเขียนทับ NOP ด้วย Direct Call Jump ข้ามเข้าสู่ JIT-compiled BPF Trampoline โดยตรง
+- ข้อได้เปรียบระดับปฏิวัติวงการ:
+  1. Overhead ลดลงเหลือต่ำกว่า **5 นาโนวินาที**
+  2. โปรแกรม `fentry` และ `fexit` สามารถเข้าถึงอาร์กิวเมนต์ของฟังก์ชันเคอร์เนลได้ตรงๆ เสมือนเป็นฟังก์ชัน C ปกติ (เช่น `int BPF_PROG(trace_open, int dfd, struct filename *name, struct open_how *how)`) โดยไม่ต้องพึ่งพา `PT_REGS_PARM`
+  3. `fexit` สามารถอ่านทั้งอาร์กิวเมนต์ขาเข้าและค่า Return Value (`ret`) ได้พร้อมกันในบริบทเดียว
+
+### 10.2 BPF Iterators (`bpf_iter_task`) การท่องเคอร์เนลโดยตรงระดับ Memory
+การสำรวจสถานะของระบบขนาดใหญ่ (เช่น โปรเซสหมื่นตัว, การเชื่อมต่อ Socket แสนตัว):
+- BPF Iterators ทำงานโดยเปิด File Descriptor ผ่าน Syscall แล้วให้เคอร์เนลทำการ Iteration โครงสร้างข้อมูลภายในทีละโหนดใน Kernel Space
+- แต่ละรอบเคอร์เนลจะส่ง Pointer ของโครงสร้าง (เช่น `struct task_struct *task`) ให้กับฟังก์ชัน BPF `SEC("iter/task")`
+- โค้ด BPF สามารถฟิลเตอร์และจัดรูปแบบข้อมูลผ่าน `BPF_SEQ_PRINTF()` สตรีมออกมาทาง Read Syscall
+- ประสิทธิภาพ: การสำรวจข้อมูลโปรเซสทั้งหมดใช้เวลาเพียงเสี้ยวของมิลลิวินาที (Sub-millisecond) และไม่สร้าง Lock Contention บนระบบไฟล์ `/proc`
+
+---
+
 ### บทสรุปและแนวทางการศึกษาต่อยอด (Next Steps)
-การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง (Hands-on Practice) หลังจากศึกษาเนื้อหาทั้ง 6 บทนี้แล้ว ให้ดำเนินการตามแบบฝึกหัดรายสัปดาห์ในไดเรกทอรี `phase1` ถึง `phase6` โดยเริ่มจากการสร้างเครือข่ายจำลองด้วย Network Namespaces ใน `week01` ไปจนถึงการสร้างระบบป้องกันการบุกรุก eBPF IPS อัตโนมัติใน `week12`!
+การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง (Hands-on Practice) หลังจากศึกษาเนื้อหาทั้ง 10 บทนี้แล้ว ให้ดำเนินการตามแบบฝึกหัดรายสัปดาห์ในไดเรกทอรี `phase1` ถึง `phase10` โดยเริ่มจากการสร้างเครือข่ายจำลองด้วย Network Namespaces ใน `week01` ไปจนถึงการสำรวจเคอร์เนลระดับลึกด้วย BPF Iterators ใน `week23`!

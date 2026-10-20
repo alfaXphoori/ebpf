@@ -12,11 +12,11 @@
 
 ---
 
-## 🗺️ แผนที่การเรียนรู้ 12 สัปดาห์ (12-Week Curriculum Roadmap)
+## 🗺️ แผนที่การเรียนรู้ 10 เฟส รวม 23 สัปดาห์ (Complete 10-Phase eBPF Curriculum Roadmap)
 
 ```
 +----------------------------------------------------------------------------------------------------+
-|                                    12-WEEK eBPF LEARNING ROADMAP                                   |
+|                                    23-WEEK eBPF LEARNING ROADMAP                                   |
 +----------------------------------------------------------------------------------------------------+
 | เฟส 1: รากฐานระบบเครือข่ายและเคอร์เนล Linux (Network Foundation)                                       |
 |  - Week 01: ผ่าโครงสร้าง Packet ระดับ Byte และการจำลองระบบเครือข่ายด้วย Network Namespaces         |
@@ -48,11 +48,24 @@
 |  - Week 15: ตรวจจับ Reverse Shell และ Web RCE ทันทีในเคอร์เนลด้วย task_struct real_parent          |
 |  - Week 16: ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล (sys_enter_bpf Integrity)   |
 +----------------------------------------------------------------------------------------------------+
+| เฟส 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (System Performance)          |
+|  - Week 17: สร้าง Storage I/O Latency Log2 Histogram (biolatency: block_rq_issue/complete)         |
+|  - Week 18: On-CPU Profiler & Kernel Call Stack Unwinding (Flamegraph Profiling ด้วย perf_event)   |
+|  - Week 19: เฝ้าระวัง Memory Page Faults และดักจับ OOM Killer ทันทีในเคอร์เนล (oom:mark_victim)     |
++----------------------------------------------------------------------------------------------------+
+| เฟส 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (Socket Acceleration & AF_XDP)          |
+|  - Week 20: เร่งความเร็ว Local TCP ด้วย Sockops และ sk_msg Socket Bypass (ข้าม TCP/IP Stack)        |
+|  - Week 21: AF_XDP (XSK) Zero-Copy Kernel-Bypass Packet Redirect ด้วย BPF_MAP_TYPE_XSKMAP           |
++----------------------------------------------------------------------------------------------------+
+| เฟส 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (Cutting-Edge Modern eBPF Technologies)                 |
+|  - Week 22: BPF Trampoline (fentry / fexit) ดักฟังฟังก์ชันเคอร์เนลแบบ Zero-Overhead (< 5ns)         |
+|  - Week 23: BPF Task Iterators (bpf_iter_task) ท่องโครงสร้างเคอร์เนลโดยตรง ไม่ง้อ /proc             |
++----------------------------------------------------------------------------------------------------+
 ```
 
 ---
 
-## 📑 สารบัญห้องทดลองปฏิบัติการทั้ง 16 สัปดาห์ (Weekly Labs & Source Code Index)
+## 📑 สารบัญห้องทดลองปฏิบัติการครบทั้ง 23 สัปดาห์ (Weekly Labs & Source Code Index)
 
 | สัปดาห์ | หัวข้อปฏิบัติการ | เอกสารคู่มือ (Lab Guide) | โค้ดต้นฉบับและสคริปต์ (Source Code & Scripts) |
 | :---: | :--- | :--- | :--- |
@@ -72,6 +85,13 @@
 | **14** | Zero-Trust Socket Egress Control | [`week14/README.md`](phase7-advanced-security-observability/week14-cgroup-sock-addr/README.md) | • [`sock_enforce.c`](phase7-advanced-security-observability/week14-cgroup-sock-addr/sock_enforce.c)<br>• [`main.go`](phase7-advanced-security-observability/week14-cgroup-sock-addr/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week14-cgroup-sock-addr/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week14-cgroup-sock-addr/go.mod) |
 | **15** | Reverse Shell & Interactive Threat Guard | [`week15/README.md`](phase7-advanced-security-observability/week15-reverse-shell-guard/README.md) | • [`revshell_detect.c`](phase7-advanced-security-observability/week15-reverse-shell-guard/revshell_detect.c)<br>• [`main.go`](phase7-advanced-security-observability/week15-reverse-shell-guard/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week15-reverse-shell-guard/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week15-reverse-shell-guard/go.mod) |
 | **16** | eBPF Rootkit Detector & Integrity Scanner | [`week16/README.md`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/README.md) | • [`bpf_audit.c`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/bpf_audit.c)<br>• [`main.go`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/main.go)<br>• [`Makefile`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/Makefile)<br>• [`go.mod`](phase7-advanced-security-observability/week16-ebpf-integrity-audit/go.mod) |
+| **17** | Block I/O Latency Histogram (biolatency) | [`week17/README.md`](phase8-system-performance-observability/week17-block-io-biolatency/README.md) | • [`biolatency.c`](phase8-system-performance-observability/week17-block-io-biolatency/biolatency.c)<br>• [`main.go`](phase8-system-performance-observability/week17-block-io-biolatency/main.go)<br>• [`Makefile`](phase8-system-performance-observability/week17-block-io-biolatency/Makefile)<br>• [`go.mod`](phase8-system-performance-observability/week17-block-io-biolatency/go.mod) |
+| **18** | On-CPU Profiler & Call Stack Unwinding | [`week18/README.md`](phase8-system-performance-observability/week18-cpu-profiler-stacks/README.md) | • [`cpu_stacks.c`](phase8-system-performance-observability/week18-cpu-profiler-stacks/cpu_stacks.c)<br>• [`main.go`](phase8-system-performance-observability/week18-cpu-profiler-stacks/main.go)<br>• [`Makefile`](phase8-system-performance-observability/week18-cpu-profiler-stacks/Makefile)<br>• [`go.mod`](phase8-system-performance-observability/week18-cpu-profiler-stacks/go.mod) |
+| **19** | Memory Page Faults & OOM Victim Watcher | [`week19/README.md`](phase8-system-performance-observability/week19-memory-oom-watcher/README.md) | • [`oom_watcher.c`](phase8-system-performance-observability/week19-memory-oom-watcher/oom_watcher.c)<br>• [`main.go`](phase8-system-performance-observability/week19-memory-oom-watcher/main.go)<br>• [`Makefile`](phase8-system-performance-observability/week19-memory-oom-watcher/Makefile)<br>• [`go.mod`](phase8-system-performance-observability/week19-memory-oom-watcher/go.mod) |
+| **20** | TCP Sockops & sk_msg Fastpath Bypass | [`week20/README.md`](phase9-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/README.md) | • [`sockops.c`](phase9-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/sockops.c)<br>• [`main.go`](phase9-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/main.go)<br>• [`Makefile`](phase9-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/Makefile)<br>• [`go.mod`](phase9-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/go.mod) |
+| **21** | AF_XDP Zero-Copy Kernel-Bypass Redirect | [`week21/README.md`](phase9-high-throughput-socket-acceleration/week21-af-xdp-redirect/README.md) | • [`xsk_kern.c`](phase9-high-throughput-socket-acceleration/week21-af-xdp-redirect/xsk_kern.c)<br>• [`main.go`](phase9-high-throughput-socket-acceleration/week21-af-xdp-redirect/main.go)<br>• [`Makefile`](phase9-high-throughput-socket-acceleration/week21-af-xdp-redirect/Makefile)<br>• [`go.mod`](phase9-high-throughput-socket-acceleration/week21-af-xdp-redirect/go.mod) |
+| **22** | Modern BPF Trampoline (fentry / fexit) | [`week22/README.md`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/README.md) | • [`trampoline.c`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/trampoline.c)<br>• [`main.go`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/main.go)<br>• [`Makefile`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/Makefile)<br>• [`go.mod`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/go.mod) |
+| **23** | Kernel Traversal with BPF Iterators | [`week23/README.md`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/README.md) | • [`task_iter.c`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/task_iter.c)<br>• [`main.go`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/main.go)<br>• [`Makefile`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/Makefile)<br>• [`go.mod`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/go.mod) |
 
 ---
 
@@ -106,6 +126,16 @@
 │   ├── week14-cgroup-sock-addr/           # นโยบาย Zero-Trust Egress Socket Control ด้วย cgroup/connect4
 │   ├── week15-reverse-shell-guard/        # ตรวจจับ Reverse Shell และ Web RCE ผ่าน task_struct real_parent
 │   └── week16-ebpf-integrity-audit/       # ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล
+├── phase8-system-performance-observability/
+│   ├── week17-block-io-biolatency/        # วิเคราะห์ Storage I/O Latency Histogram (biolatency)
+│   ├── week18-cpu-profiler-stacks/        # CPU Profiler ถอดรหัส Kernel Call Stack (Flamegraph-ready)
+│   └── week19-memory-oom-watcher/         # ตรวจจับ Page Faults และเฝ้าระวัง OOM Killer แบบเรียลไทม์
+├── phase9-high-throughput-socket-acceleration/
+│   ├── week20-tcp-sockops-bypass/         # เร่งความเร็ว Local TCP ด้วย Sockops และ sk_msg Fastpath
+│   └── week21-af-xdp-redirect/            # Zero-Copy Kernel-Bypass แพ็กเก็ตด้วย AF_XDP (XSKMAP)
+├── phase10-cutting-edge-ebpf-technologies/
+│   ├── week22-fentry-fexit-trampoline/    # เทคโนโลยี BPF Trampoline (fentry/fexit) Zero-Overhead Tracing
+│   └── week23-bpf-iterators/              # BPF Iterators (bpf_iter_task) ท่องเคอร์เนลโดยไม่พึ่ง /proc
 ├── .gitignore                             # การยกเว้นไฟล์ Binary, Object, และ Cache
 └── README.md                              # เอกสารแนะนำโครงการนี้
 ```
