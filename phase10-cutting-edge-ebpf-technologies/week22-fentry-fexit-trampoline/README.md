@@ -18,3 +18,29 @@ make generate && make build
 # รันเพื่อติดตามการเปิดไฟล์ผ่าน BPF Trampoline
 make run
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF Trampoline (fentry & fexit) Ultra-Low Latency Tracing
+======================================================================
+2026/10/20 11:57:36 [INFO] Attached BPF Trampoline fentry to 'do_sys_openat2'
+2026/10/20 11:57:36 [INFO] Attached BPF Trampoline fexit to 'do_sys_openat2'
+2026/10/20 11:57:36 [INFO] Tracing file open duration with <5ns trampoline overhead...
+
+TIME      PID    COMM             FD / RET   LATENCY    FILENAME
+---------------------------------------------------------------------------------------------------
+11:57:36  65265  cat              3          9.90us     /etc/ld.so.cache
+11:57:36  65265  cat              3          4.43us     /usr/lib/x86_64-linux-gnu/libselinux.so.1
+11:57:36  65265  cat              3          3.36us     /usr/lib/x86_64-linux-gnu/libc.so.6
+11:57:36  65265  cat              3          3.43us     /etc/hosts
+11:57:36  65266  cat              ERR(-2)    19.27us    /nonexistent_file
+
+[INFO] Detaching trampoline links...
+[SUCCESS] BPF Trampoline detached safely.
+```

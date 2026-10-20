@@ -17,3 +17,24 @@ make generate && make build
 # รันเพื่อเปิดระบบเร่งความเร็วเครือข่าย Local Socket
 make run
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF TCP Sockops & Direct Socket-to-Socket Bypass (Cilium Mesh FastPath)
+======================================================================
+2026/10/20 11:57:11 [INFO] Attached BPF_PROG_TYPE_SOCK_OPS to cgroup /sys/fs/cgroup
+2026/10/20 11:57:11 [INFO] Attached BPF_PROG_TYPE_SK_MSG verdict to BPF_MAP_TYPE_SOCKHASH
+2026/10/20 11:57:11 [INFO] Localhost socket bypass active! Zero-copy socket routing enabled.
+
+# Sent test message: echo "Accelerated TCP Message via BPF SOCKHASH" | nc 127.0.0.1 18080
+
+[11:57:13] Accelerated TCP Messages: 1        | Direct Bypassed Bytes: 41        
+
+[INFO] Detaching sockops and sk_msg hooks...
+```

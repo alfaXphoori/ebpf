@@ -18,3 +18,26 @@ make generate && make build
 # รันเพื่อเฝ้าระวังหน่วยความจำ
 make run
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF Memory Subsystem & OOM Forensics Watcher
+======================================================================
+2026/10/20 11:56:56 [INFO] Watching for User Page Faults and OOM Killer events...
+
+# Triggered memory allocation in Python: python3 -c "b = bytearray(30 * 1024 * 1024); b[0] = 1"
+
+[11:56:59] Top Processes by User-Space Page Faults:
+   #1 python3          : 8577     page faults
+   #2 bash             : 54       page faults
+   #3 oom-watcher      : 43       page faults
+   #4 sleep            : 9        page faults
+
+[INFO] Detaching Memory Watcher...
+```

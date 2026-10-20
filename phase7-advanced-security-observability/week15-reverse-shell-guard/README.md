@@ -16,3 +16,24 @@ make generate && make build
 # รัน Threat Guard เฝ้าระวังพฤติกรรมในเคอร์เนล
 make run
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF Reverse Shell & Interactive Threat Detector (CO-RE + RingBuffer)
+======================================================================
+2026/10/20 11:56:01 [INFO] Hooked tracepoint 'sched/sched_process_exec'.
+2026/10/20 11:56:01 [INFO] Watching for interactive shell spawns and parent process anomalies...
+
+TIME      SEVERITY               PID    PPID   PROCESS      PARENT        
+--------------------------------------------------------------------------------
+11:56:02  CRITICAL-RCE          64767  64766  sh           python3       
+
+[INFO] Stopping Threat Guard...
+[SUCCESS] Threat Guard cleanly shutdown.
+```

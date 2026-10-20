@@ -18,3 +18,28 @@ sudo ./bin/sock-enforce -block-port 2323
 # ทดสอบจากอีกหน้าจอ (จะได้รับข้อความ Operation not permitted ทันทีโดยไม่มีแพ็กเก็ตหลุดออกไป)
 curl -m 1 http://127.0.0.1:2323
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF Zero-Trust Socket Egress Enforcer (cgroup/connect4)
+======================================================================
+2026/10/20 11:55:54 [POLICY] Blocked destination port: 2323 (TCP)
+2026/10/20 11:55:54 [POLICY] Blocked destination IPv4: 10.99.99.99
+2026/10/20 11:55:54 [INFO] Successfully attached to cgroup /sys/fs/cgroup!
+2026/10/20 11:55:54 [INFO] Zero-overhead socket filter active. (Press Ctrl+C to stop)
+
+# Client Connection Attempt:
+$ curl -m 1 http://127.0.0.1:2323
+curl: (7) Failed to connect to 127.0.0.1 port 2323 after 0 ms: Could not connect to server
+
+[11:55:56] Blocked Port 2323 attempts: 1     
+
+[INFO] Detaching from cgroup and stopping...
+Final drops on Port 2323: 1
+```

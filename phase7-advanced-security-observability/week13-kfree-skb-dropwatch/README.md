@@ -34,3 +34,31 @@ make generate && make build
 # รัน dropwatch เฝ้าระวังแพ็กเก็ตดรอปแบบเรียลไทม์
 make run
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF Kernel Dropwatch & Packet Loss Diagnostics (kfree_skb)
+======================================================================
+2026/10/20 11:55:30 [INFO] Attached to 'skb:kfree_skb'! Monitoring dropped packets live...
+TIME      PID    COMM             DROP REASON              KERNEL PC         
+--------------------------------------------------------------------------------
+11:55:31  64625  nc               NO_SOCKET                0xffffffff90b54601
+11:55:32  0      swapper/7        REASON_65624             0xffffffffc164b2d8
+11:55:32  0      swapper/7        REASON_65624             0xffffffffc164b2d8
+11:55:32  0      swapper/7        REASON_65624             0xffffffffc164b2d8
+11:55:32  0      swapper/7        REASON_65624             0xffffffffc164b2d8
+
+[INFO] Received interrupt. Shutting down dropwatch...
+
+========== Drop Summary ==========
+Total Captured Dropped Packets: 5
+  - NO_SOCKET                : 1 packets
+  - REASON_65624             : 4 packets
+==================================
+```

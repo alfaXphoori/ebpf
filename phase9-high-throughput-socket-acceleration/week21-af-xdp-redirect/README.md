@@ -18,3 +18,22 @@ make generate && make build
 # รันเพื่อเปิด Pipeline การส่งต่อแพ็กเก็ต AF_XDP
 make run
 ```
+
+---
+
+## 3. ผลการทดสอบจริง (Captured Test Output)
+
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`)
+
+```text
+======================================================================
+ eBPF AF_XDP Wire-Speed Packet Pipeline (BPF_MAP_TYPE_XSKMAP)
+======================================================================
+2026/10/20 11:57:20 [INFO] Attached AF_XDP redirect program to lo [Index: 1]!
+2026/10/20 11:57:20 [INFO] Monitoring XSK pipeline telemetry... (Press Ctrl+C to stop)
+
+[11:57:22] XSK Redirects: 0        | Fallback Passed Packets: 11      
+
+[INFO] Detaching XDP link and exiting cleanly...
+Final Summary -> Redirects: 0, Passed: 13
+```
