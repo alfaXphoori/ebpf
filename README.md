@@ -145,9 +145,17 @@
 ## 🛠️ ความต้องการของระบบและการติดตั้ง (Prerequisites & Setup)
 
 ### ความต้องการของระบบ (System Requirements):
-- **ระบบปฏิบัติการ**: Ubuntu 24.04 LTS (หรือ Linux Kernel 6.8+ เป็นต้นไป)
-- **สิทธิ์การใช้งาน**: Root หรือ Sudo Privileges
-- **คอมไพเลอร์และเครื่องมือ**: Clang/LLVM 16+, Go 1.21+, Python 3.10+, iproute2, bpftool, bpftrace
+- **ระบบปฏิบัติการ (Operating System)**: Ubuntu 24.04 LTS / Ubuntu 26.04+ LTS (รองรับ Linux Kernel 6.8+ หรือ Kernel 7.0+ บนสถาปัตยกรรม x86_64 หรือ ARM64)
+- **สิทธิ์การใช้งาน (Privileges)**: Root หรือ Sudo Privileges (หรือ Fine-grained Linux Capabilities: `CAP_BPF`, `CAP_NET_ADMIN`, `CAP_PERFMON`, `CAP_SYS_ADMIN`)
+- **คอมไพเลอร์และเครื่องมือพัฒนา (Compilers & Toolchains)**:
+  - **Clang / LLVM**: 16+ ขึ้นไป (แนะนำเวอร์ชัน 18+ หรือ 21+) พร้อมติดตั้ง `gcc-multilib` และ Multiarch Headers (`/usr/include/asm`)
+  - **Go**: Go 1.22+ หรือ Go 1.26+ (รองรับ pure Go eBPF control planes ผ่าน `github.com/cilium/ebpf`)
+  - **Python**: Python 3.10+ / 3.12+ / 3.14+ พร้อมโมดูล `python3-bpfcc` สำหรับแล็บ BCC
+  - **เครื่องมือจัดการเครือข่ายและการดีบักเคอร์เนล**: `iproute2` (`ip`, `tc`), `bpftool` (v7.0+), `bpftrace`, `libbpf-dev`, `tcpdump`, `netcat`
+- **ฟีเจอร์ระดับเคอร์เนล (Required Kernel Subsystems)**:
+  - **BTF (BPF Type Format)**: เปิดใช้งานที่ `/sys/kernel/btf/vmlinux` สำหรับการสกัดโครงสร้าง `vmlinux.h` แบบ CO-RE
+  - **cgroup v2**: เมานต์อยู่ที่ `/sys/fs/cgroup` สำหรับแล็บ Socket Enforcement (`cgroup/connect4`) และ TCP Sockops Acceleration
+  - **BPF Trampoline & Iterators**: รองรับ Kernel Trampoline (`fentry`/`fexit`) และ BPF Task Iterators (`CONFIG_BPF_TRAMPOLINE=y`)
 
 ### คำสั่งเริ่มต้นติดตั้งสภาพแวดล้อมอัตโนมัติ:
 รันสคริปต์ติดตั้งระบบที่เตรียมไว้ในไดเรกทอรี `scripts/`:
