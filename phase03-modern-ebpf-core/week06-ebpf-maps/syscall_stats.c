@@ -51,7 +51,8 @@ struct {
 SEC("tracepoint/raw_syscalls/sys_enter")
 int track_syscalls(void *ctx)
 {
-    /* Extract caller PID from upper 32 bits of 64-bit PID+TGID value */
+    /* Extract caller PID (= TGID, the userspace process ID) from the upper 32 bits.
+     * The lower 32 bits hold the thread ID (kernel "pid"). */
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u32 pid = (__u32)(pid_tgid >> 32);
 
@@ -60,6 +61,10 @@ int track_syscalls(void *ctx)
     if (stat) {
         /* Key already exists: atomically increment execution count */
         __sync_fetch_and_add(&stat->count, 1);
+        /* Refresh comm: a forked child first appears with its parent's name
+         * (e.g. "bash") and only gets its real name after execve(). Without
+         * this refresh, `python3` launched from bash would be shown as "bash". */
+        bpf_get_current_comm(&stat->comm, sizeof(stat->comm));
     } else {
         /* First time seeing this PID: initialize statistics */
         struct proc_stat init_stat = {};

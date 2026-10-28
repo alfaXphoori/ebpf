@@ -16,4 +16,4 @@ run: build
 	sudo ./bin/lsm_file_guard
 
 clean:
-	rm -rf bin/ bpf_*.go bpf_*.o
+	rm -rf bin/ bpf_*.go bpf_*.o lab-files/

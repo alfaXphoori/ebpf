@@ -9,31 +9,33 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
-	_ "time"
 
+	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
 	"github.com/cilium/ebpf/ringbuf"
 	"github.com/cilium/ebpf/rlimit"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -target native bpf ringbuf_events.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-I../../" -target native bpf ringbuf_events.c
 
-// secEvent mirrors the C struct sec_event definition
+// secEvent mirrors the C struct sec_event definition (176 bytes, little-endian)
 type secEvent struct {
-	Pid       uint32
-	Uid       uint32
 	TsNs      uint64
-	EventType uint8
-	Pad       [3]byte
+	Pid       uint32
+	Ppid      uint32
+	Uid       uint32
 	DataLen   uint32
+	EventType uint8
+	Pad       [7]byte
 	Comm      [16]byte
 	Payload   [128]byte
 }
 
 const (
-	eventTypeExecve      = 1
+	eventTypeExecve       = 1
 	eventTypeTLSPlaintext = 2
 )
 
@@ -97,6 +99,7 @@ func sanitizePayload(b []byte, length int) string {
 
 func main() {
 	libsslFlag := flag.String("libssl", "", "Explicit path to libssl.so (e.g. /usr/lib/x86_64-linux-gnu/libssl.so.3)")
+	execHook := flag.String("exec-hook", "sched", "Exec tracepoint: 'sched' (sched/sched_process_exec) or 'syscall' (syscalls/sys_enter_execve)")
 	flag.Parse()
 
 	// Allow current process to lock memory for eBPF resources
@@ -111,31 +114,60 @@ func main() {
 	}
 	defer objs.Close()
 
-	// 1. Attach tracepoint: sys_enter_execve
-	tp, err := link.Tracepoint("syscalls", "sys_enter_execve", objs.TpSysEnterExecve, nil)
+	// 1. Attach exec tracepoint
+	var tp link.Link
+	var err error
+	switch *execHook {
+	case "sched":
+		tp, err = link.Tracepoint("sched", "sched_process_exec", objs.TpSchedProcessExec, nil)
+	case "syscall":
+		tp, err = link.Tracepoint("syscalls", "sys_enter_execve", objs.TpSysEnterExecve, nil)
+	default:
+		log.Fatalf("Unknown -exec-hook %q (use 'sched' or 'syscall')", *execHook)
+	}
 	if err != nil {
-		log.Fatalf("Failed to attach sys_enter_execve tracepoint: %v", err)
+		log.Fatalf("Failed to attach exec tracepoint (%s): %v", *execHook, err)
 	}
 	defer tp.Close()
-	log.Println("[INFO] Tracepoint attached: syscalls/sys_enter_execve")
+	if *execHook == "sched" {
+		log.Println("[INFO] Tracepoint attached: sched/sched_process_exec")
+	} else {
+		log.Println("[INFO] Tracepoint attached: syscalls/sys_enter_execve")
+	}
 
-	// 2. Attach uprobe: OpenSSL SSL_write
+	// 2. Attach uprobes: OpenSSL SSL_write + SSL_write_ex
+	// Uprobe ผูกกับ "ไฟล์" library (inode) ไม่ใช่ process: ทุก process ที่ map libssl ไฟล์นี้
+	// (curl, python3, ...) จะโดนดักทั้งหมด แต่โปรแกรมที่ link OpenSSL แบบ static หรือใช้
+	// TLS stack อื่น (Go crypto/tls, rustls, GnuTLS, BoringSSL) จะมองไม่เห็น
 	targetLibssl := findLibsslPath(*libsslFlag)
 	if targetLibssl != "" {
+		// /lib -> /usr/lib (merged-usr) จึงเป็นไฟล์เดียวกัน
+		if resolved, err := filepath.EvalSymlinks(targetLibssl); err == nil && resolved != targetLibssl {
+			log.Printf("[INFO] %s resolves to %s", targetLibssl, resolved)
+		}
 		ex, err := link.OpenExecutable(targetLibssl)
 		if err != nil {
 			log.Printf("[WARN] Failed to open libssl executable at %s: %v", targetLibssl, err)
 		} else {
-			up, err := ex.Uprobe("SSL_write", objs.UprobeSslWrite, nil)
-			if err != nil {
-				log.Printf("[WARN] Failed to attach uprobe to SSL_write in %s: %v", targetLibssl, err)
-			} else {
+			probes := []struct {
+				symbol string
+				prog   *ebpf.Program
+			}{
+				{"SSL_write", objs.UprobeSslWrite},
+				{"SSL_write_ex", objs.UprobeSslWriteEx},
+			}
+			for _, p := range probes {
+				up, err := ex.Uprobe(p.symbol, p.prog, nil)
+				if err != nil {
+					log.Printf("[WARN] Failed to attach uprobe to %s in %s: %v", p.symbol, targetLibssl, err)
+					continue
+				}
 				defer up.Close()
-				log.Printf("[INFO] Uprobe attached: SSL_write on %s", targetLibssl)
+				log.Printf("[INFO] Uprobe attached: %s on %s", p.symbol, targetLibssl)
 			}
 		}
 	} else {
-		log.Println("[WARN] No libssl.so found. SSL_write Uprobe skipped. Only sys_enter_execve will be active.")
+		log.Println("[WARN] No libssl.so found. SSL_write Uprobes skipped. Only exec tracing will be active.")
 	}
 
 	// 3. Open Ring Buffer reader
@@ -151,13 +183,13 @@ func main() {
 
 	go func() {
 		<-sigCh
-		log.Println("\n[INFO] Received termination signal. Closing ring buffer reader...")
+		log.Println("[INFO] Received termination signal. Closing ring buffer reader...")
 		rd.Close()
 	}()
 
 	log.Println("[INFO] Successfully listening for events from eBPF Ring Buffer (16MB)...")
-	fmt.Printf("%-15s %-7s %-6s %-16s %s\n", "EVENT_TYPE", "PID", "UID", "COMM", "DETAILS")
-	fmt.Println(strings.Repeat("-", 80))
+	fmt.Printf("%-15s %-7s %-7s %-6s %-16s %s\n", "EVENT_TYPE", "PID", "PPID", "UID", "COMM", "DETAILS")
+	fmt.Println(strings.Repeat("-", 88))
 
 	var event secEvent
 	for {
@@ -181,17 +213,17 @@ func main() {
 		switch event.EventType {
 		case eventTypeExecve:
 			payload := cStringToString(event.Payload[:])
-			fmt.Printf("\033[1;32m%-15s\033[0m %-7d %-6d %-16s binary=%s\n",
-				"[EXECVE]", event.Pid, event.Uid, comm, payload)
+			fmt.Printf("\033[1;32m%-15s\033[0m %-7d %-7d %-6d %-16s binary=%s\n",
+				"[EXECVE]", event.Pid, event.Ppid, event.Uid, comm, payload)
 
 		case eventTypeTLSPlaintext:
 			payload := sanitizePayload(event.Payload[:], int(event.DataLen))
-			fmt.Printf("\033[1;36m%-15s\033[0m %-7d %-6d %-16s len=%d plaintext=%q\n",
-				"[TLS_PLAINTEXT]", event.Pid, event.Uid, comm, event.DataLen, payload)
+			fmt.Printf("\033[1;36m%-15s\033[0m %-7d %-7d %-6d %-16s len=%d plaintext=%q\n",
+				"[TLS_PLAINTEXT]", event.Pid, event.Ppid, event.Uid, comm, event.DataLen, payload)
 
 		default:
-			fmt.Printf("%-15s %-7d %-6d %-16s unknown event type=%d\n",
-				"[UNKNOWN]", event.Pid, event.Uid, comm, event.EventType)
+			fmt.Printf("%-15s %-7d %-7d %-6d %-16s unknown event type=%d\n",
+				"[UNKNOWN]", event.Pid, event.Ppid, event.Uid, comm, event.EventType)
 		}
 	}
 }

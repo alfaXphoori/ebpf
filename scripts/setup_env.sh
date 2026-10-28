@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # eBPF Development Environment Setup Script
-# Target: Ubuntu 24.04+ LTS (Linux Kernel 6.8+)
+# Target: Ubuntu 24.04 LTS (Linux 6.8+) / Ubuntu 26.04 LTS (Linux 7.0+)
 # ==============================================================================
 
 set -euo pipefail
@@ -35,7 +35,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 echo -e "${CYAN}======================================================================"
-echo -e "   eBPF Zero-to-Hero Environment Provisioning (Ubuntu 24.04+ LTS)"
+echo -e "   eBPF Zero-to-Hero Environment Provisioning (Ubuntu 24.04 / 26.04 LTS)"
 echo -e "======================================================================${NC}"
 echo "Repository Root: ${REPO_ROOT}"
 echo "Kernel Release : $(uname -r)"

@@ -110,32 +110,55 @@ int xdp_firewall_prog(struct xdp_md *ctx)
 
     /*
      * 2. Layer 3 IPv4 Header Parsing & Bounds Checking
+     * Checking the fixed 20-byte header is enough to read saddr/protocol safely.
      */
     struct iphdr *iph = (void *)(eth + 1);
     if ((void *)(iph + 1) > data_end) {
         return XDP_PASS;
     }
 
-    /* Validate dynamic IP header length (IHL field contains count of 32-bit words) */
+    /*
+     * 3. Track Protocol Statistics in Per-CPU Array
+     * iph->protocol is a __u8 (0-255), so it is always a valid index for 256 entries.
+     */
+    __u32 proto = iph->protocol;
+    __u64 *proto_cnt = bpf_map_lookup_elem(&proto_counters, &proto);
+    if (proto_cnt) {
+        /* Per-CPU array maps do not require atomic synchronization */
+        *proto_cnt += 1;
+    }
+
+    /*
+     * 4. Match Source IP Against Blocklist
+     * This MUST happen before any optional L4 validation below. Otherwise a blocked
+     * host could bypass the firewall by sending a truncated L4 header, a bogus IHL,
+     * or a non-first IP fragment (which carries no L4 header at all).
+     */
+    __u32 saddr = iph->saddr;
+    struct drop_stats *stats = bpf_map_lookup_elem(&blocked_ips, &saddr);
+    if (stats) {
+        /* Atomically update packet and byte drop counters */
+        __sync_fetch_and_add(&stats->dropped_packets, 1);
+        __u64 pkt_len = (__u64)((char *)data_end - (char *)data);
+        __sync_fetch_and_add(&stats->dropped_bytes, pkt_len);
+
+        /* Drop packet immediately at the network driver level */
+        return XDP_DROP;
+    }
+
+    /*
+     * 5. Validate dynamic IP header length (IHL field contains count of 32-bit words)
+     * Malformed headers are passed to the kernel, which drops and counts them itself.
+     */
     __u32 ip_hdr_len = iph->ihl * 4;
     if (ip_hdr_len < sizeof(struct iphdr) || (void *)iph + ip_hdr_len > data_end) {
         return XDP_PASS;
     }
 
     /*
-     * 3. Track Protocol Statistics in Per-CPU Array
-     */
-    __u32 proto = iph->protocol;
-    if (proto < 256) {
-        __u64 *proto_cnt = bpf_map_lookup_elem(&proto_counters, &proto);
-        if (proto_cnt) {
-            /* Per-CPU array maps do not require atomic synchronization */
-            *proto_cnt += 1;
-        }
-    }
-
-    /*
-     * 4. Layer 4 Transport Header Parsing with Strict Bounds Checks
+     * 6. Layer 4 Transport Header Parsing with Strict Bounds Checks
+     * Template for port-based rules (see Exercises): after these checks the verifier
+     * allows reading tcph->dest / udph->dest / icmph->type.
      */
     void *l4 = (void *)iph + ip_hdr_len;
     if (iph->protocol == IPPROTO_TCP) {
@@ -153,21 +176,6 @@ int xdp_firewall_prog(struct xdp_md *ctx)
         if ((void *)(icmph + 1) > data_end) {
             return XDP_PASS;
         }
-    }
-
-    /*
-     * 5. Match Source IP Against Blocklist
-     */
-    __u32 saddr = iph->saddr;
-    struct drop_stats *stats = bpf_map_lookup_elem(&blocked_ips, &saddr);
-    if (stats) {
-        /* Atomically update packet and byte drop counters */
-        __sync_fetch_and_add(&stats->dropped_packets, 1);
-        __u64 pkt_len = (__u64)((char *)data_end - (char *)data);
-        __sync_fetch_and_add(&stats->dropped_bytes, pkt_len);
-
-        /* Drop packet immediately at the network driver level */
-        return XDP_DROP;
     }
 
     /* Allow clean traffic to pass through the network stack */

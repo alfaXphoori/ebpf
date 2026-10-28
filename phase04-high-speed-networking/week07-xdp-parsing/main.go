@@ -22,6 +22,14 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 )
 
+// ipKey converts an IPv4 address into the __u32 map key used by blocked_ips.
+// The kernel compares the 4 raw bytes of iph->saddr (network byte order), so we
+// reinterpret the same 4 bytes in host (native) byte order. On little-endian
+// x86_64/arm64 this equals binary.LittleEndian.Uint32(ip).
+func ipKey(ip net.IP) uint32 {
+	return binary.NativeEndian.Uint32(ip.To4())
+}
+
 func main() {
 	ifaceName := flag.String("iface", "lo", "Target network interface to attach XDP (e.g., lo, eth0, veth1)")
 	blockIPsList := flag.String("block-ip", "", "Comma-separated IPv4 addresses to drop (e.g., 10.10.1.1,192.168.1.100)")
@@ -73,17 +81,17 @@ func main() {
 				log.Fatalf("Invalid IPv4 address provided: %s", trimmed)
 			}
 
-			// In Linux little-endian host architecture, converting 4 bytes with LittleEndian
-			// matches the 32-bit layout of iph->saddr in packet memory.
-			ipKey := binary.LittleEndian.Uint32(parsedIP)
+			// iph->saddr is read from packet memory as raw bytes, so the map key must
+			// have the same in-memory byte layout (see ipKey above).
+			key := ipKey(parsedIP)
 			initialStats := bpfDropStats{
 				DroppedPackets: 0,
 				DroppedBytes:   0,
 			}
-			if err := objs.BlockedIps.Put(&ipKey, &initialStats); err != nil {
+			if err := objs.BlockedIps.Put(&key, &initialStats); err != nil {
 				log.Fatalf("Failed to populate blocked_ips for %s: %v", trimmed, err)
 			}
-			log.Printf("Added %s (Key: 0x%08x) to XDP blocklist map\n", trimmed, ipKey)
+			log.Printf("Added %s (Key: 0x%08x) to XDP blocklist map\n", trimmed, key)
 		}
 	} else {
 		log.Printf("No -block-ip specified. Running in promiscuous monitoring mode.\n")
@@ -160,7 +168,7 @@ func renderDashboard(objs *bpfObjects, iface string, numCPUs int) {
 		countBlocked++
 		// Reconstruct IPv4 address from uint32
 		ipBytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(ipBytes, key)
+		binary.NativeEndian.PutUint32(ipBytes, key)
 		ipStr := net.IP(ipBytes).String()
 
 		fmt.Printf("  %-18s  %-16d  %-16d\n", ipStr, stat.DroppedPackets, stat.DroppedBytes)

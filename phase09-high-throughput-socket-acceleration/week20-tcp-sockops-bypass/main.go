@@ -6,6 +6,7 @@ package main
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang bpf sockops.c
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -19,8 +20,42 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 )
 
+// Index layout of bypass_stats (must match the enum in sockops.c)
+const (
+	statRedirectMsgs uint32 = iota
+	statRedirectBytes
+	statFallbackMsgs
+	statFallbackBytes
+	statSocksAdded
+)
+
+// readStat returns one counter from bypass_stats (0 on lookup error)
+func readStat(m *ebpf.Map, idx uint32) uint64 {
+	var v uint64
+	if err := m.Lookup(&idx, &v); err != nil {
+		return 0
+	}
+	return v
+}
+
+// countSockhashEntries walks the SOCKHASH keys (sockets closed by the
+// application are removed from the map automatically by the kernel)
+func countSockhashEntries(m *ebpf.Map) int {
+	var key, next bpfSockKey
+	n := 0
+	err := m.NextKey(nil, &next)
+	for err == nil {
+		n++
+		key = next
+		err = m.NextKey(&key, &next)
+	}
+	return n
+}
+
 func main() {
-	cgroupPath := flag.String("cgroup", "/sys/fs/cgroup", "Target cgroup v2 path")
+	// Attaching sockops to the ROOT cgroup affects every TCP socket on the host.
+	// Default to a dedicated child cgroup and only move test processes into it.
+	cgroupPath := flag.String("cgroup", "/sys/fs/cgroup/w20-sockops-lab", "Target cgroup v2 path (created if missing)")
 	flag.Parse()
 
 	fmt.Println("======================================================================")
@@ -29,6 +64,15 @@ func main() {
 
 	if err := rlimit.RemoveMemlock(); err != nil {
 		log.Fatalf("Failed to remove memlock: %v", err)
+	}
+
+	createdCgroup := false
+	if _, err := os.Stat(*cgroupPath); errors.Is(err, os.ErrNotExist) {
+		if err := os.Mkdir(*cgroupPath, 0755); err != nil {
+			log.Fatalf("Failed to create cgroup %s: %v", *cgroupPath, err)
+		}
+		createdCgroup = true
+		log.Printf("[INFO] Created cgroup %s\n", *cgroupPath)
 	}
 
 	var objs bpfObjects
@@ -61,7 +105,8 @@ func main() {
 	defer link.RawDetachProgram(link.RawDetachProgramOptions(attachOpts))
 	log.Printf("[INFO] Attached BPF_PROG_TYPE_SK_MSG verdict to BPF_MAP_TYPE_SOCKHASH\n")
 
-	log.Printf("[INFO] Localhost socket bypass active! Zero-copy socket routing enabled.\n\n")
+	log.Printf("[INFO] Socket bypass active for NEW IPv4 TCP connections inside %s\n", *cgroupPath)
+	log.Printf("[INFO] Move a shell into it: echo $$ | sudo tee %s/cgroup.procs\n\n", *cgroupPath)
 
 	stopper := make(chan os.Signal, 1)
 	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM)
@@ -69,18 +114,31 @@ func main() {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	printStats := func() {
+		fmt.Printf("[%s] Sockets: %-4d (live %-4d) | Redirected: %-8d msgs %-12d B | Fallback: %-6d msgs %-10d B\n",
+			time.Now().Format("15:04:05"),
+			readStat(objs.BypassStats, statSocksAdded),
+			countSockhashEntries(objs.SockHash),
+			readStat(objs.BypassStats, statRedirectMsgs),
+			readStat(objs.BypassStats, statRedirectBytes),
+			readStat(objs.BypassStats, statFallbackMsgs),
+			readStat(objs.BypassStats, statFallbackBytes))
+	}
+
 	for {
 		select {
 		case <-ticker.C:
-			var k0, k1 uint32 = 0, 1
-			var msgs, bytes uint64
-			objs.BypassStats.Lookup(&k0, &msgs)
-			objs.BypassStats.Lookup(&k1, &bytes)
-			fmt.Printf("[%s] Accelerated TCP Messages: %-8d | Direct Bypassed Bytes: %-10d\n",
-				time.Now().Format("15:04:05"), msgs, bytes)
+			printStats()
 
 		case <-stopper:
 			fmt.Println("\n[INFO] Detaching sockops and sk_msg hooks...")
+			printStats()
+			if createdCgroup {
+				// Only succeeds when no process is left inside the cgroup
+				if err := os.Remove(*cgroupPath); err == nil {
+					log.Printf("[INFO] Removed cgroup %s\n", *cgroupPath)
+				}
+			}
 			return
 		}
 	}

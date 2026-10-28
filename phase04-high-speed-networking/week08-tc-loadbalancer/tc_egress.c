@@ -128,7 +128,17 @@ int tc_egress_prog(struct __sk_buff *skb)
             .packets = 1,
             .bytes = pkt_len,
         };
-        bpf_map_update_elem(&egress_stats, &dport, &init_stat, BPF_ANY);
+        /*
+         * BPF_NOEXIST: if another CPU created the entry between our lookup and
+         * this update, do not overwrite its counters; add to them instead.
+         */
+        if (bpf_map_update_elem(&egress_stats, &dport, &init_stat, BPF_NOEXIST) != 0) {
+            stat = bpf_map_lookup_elem(&egress_stats, &dport);
+            if (stat) {
+                __sync_fetch_and_add(&stat->packets, 1);
+                __sync_fetch_and_add(&stat->bytes, pkt_len);
+            }
+        }
     }
 
     /*

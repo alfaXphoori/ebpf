@@ -1,7 +1,16 @@
 //go:build ignore
 // +build ignore
 
-#include <linux/bpf.h>
+/*
+ * Week 13: Kernel Dropwatch (tracepoint skb:kfree_skb) - CO-RE edition
+ *
+ * ใช้ vmlinux.h แทนการประกาศ struct ของ tracepoint เอง เพื่อให้ libbpf/cilium-ebpf
+ * ทำ CO-RE relocation ของ offset ฟิลด์ (เช่น `reason`) ให้ตรงกับเคอร์เนลที่รันจริง
+ *   - Linux 6.8  (Ubuntu 24.04): ไม่มีฟิลด์ rx_sk  -> reason อยู่ offset 28
+ *   - Linux 7.0  (Ubuntu 26.04): มีฟิลด์ rx_sk     -> reason อยู่ offset 36
+ */
+
+#include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
@@ -10,15 +19,22 @@
 #define TASK_COMM_LEN 16
 #endif
 
+/* enum skb_drop_reason: 0 = NOT_DROPPED_YET, 1 = CONSUMED (ไม่ใช่การดรอปจริง) */
+#define DROP_REASON_FIRST_REAL_DROP 2
+
 /*
  * Event structure sent via BPF Ring Buffer to User Space
+ * (จัด layout ให้ไม่มี implicit padding เพื่อให้ฝั่ง Go decode ได้ตรงทุกไบต์)
  */
 struct drop_event {
+    __u64 location;  /* kernel instruction pointer ที่เรียก kfree_skb_reason() */
     __u32 pid;
-    __u32 reason;
-    __u64 location;
-    __u16 protocol;
+    __u32 reason;    /* enum skb_drop_reason (16 บิตบน = subsystem id) */
+    __u16 protocol;  /* ntohs(skb->protocol) -> host byte order, เช่น 0x0800 = IPv4 */
+    __u8 has_rx_sk;  /* 1 = เคอร์เนลนี้มีฟิลด์ rx_sk ใน tracepoint */
+    __u8 rx_sk_set;  /* 1 = แพ็กเก็ตนี้ผูกกับ socket ฝั่งรับ (rx_sk != NULL) */
     char comm[TASK_COMM_LEN];
+    __u8 pad[4];
 };
 
 /*
@@ -40,28 +56,17 @@ struct {
 } drop_reason_stats SEC(".maps");
 
 /*
- * Tracepoint arguments structure for tracepoint/skb/kfree_skb
+ * ctx เป็น struct trace_event_raw_kfree_skb จาก vmlinux.h
+ * vmlinux.h เปิด preserve_access_index ให้ทุก struct อยู่แล้ว ดังนั้นการอ่าน
+ * ctx->reason จะถูกคอมไพล์เป็น CO-RE relocation (ไม่ใช่ offset ตายตัว)
  */
-struct kfree_skb_args {
-    unsigned short common_type;
-    unsigned char common_flags;
-    unsigned char common_preempt_count;
-    int common_pid;
-
-    void *skbaddr;
-    void *location;
-    void *rx_sk;
-    unsigned short protocol;
-    unsigned int reason;
-};
-
 SEC("tracepoint/skb/kfree_skb")
-int trace_kfree_skb(struct kfree_skb_args *ctx)
+int trace_kfree_skb(struct trace_event_raw_kfree_skb *ctx)
 {
     __u32 reason = ctx->reason;
 
-    /* Filter out drops without reason or reason <= 1 (NOT_SPECIFIED) if desired */
-    if (reason <= 1) {
+    /* ข้าม NOT_DROPPED_YET (0) และ SKB_CONSUMED (1) ซึ่งไม่ใช่การดรอปผิดปกติ */
+    if (reason < DROP_REASON_FIRST_REAL_DROP) {
         return 0;
     }
 
@@ -71,7 +76,7 @@ int trace_kfree_skb(struct kfree_skb_args *ctx)
         __sync_fetch_and_add(count, 1);
     } else {
         __u64 init_val = 1;
-        bpf_map_update_elem(&drop_reason_stats, &reason, &init_val, BPF_ANY);
+        bpf_map_update_elem(&drop_reason_stats, &reason, &init_val, BPF_NOEXIST);
     }
 
     /* Reserve slot in ring buffer */
@@ -84,6 +89,20 @@ int trace_kfree_skb(struct kfree_skb_args *ctx)
     event->reason = reason;
     event->location = (__u64)ctx->location;
     event->protocol = ctx->protocol;
+    event->has_rx_sk = 0;
+    event->rx_sk_set = 0;
+    __builtin_memset(event->pad, 0, sizeof(event->pad));
+
+    /*
+     * CO-RE field existence: ฟิลด์ rx_sk เพิ่งถูกเพิ่มในเคอร์เนลรุ่นหลัง 6.8 (ราว 6.11)
+     * บนเคอร์เนลที่ไม่มีฟิลด์นี้ loader จะแทนเงื่อนไขด้วยค่าคงที่ 0 และ
+     * verifier ตัดโค้ดใน if ทิ้ง (dead code elimination) จึงโหลดผ่านทั้ง 6.8 และ 7.0
+     */
+    if (bpf_core_field_exists(ctx->rx_sk)) {
+        event->has_rx_sk = 1;
+        event->rx_sk_set = ctx->rx_sk != NULL;
+    }
+
     bpf_get_current_comm(&event->comm, sizeof(event->comm));
 
     bpf_ringbuf_submit(event, 0);

@@ -5,7 +5,7 @@
 BIN_DIR := bin
 BINARY := $(BIN_DIR)/task-iter
 
-.PHONY: all generate build run clean
+.PHONY: all generate build test run clean
 
 all: generate build
 
@@ -17,6 +17,11 @@ build:
 	@echo "===> Building userspace binary $(BINARY)..."
 	mkdir -p $(BIN_DIR)
 	go build -v -o $(BINARY) .
+
+# Runtime test: รัน iterator จริงแล้วตรวจว่าได้ 1 แถวต่อ 1 โปรเซส (ต้องใช้ root)
+test: generate
+	@echo "===> Running runtime tests (main_test.go)..."
+	go test -exec sudo -v ./...
 
 run: build
 	@echo "===> Running $(BINARY) with sudo..."

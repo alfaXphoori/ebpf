@@ -20,7 +20,7 @@
 
 /*
  * BPF_MAP_TYPE_ARRAY: exec_count
- * Single-element array (max_entries = 1) storing the global count of execve calls.
+ * Single-element array (max_entries = 1) storing the global count of exec events.
  * Key: 32-bit unsigned integer (index 0)
  * Value: 64-bit unsigned integer (cumulative count)
  */
@@ -32,11 +32,18 @@ struct {
 } exec_count SEC(".maps");
 
 /*
- * Tracepoint program attached to sys_enter_execve
- * Triggered whenever any process in the system executes the execve() syscall.
+ * Tracepoint program attached to sched/sched_process_exec
+ * Triggered (on every CPU) whenever a process successfully executes a new
+ * program via execve()/execveat().
+ *
+ * Why not "tracepoint/syscalls/sys_enter_execve"? On Ubuntu 26.04 /
+ * Linux 7.0.0-38 we observed BPF programs attached to
+ * syscalls:sys_enter_execve firing only for execs running on CPU 0, so the
+ * counter under-counted ~8x on an 8-CPU machine. sched:* and raw_syscalls:*
+ * tracepoints are unaffected. (Cause not confirmed - see README.)
  */
-SEC("tracepoint/syscalls/sys_enter_execve")
-int handle_execve(void *ctx)
+SEC("tracepoint/sched/sched_process_exec")
+int handle_exec(void *ctx)
 {
     __u32 key = 0;
     __u64 *val;
@@ -51,7 +58,7 @@ int handle_execve(void *ctx)
     /* Read caller PID (upper 32 bits of 64-bit PID+TGID) and log to kernel trace pipe */
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u32 pid = (__u32)(pid_tgid >> 32);
-    bpf_printk("execve called by PID %d\n", pid);
+    bpf_printk("exec by PID %d\n", pid);
 
     return 0;
 }

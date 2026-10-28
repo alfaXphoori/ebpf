@@ -1,6 +1,6 @@
 module week09-ringbuf-uprobes
 
-go 1.21
+go 1.22
 
 require github.com/cilium/ebpf v0.16.0
 

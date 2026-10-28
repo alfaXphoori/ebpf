@@ -1,9 +1,9 @@
 #!/usr/bin/env bpftrace
 /*
  * ==============================================================================
- * eBPF Noob to Hero - Week 03: Kernel Observability with bpftrace
+ * eBPF Zero to Hero - Week 03: Kernel Observability with bpftrace
  * Script: trace_exec_and_tcp.bt
- * Description: Instruments process execution (sys_enter_execve), TCP socket
+ * Description: Instruments process execution (sched:sched_process_exec), TCP socket
  *              payload throughput (tcp_sendmsg), and network packet retransmissions
  *              (tcp_retransmit_skb) using kernel tracepoints and kprobes.
  * Author: eBPF Mastery Team
@@ -14,28 +14,39 @@ BEGIN
 {
     printf("\n");
     printf("====================================================================\n");
-    printf("  eBPF Noob to Hero - Week 03: Process Execution & TCP Observability\n");
+    printf("  eBPF Zero to Hero - Week 03: Process Execution & TCP Observability\n");
     printf("====================================================================\n");
     printf("  Active Probes:\n");
-    printf("    1. tracepoint:syscalls:sys_enter_execve (New process launches)\n");
+    printf("    1. tracepoint:sched:sched_process_exec (New process launches)\n");
     printf("    2. kprobe:tcp_sendmsg                  (TCP payload histogram)\n");
     printf("    3. tracepoint:tcp:tcp_retransmit_skb   (TCP packet drops/retrans)\n");
     printf("    4. interval:s:10                       (Periodic live stats report)\n");
     printf("--------------------------------------------------------------------\n");
     printf("  Tracing started! Press Ctrl+C to terminate and view full summary.\n\n");
-    printf("%-9s %-6s %-6s %-16s %s\n", "TIME", "UID", "PID", "COMM", "ARGS / EVENT");
+    printf("%-9s %-6s %-7s %-16s %s\n", "TIME", "UID", "PID", "PARENT", "FILENAME / EVENT");
     printf("--------------------------------------------------------------------\n");
 }
 
 /*
  * Probe 1: Process Execution Tracepoint
- * Hook into sys_enter_execve whenever a process executes a new binary image.
+ * sched:sched_process_exec fires after a successful execve()/execveat(), on
+ * every CPU. Its fields (see /sys/kernel/tracing/events/sched/sched_process_exec/format):
+ *   __data_loc char[] filename   -> read with str(args->filename)
+ *   pid_t pid, pid_t old_pid
+ * At this point `comm` is already the NEW program name, so we print the parent's
+ * name from curtask->real_parent->comm (BTF lets bpftrace walk task_struct).
+ *
+ * Why not tracepoint:syscalls:sys_enter_execve (which also has args->argv)?
+ * On Ubuntu 26.04 / Linux 7.0.0-38 we observed BPF programs on
+ * syscalls:sys_enter_execve (and sys_enter_openat) firing only for syscalls on
+ * CPU 0, i.e. most execs were silently missed. raw_syscalls:* and sched:* are
+ * unaffected. See README "Troubleshooting".
  */
-tracepoint:syscalls:sys_enter_execve
+tracepoint:sched:sched_process_exec
 {
-    time("%H:%M:%S  ");
-    printf("%-6d %-6d %-16s ", uid, pid, comm);
-    join(args->argv);
+    // One printf per event (time() is a separate event and can interleave across CPUs)
+    printf("%s  %-6d %-7d %-16s %s\n", strftime("%H:%M:%S", nsecs), uid, pid,
+           curtask->real_parent->comm, str(args->filename));
     @process_exec_count[comm] = count();
 }
 
@@ -67,9 +78,8 @@ kprobe:tcp_sendmsg
  */
 tracepoint:tcp:tcp_retransmit_skb
 {
-    time("%H:%M:%S  ");
-    printf("%-6d %-6d %-16s [TCP RETRANSMIT] %s:%d -> %s:%d (State: %d)\n",
-           uid, pid, comm,
+    printf("%s  %-6d %-7d %-16s [TCP RETRANSMIT] %s:%d -> %s:%d (State: %d)\n",
+           strftime("%H:%M:%S", nsecs), uid, pid, comm,
            ntop(args->saddr), args->sport,
            ntop(args->daddr), args->dport,
            args->state);
@@ -79,11 +89,14 @@ tracepoint:tcp:tcp_retransmit_skb
 
 /*
  * Probe 4: 10-Second Periodic Interval
- * Prints real-time intermediate summaries of network activity and resets counters.
+ * Prints real-time intermediate summaries of network activity.
+ * NOTE: maps are NOT cleared here, so these numbers are cumulative since start
+ * (the END probe prints the same totals). Add clear(@map) here if you want
+ * per-window numbers instead -- see the exercises in README.md.
  */
 interval:s:10
 {
-    printf("\n--- [Intermediate Periodic Report: Past 10s Activity] ---\n");
+    printf("\n--- [Periodic Report (every 10s): cumulative since start] ---\n");
     
     printf("\nTop Processes by TCP Transmit Calls:\n");
     print(@tcp_send_calls);
@@ -124,4 +137,12 @@ END
 
     printf("====================================================================\n");
     printf("Observation complete. All kernel probes detached safely.\n\n");
+
+    // bpftrace automatically prints every non-empty map on exit; clear them so
+    // the summary above is not printed a second time.
+    clear(@process_exec_count);
+    clear(@tcp_send_calls);
+    clear(@tcp_send_total_bytes);
+    clear(@tcp_send_bytes);
+    clear(@tcp_retransmit_count);
 }

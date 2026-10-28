@@ -19,7 +19,7 @@ import (
 
 func main() {
 	fmt.Println("======================================================================")
-	fmt.Println(" eBPF Syscall Execve Monitor (Cilium ebpf-go + CO-RE)")
+	fmt.Println(" eBPF Process Exec Monitor (Cilium ebpf-go + bpf2go)")
 	fmt.Println("======================================================================")
 
 	// In older kernels (< 5.11), BPF map and program memory is constrained by RLIMIT_MEMLOCK.
@@ -35,14 +35,16 @@ func main() {
 	}
 	defer objs.Close()
 
-	// Attach the eBPF program to the tracepoint: syscalls/sys_enter_execve
-	tp, err := link.Tracepoint("syscalls", "sys_enter_execve", objs.HandleExecve, nil)
+	// Attach the eBPF program to the tracepoint: sched/sched_process_exec
+	// (fires on every CPU after a successful exec; see counter.c for why we
+	// do not use syscalls/sys_enter_execve on Linux 7.0.0-38)
+	tp, err := link.Tracepoint("sched", "sched_process_exec", objs.HandleExec, nil)
 	if err != nil {
-		log.Fatalf("Failed to attach tracepoint to sys_enter_execve: %v", err)
+		log.Fatalf("Failed to attach tracepoint to sched/sched_process_exec: %v", err)
 	}
 	defer tp.Close()
 
-	log.Printf("Successfully hooked tracepoint 'syscalls/sys_enter_execve'!\n")
+	log.Printf("Successfully hooked tracepoint 'sched/sched_process_exec'!\n")
 	log.Printf("Monitoring active processes... Press Ctrl+C to terminate.\n\n")
 
 	// Set up channel to capture OS interrupt / termination signals
@@ -68,7 +70,7 @@ func main() {
 			rate := count - previousCount
 			previousCount = count
 
-			fmt.Printf("[%s] Total execve() invocations: %-8d | Rate: %-4d calls/sec\n",
+			fmt.Printf("[%s] Total exec events: %-8d | Rate: %-4d execs/sec\n",
 				time.Now().Format("15:04:05"), count, rate)
 
 		case sig := <-stopper:
@@ -77,7 +79,7 @@ func main() {
 			// Print final count
 			var finalCount uint64
 			if err := objs.ExecCount.Lookup(&key, &finalCount); err == nil {
-				fmt.Printf("Final cumulative execve() syscall count: %d\n", finalCount)
+				fmt.Printf("Final cumulative exec event count: %d\n", finalCount)
 			}
 			fmt.Println("eBPF program and tracepoint links detached successfully.")
 			return

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-eBPF Noob to Hero - Week 04: Kernel Tracing with BCC (BPF Compiler Collection)
+eBPF Zero to Hero - Week 04: Kernel Tracing with BCC (BPF Compiler Collection)
 Script: tcp_v4_latency.py
-Description: Measures TCP IPv4 connection establishment latency (SYN -> SYN-ACK -> ACK)
+Description: Measures how long the kernel spends inside tcp_v4_connect() (route
+             lookup, source-port allocation and sending the SYN) -- NOT the full
+             SYN -> SYN-ACK handshake RTT (see bcc's tcpconnlat for that) --
              by hooking kprobe/kretprobe on tcp_v4_connect, correlating timestamps
              using a BPF Hash Map, streaming events via BPF Perf Ring Buffer, and
              computing a logarithmic microsecond latency histogram.
@@ -41,8 +43,15 @@ EBPF_C_PROGRAM = r"""
 #include <linux/in.h>
 
 /*
- * Minimal socket structures for Linux 6.8+ and 7.0+ compatibility,
- * avoiding full net/sock.h header conflicts in BCC Clang compiler.
+ * Minimal socket structures for Linux 6.8+ and 7.0+ compatibility.
+ * We cannot #include <net/sock.h> here: with BCC 0.35 on Linux 7.0 it fails
+ * to compile (e.g. "use of undeclared identifier 'BPF_F_CPU'").
+ *
+ * The hand-written layout MUST match the kernel's real struct sock_common
+ * (check with: bpftool btf dump file /sys/kernel/btf/vmlinux format c):
+ *   offset 0: skc_daddr, 4: skc_rcv_saddr, 8: skc_hash, 12: skc_dport, 14: skc_num
+ * Omitting skc_hash shifts skc_dport/skc_num by 4 bytes and yields garbage
+ * source ports -- exactly the fragility that BTF/CO-RE (Phase 3) removes.
  */
 struct sock_common {
     union {
@@ -50,6 +59,10 @@ struct sock_common {
             __be32 skc_daddr;
             __be32 skc_rcv_saddr;
         };
+    };
+    union {
+        unsigned int skc_hash;
+        __u16 skc_u16hashes[2];
     };
     union {
         struct {
@@ -197,7 +210,7 @@ def main():
         sys.exit(1)
 
     print("\033[1;36m========================================================================\033[0m")
-    print("\033[1;32m  eBPF Noob to Hero - Week 04: TCP IPv4 Connect Latency Tracker (BCC)   \033[0m")
+    print("\033[1;32m  eBPF Zero to Hero - Week 04: TCP IPv4 Connect Latency Tracker (BCC)   \033[0m")
     print("\033[1;36m========================================================================\033[0m")
     print(" Compiling embedded C eBPF code via LLVM/Clang and attaching kprobes...")
 

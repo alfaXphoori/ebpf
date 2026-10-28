@@ -26,30 +26,34 @@
    - 4.2 ผลลัพธ์ทั้ง 5 ของ XDP (XDP Actions: DROP, PASS, TX, REDIRECT, ABORTED)
    - 4.3 กฎเหล็ก Pointer Arithmetic & Verifier Bounds Checking ทีละเลเยอร์
    - 4.4 Traffic Control (TC) vs XDP และการทำ Packet Mangling พร้อมคำนวณ Checksum
+   - 4.5 บันทึกจากการทดลองจริง (Lab Notes จาก Week 07–08)
 5. [บทที่ 5: การสตรีมข้อมูลด้วย Ring Buffer และการบล็อกด้วย BPF LSM (เฟส 05)](#บทที่-5-การสตรีมข้อมูลด้วย-ring-buffer-และการบล็อกด้วย-bpf-lsm-เฟส-5)
    - 5.1 สถาปัตยกรรม Memory-mapped BPF Ring Buffer (MPSC Lockless Architecture)
    - 5.2 วงจรชีวิตของข้อมูล: `bpf_ringbuf_reserve`, `submit` และ `discard`
    - 5.3 การดักฟังสัญญะระดับ User Space ด้วย Uprobes / Uretprobes (TLS Inspection)
    - 5.4 การรักษาความปลอดภัยเชิงรุกด้วย BPF LSM (Linux Security Modules)
+   - 5.5 บันทึกจากการทดลองจริง (Lab Notes จาก Week 09–10)
 6. [บทที่ 6: โค้ดฝั่ง User Space ด้วยภาษา Go (`cilium/ebpf`) & Cheat Sheet (เฟส 06)](#บทที่-6-โค้ดฝั่ง-user-space-ด้วยภาษา-go-ciliumebpf--cheat-sheet-เฟส-6)
    - 6.1 สถาปัตยกรรม Pure Go eBPF Loader และการใช้งาน `bpf2go`
    - 6.2 พิมพ์เขียว Go Control Plane: การปลดล็อค Memlock, การโหลด, การผูก Hooks และการอ่าน Ring Buffer
    - 6.3 Complete Cheat Sheet: `bpftool`, `ip link`, `tc` และ 20 BPF Helper Functions สำคัญ
+   - 6.4 การทดสอบโปรแกรม eBPF อัตโนมัติด้วย `BPF_PROG_TEST_RUN` และการอ่าน Verifier Log
 7. [บทที่ 7: ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ Fleet (เฟส 07)](#บทที่-7-ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ-fleet-เฟส-7)
-   - 7.1 วินิจฉัยและสืบสวน Packet Drops ด้วย `tracepoint:skb:kfree_skb`
-   - 7.2 Zero-Trust Socket Egress Control ด้วย `cgroup/connect4`
-   - 7.3 การตรวจจับ Reverse Shell และ Web RCE ผ่าน `task_struct real_parent`
-   - 7.4 การตรวจจับ eBPF Rootkits และการ Audit ความปลอดภัยผ่าน `sys_enter_bpf`
+   - 7.0 กฎเหล็กของ Tracing แบบ CO-RE: ห้ามเขียน Struct ของเคอร์เนลเอง
+   - 7.1 วินิจฉัย Packet Drops ด้วย `tracepoint:skb:kfree_skb`
+   - 7.2 Socket Egress Control ด้วย `cgroup/connect4`
+   - 7.3 การตรวจจับ Reverse Shell ผ่าน `task_struct`
+   - 7.4 eBPF Integrity Auditor: เฝ้าระวังการใช้ `bpf()` Syscall
 8. [บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 08)](#บทที่-8-การวัดประสิทธิภาพระบบ-การแกะรอย-stack-และการวิเคราะห์ฮาร์ดแวร์-เฟส-8)
    - 8.1 การวัด Storage Block I/O Latency ด้วย Log2 Histograms
-   - 8.2 การทำ CPU Profiling และถอดรหัส Kernel Call Stack ด้วย `perf_event`
-   - 8.3 การเฝ้าระวัง Page Faults และการส่งสัญญาณเตือน OOM Killer
+   - 8.2 On-CPU Profiler ด้วย `perf_event` Sampling และการถอดรหัส Stack
+   - 8.3 การเฝ้าระวัง Page Faults และ OOM Killer
 9. [บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 09)](#บทที่-9-การเร่งความเร็ว-socket-และสถาปัตยกรรม-kernel-bypass-เฟส-9)
-   - 9.1 TCP Sockops และ `sk_msg` Fastpath Socket Bypass (ข้าม TCP/IP Stack)
-   - 9.2 สถาปัตยกรรม AF_XDP Zero-Copy Kernel-Bypass Packet Redirect
+   - 9.1 TCP Sockops และ `sk_msg` Socket Redirect
+   - 9.2 AF_XDP: ส่งแพ็กเก็ตจาก XDP ตรงสู่ User Space
 10. [บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)](#บทที่-10-เทคโนโลยี-ebpf-ยุคใหม่ระดับแนวหน้า-เฟส-10)
-    - 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Zero-Overhead Tracing
-    - 10.2 BPF Iterators (`bpf_iter_task`) การท่องเคอร์เนลโดยตรงระดับ Memory
+    - 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Low-Overhead Tracing
+    - 10.2 BPF Iterators (`iter/task`) การท่องโครงสร้างเคอร์เนลโดยตรง
 
 ---
 
@@ -509,7 +513,7 @@ Verifier คือหัวใจสำคัญที่สุดที่ท�
 
 ### 2.4 กลไก JIT (Just-In-Time) Compiler และ BPF Hardening
 
-เมื่อโปรแกรมผ่านการตรวจของ Verifier ตัวเคอร์เนลจะไม่รันผ่าน Interpreter ที่ช้า แต่จะส่งให้ **BPF JIT Compiler** ทำการแปลคำสั่ง Bytecode ให้กลายเป็น Native Machine Code ของสถาปัตยกรรมฮาร์ดแวร์นั้นๆ (เช่น x86-64 OPCODES หรือ ARM64 Instructions) ส่งผลให้โปรแกรมทำงานได้ด้วยความเร็วเทียบเท่า Native C ภายในเคอร์เนล 100%
+เมื่อโปรแกรมผ่านการตรวจของ Verifier ตัวเคอร์เนลจะไม่รันผ่าน Interpreter ที่ช้า แต่จะส่งให้ **BPF JIT Compiler** ทำการแปลคำสั่ง Bytecode ให้กลายเป็น Native Machine Code ของสถาปัตยกรรมฮาร์ดแวร์นั้นๆ (เช่น x86-64 OPCODES หรือ ARM64 Instructions) ส่งผลให้โปรแกรมทำงานได้ด้วยความเร็วใกล้เคียง Native C ภายในเคอร์เนล (ยังมี Overhead เล็กน้อยจากการเรียก Helper และการ Hardening เช่น Constant Blinding เมื่อเปิด `bpf_jit_harden`)
 
 #### กลไกความปลอดภัย BPF JIT Hardening:
 เพื่อป้องกันการโจมตีประเภท **JIT Spraying** (การที่ผู้ไม่หวังดีแอบซ่อน Payload ไบนารีอันตรายไว้ในค่าคงที่ของคำสั่ง BPF เพื่อหลอกให้ JIT สร้าง Machine Code ที่เป็นช่องโหว่) Linux Kernel มีระบบ Hardening ที่เปิดใช้งานได้ผ่าน `sysctl`:
@@ -734,7 +738,7 @@ XDP_ABORTED  | 0         | ทิ้งแพ็กเก็ตเมื่อ�
 
 Verifier ของ eBPF จะติดตามการเข้าถึงหน่วยความจำทุกครั้ง หากเราพยายามอ่านหรือเขียนข้อมูลใดๆ นอกเหนือขอบเขตที่ได้รับการพิสูจน์แล้ว โปรแกรมจะคอมไพล์ไม่ผ่านทันที
 
-#### ตัวอย่างโค้ดสมบูรณ์: การแกะ Packet ทีละเลเยอร์อย่างปลอดภัย 100%
+#### ตัวอย่างโค้ดสมบูรณ์: การแกะ Packet ทีละเลเยอร์ให้ผ่าน Verifier (ทุกการเข้าถึงมี Bounds Check)
 
 ```c
 #include "vmlinux.h"
@@ -857,6 +861,15 @@ bpf_l3_csum_replace(skb, offsetof(struct iphdr, check), old_ip, new_ip, sizeof(n
 bpf_l4_csum_replace(skb, tcp_offset + offsetof(struct tcphdr, check), old_ip, new_ip, sizeof(new_ip) | BPF_F_PSEUDO_HDR);
 ```
 
+#### 4.5 บันทึกจากการทดลองจริง (Lab Notes จาก Week 07–08)
+- **ลำดับการตรวจสอบสำคัญต่อความปลอดภัย**: Firewall เวอร์ชันแรกตรวจ Blocklist *หลัง* ตรวจ IHL/L4 Header ซึ่ง `return XDP_PASS` เมื่อ Header ผิดรูป ผู้โจมตีจาก IP ที่ถูกบล็อกจึงผ่านได้ด้วยแพ็กเก็ตที่ IHL ผิด, TCP Header สั้น หรือ Fragment ที่ไม่ใช่ชิ้นแรก **ให้ตัดสินใจเรื่อง Policy ทันทีที่มีข้อมูลพอ (หลังอ่าน IPv4 Header 20 ไบต์)**
+- **Map Key ที่เป็น IP**: ใช้ `binary.NativeEndian` ฝั่ง Go ให้ตรงกับการอ่าน `__u32` ในเคอร์เนล ไม่ควร Hard-code `LittleEndian`
+- **Load Balancer ต้องมีเส้นทางขากลับ**: DNAT ขาเข้าอย่างเดียวทำให้ Backend ตอบกลับด้วย IP ของตัวเองและ Client ส่ง RST แล็บ Week 08 ใช้ Reverse SNAT ที่ TCX Ingress (แชร์ Flow Table แบบ LRU กับ XDP) และคำนวณ Checksum ด้วย `bpf_l3_csum_replace` / `bpf_l4_csum_replace` + `BPF_F_PSEUDO_HDR` อีกทางเลือกคือ DSR (Direct Server Return)
+- **การเลือก Backend**: `sport % N` ใช้ไม่ได้จริง เพราะ Linux มักเลือก Ephemeral Port เป็นเลขคู่สำหรับ `connect()` ทุก Request จึงลง Backend เดียว ต้องใช้ Flow Hash
+- **XDP บน veth**: โหมด Native `XDP_TX` บน veth จะดรอปแพ็กเก็ต (`xdp_tx_errors`) ถ้า Peer ไม่มีโปรแกรม XDP หรือไม่เปิด GRO แล็บจึงใช้ Generic Mode และแพ็กเก็ตที่ส่งด้วย `XDP_TX` จะไม่ผ่าน TC Egress
+- **Checksum Offload ซ่อน Bug**: เมื่อเปิด TX Checksum Offload บน veth Checksum ที่ผิดจะไม่ถูกตรวจพบ ให้ปิดด้วย `ethtool -K <iface> tx off` ระหว่างทดสอบ และตรวจ Checksum ใน Unit Test ด้วย `BPF_PROG_TEST_RUN` (ดูหัวข้อ 6.4)
+- แล็บทั้งหมดรองรับเฉพาะ IPv4 การรองรับ IPv6 เป็นแบบฝึกหัดท้ายบท
+
 ---
 
 # บทที่ 5: การสตรีมข้อมูลด้วย Ring Buffer และการบล็อกด้วย BPF LSM (เฟส 05)
@@ -890,7 +903,7 @@ bpf_l4_csum_replace(skb, tcp_offset + offsetof(struct tcphdr, check), old_ip, ne
                                                               v
 +-----------------------------------------------------------------------------------+
 | Consumer (User Space Application / Go):                                           |
-|  [ ringbuf.NewReader() ] <--- ดึง Event เรียงลำดับเวลาอย่างถูกต้อง แม่นยำ 100%     |
+|  [ ringbuf.NewReader() ] <--- ดึง Event ตามลำดับการ Reserve (ข้ามทุก CPU)          |
 +-----------------------------------------------------------------------------------+
 ```
 
@@ -1018,6 +1031,14 @@ int BPF_PROG(restrict_sensitive_files, struct file *file) {
 
 char _license[] SEC("license") = "GPL";
 ```
+
+#### 5.5 บันทึกจากการทดลองจริง (Lab Notes จาก Week 09–10)
+- **Uprobe บน TLS**: ต้อง Hook ทั้ง `SSL_write` และ `SSL_write_ex` (CPython และ OpenSSL 3 ใช้ `SSL_write_ex`) ใช้ได้เฉพาะโปรแกรมที่ Link กับ `libssl` แบบ Dynamic มองไม่เห็นทราฟฟิกของ Go `crypto/tls`, Rust `rustls`, GnuTLS (เช่น `wget`), BoringSSL และ OpenSSL แบบ Static
+- **จริยธรรม**: การดักอ่าน Plaintext ของ TLS ทำได้เฉพาะบนเครื่องของตนเองหรือระบบที่ได้รับอนุญาตเป็นลายลักษณ์อักษร
+- **Exec Tracing**: ใช้ `tracepoint/sched/sched_process_exec` เป็นค่าเริ่มต้น (ดูข้อสังเกตเรื่อง `syscalls:sys_enter_*` ในบทที่ 7.4)
+- **BPF LSM: Attach สำเร็จ ≠ บังคับใช้จริง** ถ้า `bpf` ไม่อยู่ใน `/sys/kernel/security/lsm` เคอร์เนลจะไม่เรียกโปรแกรม LSM เลย แม้ Attach สำเร็จ วิธีเปิดใช้: เพิ่ม `lsm=<รายการเดิมทั้งหมด>,bpf` ใน `GRUB_CMDLINE_LINUX` แล้ว `update-grub` และรีบูต **ห้ามตัด LSM เดิม (เช่น apparmor, landlock) ออกจากรายการ**
+- **ค่าที่คืนจาก LSM Hook**: คืน `-EPERM` (ประกาศ `#define EPERM 1`) แอปพลิเคชันจะได้ errno `EPERM` จาก `open()`
+- **การจับคู่ด้วยชื่อไฟล์ (Basename) หลบได้ง่าย** ด้วย Hard link และเกิด False Positive (เช่น `secrets.pyc` ของ Python) การป้องกันที่แม่นยำกว่าคือจับคู่ด้วย (device, inode) และใช้ `bpf_d_path` สำหรับบันทึก Path เต็ม
 
 ---
 
@@ -1226,7 +1247,7 @@ sudo tc qdisc del dev eth0 clsact
 | 8 | `bpf_get_current_pid_tgid()` | Tracing / LSM | ดึงค่า PID และ Thread Group ID ของ Process ปัจจุบัน |
 | 9 | `bpf_get_current_uid_gid()` | Tracing / LSM | ดึงค่า UID และ GID ของผู้ใช้งานที่เป็นเจ้าของ Process |
 | 10 | `bpf_get_current_comm(buf, size)` | Tracing / LSM | อ่านชื่อโปรแกรมของ Process ปัจจุบัน (เช่น `curl`, `nginx`) |
-| 11 | `bpf_printk(fmt, ...)` | ทุกประเภท | พิมพ์ข้อความ Debug เข้าสู่ `/sys/kernel/debug/tracing/trace_pipe` |
+| 11 | `bpf_printk(fmt, ...)` | ทุกประเภท | พิมพ์ข้อความ Debug เข้าสู่ `/sys/kernel/tracing/trace_pipe` |
 | 12 | `bpf_probe_read_user(dst, size, src)` | Tracing / LSM | อ่านหน่วยความจำจาก User Space Process อย่างปลอดภัย |
 | 13 | `bpf_probe_read_kernel(dst, size, src)`| Tracing / LSM | อ่านหน่วยความจำจาก Kernel Space Data Structure |
 | 14 | `bpf_xdp_adjust_head(ctx, delta)` | XDP | ขยายหรือลดขนาด Packet Header (ใช้เพิ่ม/ตัด VLAN, Encapsulation) |
@@ -1239,93 +1260,222 @@ sudo tc qdisc del dev eth0 clsact
 
 ---
 
+### 6.4 การทดสอบโปรแกรม eBPF อัตโนมัติด้วย `BPF_PROG_TEST_RUN` และการอ่าน Verifier Log
+
+โปรแกรม eBPF ก็เป็นซอฟต์แวร์ที่ต้องมี Unit Test เหมือนโค้ดทั่วไป เคอร์เนลมีคำสั่ง `BPF_PROG_TEST_RUN` (ผ่าน `bpf()` syscall) ให้ป้อนข้อมูลจำลองเข้าโปรแกรมแล้วรับค่า Return Code และข้อมูลขาออกกลับมา **โดยไม่ต้องผูกโปรแกรมกับ Interface จริง** รองรับโปรแกรมประเภท XDP, TC (`sched_cls`), `socket_filter`, `flow_dissector`, `raw_tracepoint` และ `tracing` (fentry/fexit)
+
+```
+  Go Test (go test -exec sudo)                Kernel
+ +-----------------------------+   bpf(BPF_PROG_TEST_RUN)   +---------------------------+
+ | สร้าง Packet จำลอง (bytes)   | -------------------------> | รันโปรแกรม XDP/TC 1..N รอบ |
+ | ตรวจ retval == XDP_DROP ?   | <------------------------- | คืน retval + data_out     |
+ | ตรวจ Packet ขาออก / Map     |   retval, data_out, duration +---------------------------+
+ +-----------------------------+
+```
+
+ใน `cilium/ebpf` (v0.16) มี 3 ฟังก์ชันหลัก:
+
+| ฟังก์ชัน | ใช้ทำอะไร |
+| :--- | :--- |
+| `prog.Run(&ebpf.RunOptions{Data: pkt, DataOut: out})` | รัน 1 ครั้ง ได้ `retval` และ Packet ขาออก (ตรวจว่า Rewrite Header/Checksum ถูกต้อง) |
+| `prog.Test(pkt)` | รูปแบบย่อ คืน `(retval, dataOut, err)` |
+| `prog.Benchmark(pkt, repeat, reset)` | รันซ้ำ `repeat` รอบในเคอร์เนล คืนเวลาเฉลี่ยต่อรอบ ใช้วัด Overhead ของโปรแกรมแทนการเดาตัวเลข |
+
+ตัวอย่าง Unit Test สำหรับ XDP Firewall:
+
+```go
+func TestDropBlockedIP(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("BPF_PROG_TEST_RUN ต้องใช้สิทธิ์ root (รันด้วย go test -exec sudo)")
+	}
+	var objs bpfObjects
+	if err := loadBpfObjects(&objs, nil); err != nil {
+		t.Fatalf("load: %+v", err) // %+v พิมพ์ Verifier Log ฉบับเต็มเมื่อโหลดไม่ผ่าน
+	}
+	defer objs.Close()
+
+	// ใส่ IP ที่ต้องการบล็อกลง Map ก่อนทดสอบ (Network Byte Order)
+	blocked := binary.LittleEndian.Uint32(net.ParseIP("10.0.0.66").To4())
+	if err := objs.BlocklistMap.Put(blocked, uint8(1)); err != nil {
+		t.Fatal(err)
+	}
+
+	pkt := buildIPv4TCP("10.0.0.66", "10.0.0.1", 12345, 80) // ฟังก์ชันช่วยสร้าง Eth+IPv4+TCP
+	ret, err := objs.XdpFirewall.Run(&ebpf.RunOptions{Data: pkt})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ret != 1 /* XDP_DROP */ {
+		t.Fatalf("want XDP_DROP, got %d", ret)
+	}
+}
+```
+
+> ชื่อ `BlocklistMap` / `XdpFirewall` ขึ้นกับชื่อ Map/Program ในไฟล์ C ของแต่ละแล็บ (bpf2go แปลงเป็น CamelCase ให้) ดูตัวอย่างจริงได้ใน `main_test.go` ของแล็บที่มีชุดทดสอบ และรันทั้งหมดได้ด้วย `make test` ที่ Root ของ Repository
+
+**หลักการเขียน Test ที่ดีสำหรับ eBPF:**
+1. **Happy path + Negative path**: แพ็กเก็ตปกติต้อง `XDP_PASS` แพ็กเก็ตที่ตรงเงื่อนไขต้อง `XDP_DROP`
+2. **Malformed input**: แพ็กเก็ตสั้นกว่า Header, IHL ผิด, ไม่ใช่ IPv4 (เช่น IPv6/ARP) ต้องไม่ทำให้โปรแกรมทำงานผิด
+3. **ตรวจ Side effect**: อ่านค่า Map หลังรัน (Counter เพิ่มถูกต้องหรือไม่) และตรวจ `DataOut` เมื่อโปรแกรมแก้ไข Header (เช่น DNAT ต้องคำนวณ Checksum ใหม่ให้ถูก)
+4. **อ่าน Verifier Log เมื่อโหลดไม่ผ่าน**: Error ที่ได้จาก `loadBpfObjects` เป็น `*ebpf.VerifierError` ให้พิมพ์ด้วย `%+v` จะได้ Log ทุกบรรทัด บรรทัดท้ายสุดคือสาเหตุ (เช่น `invalid access to packet, off=34 size=2, R1(id=0,off=34,r=34)` หมายถึงลืมตรวจ Bounds ก่อนอ่าน 2 ไบต์ที่ offset 34)
+
+**ข้อสังเกตจากการทดลองจริงบน Linux 7.0 (Week 11–12):**
+- Verifier รุ่นใหม่ฉลาดขึ้น: การ Dereference ค่าที่ได้จาก `bpf_map_lookup_elem` บน **ARRAY Map ด้วย Key คงที่** โดยไม่ตรวจ NULL ผ่าน Verifier ได้ (เพราะพิสูจน์ได้ว่า Index อยู่ในช่วง) ตัวอย่าง "ลืมตรวจ NULL" จึงต้องใช้ HASH Map
+- ข้อความ Error ของ Bounds Check อาจไม่ตรงกับที่คาด เช่น Clang แยกการอ่าน `h_proto` 2 ไบต์เป็น 1 ไบต์ ทำให้ได้ `off=12 size=1`
+- Atomic แบบคืนค่า (`__sync_fetch_and_add` ที่ใช้ค่าที่ได้กลับ, `__sync_val_compare_and_swap`) ต้องคอมไพล์ด้วย `-mcpu=v3` (ใส่ `-cflags "-mcpu=v3"` ใน `go:generate` ของ bpf2go) และเคอร์เนล 5.12+
+- ค่าใน Config Map (ARRAY) เริ่มต้นเป็นศูนย์ทุกช่อง โค้ดต้องตีความ 0 เป็น "ใช้ค่า Default" มิฉะนั้น Limit = 0 จะดรอปทุกแพ็กเก็ต (bug จริงที่พบใน Week 12)
+- `RunOptions.CPU` ใช้ไม่ได้กับโปรแกรม XDP
+- **Auto-ban จาก IP ต้นทางเป็นช่องทาง DoS**: ผู้โจมตีปลอม Source IP ของผู้ใช้จริงเพื่อให้ระบบแบนผู้ใช้จริงได้
+
+**ข้อจำกัด**: `BPF_PROG_TEST_RUN` ไม่ได้จำลองทุกอย่างของเส้นทางจริง เช่น `XDP_REDIRECT` ไปยัง AF_XDP socket, ค่า `ingress_ifindex` จริง หรือพฤติกรรมของ Driver ในโหมด Native จึงยังต้องมีการทดสอบจริงบน veth/netns ควบคู่กัน
+
+---
+
 # บทที่ 7: ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ Fleet (เฟส 07)
 
-ในระบบปฏิบัติการลินุกซ์ระดับโปรดักชัน ภัยคุกคามและการสูญหายของข้อมูลมักเกิดขึ้นลึกเกินกว่าที่เครื่องมือ User Space ทั่วไปจะตรวจจับได้ เฟสนี้จะนำเทคนิค eBPF ขั้นสูงมาใช้เพื่อสร้างเกราะป้องกันและการสืบสวนเชิงลึก
+ในระบบปฏิบัติการลินุกซ์ระดับโปรดักชัน ภัยคุกคามและการสูญหายของข้อมูลมักเกิดขึ้นลึกเกินกว่าที่เครื่องมือ User Space ทั่วไปจะตรวจจับได้ เฟสนี้นำเทคนิค eBPF ขั้นสูงมาใช้สร้างเครื่องมือสืบสวนและเฝ้าระวัง พร้อมกับเรียนรู้ **ข้อจำกัดและช่องทางหลบเลี่ยง (Evasion)** ของเครื่องมือเหล่านั้นอย่างตรงไปตรงมา เพราะเครื่องมือความปลอดภัยที่ไม่รู้จุดอ่อนของตัวเองอันตรายกว่าไม่มีเครื่องมือ
 
-### 7.1 วินิจฉัยและสืบสวน Packet Drops ด้วย `tracepoint:skb:kfree_skb`
-เมื่อแพ็กเก็ตเน็ตเวิร์กสูญหายในลินุกซ์ เคอร์เนลจะไม่ทิ้งแพ็กเก็ตเงียบๆ แต่จะเรียกฟังก์ชันภายใน `kfree_skb()` หรือปล่อยอีเวนต์ Tracepoint `skb:kfree_skb` พร้อมด้วยรหัสสาเหตุ (Drop Reason):
-- โครงสร้างอีเวนต์มีฟิลด์ `reason` (เช่น `SKB_DROP_REASON_TCP_CSUM`, `SKB_DROP_REASON_NO_SOCKET`, `SKB_DROP_REASON_NETFILTER_DROP`)
-- การดักฟัง ณ จุดนี้ทำให้เราทราบว่าแพ็กเก็ตคู่สนทนาใด (Src/Dst IP และ Port) ถูกดรอป และถูกดรอปด้วยเหตุผลใดในระดับ Subsystem
+### 7.0 กฎเหล็กของ Tracing แบบ CO-RE: ห้ามเขียน Struct ของเคอร์เนลเอง
 
-### 7.2 Zero-Trust Socket Egress Control ด้วย `cgroup/connect4`
-การควบคุมความปลอดภัยของคอนเทนเนอร์และโพรเซสที่แท้จริงต้องควบคุมตั้งแต่ชั้น Socket Creation:
-- eBPF Hook ประเภท `cgroup/connect4` ทำงานในจังหวะที่ Application เรียกคำสั่ง `connect()` ระบบจะส่ง `struct bpf_sock_addr` เข้ามาในโปรแกรม
-- โปรแกรม eBPF สามารถอ่านปลายทาง `user_ip4`, `user_port` และส่งคืนค่า `1` (อนุญาต) หรือ `0` (บล็อก)
-- หากส่งคืน `0` เคอร์เนลจะปฏิเสธการเชื่อมต่อทันทีด้วยข้อผิดพลาด `EPERM` (Operation not permitted) โดยที่แพ็กเก็ต SYN ไม่เคยถูกสร้างหรือส่งออกจากการ์ดเครือข่ายเลย
+แล็บเวอร์ชันแรกของเฟสนี้เคยประกาศ Struct ของ Tracepoint เองด้วยมือ (เช่น `struct trace_kfree_skb_args`) ผลที่พบจากการทดลองจริงคือ:
+- **Week 13**: Tracepoint `skb:kfree_skb` บนเคอร์เนลใหม่มีฟิลด์ `rx_sk` เพิ่มเข้ามา ทำให้ Offset ของ `reason` เลื่อนจาก 28 เป็น 36 ไบต์ Struct ที่เขียนตายตัวสำหรับเคอร์เนลหนึ่งจะอ่านค่าขยะบนอีกเคอร์เนลหนึ่ง
+- **Week 16**: Struct ที่เขียนเองอ่าน `cmd` ของ `sys_enter_bpf` ที่ Offset 12 แต่เคอร์เนลจริงวางไว้ที่ Offset 16 ผลคือทุกอีเวนต์ถูกรายงานเป็น `BPF_MAP_CREATE` ทั้งหมด
 
-### 7.3 การตรวจจับ Reverse Shell และ Web RCE ผ่าน `task_struct real_parent`
-ผู้บุกรุกที่สามารถเจาะผ่าน Web Application (เช่น Nginx, Apache, Node.js) มักจะรัน Interactive Shell (เช่น `/bin/bash`, `sh`, `python -c ...`) เพื่อเปิดช่องทางย้อนกลับ (Reverse Shell):
-- เราใช้ Tracepoint `sched_process_exec` ร่วมกับ CO-RE เพื่อเข้าถึงโครงสร้าง `task_struct` ของเคอร์เนล
-- อ่านค่า `bpf_get_current_task()` แล้วสำรวจตัวแปรบรรพบุรุษ `task->real_parent->comm`
-- หากโพรเซสลูกคือ Shell หรือสคริปต์คอมมานด์ไลน์ แต่โพรเซสพ่อคือ Daemon หรือ Web Server เช่น `nginx`, `httpd`, `python`, `node` ระบบจะยกระดับเป็นแจ้งเตือนวิกฤต (Critical Threat Event) ทันที
+แนวทางที่ถูกต้อง:
+```c
+#include "vmlinux.h"                 // Type ทั้งหมดมาจาก BTF ของเคอร์เนลจริง
+#include <bpf/bpf_core_read.h>
 
-### 7.4 การตรวจจับ eBPF Rootkits และการ Audit ความปลอดภัยผ่าน `sys_enter_bpf`
-มัลแวร์ยุคใหม่ (เช่น Symbiote, TripleCross, BPFDoor) เริ่มนำ eBPF มาใช้เป็น Rootkit ซ่อนตัว:
-- มัลแวร์เหล่านี้จะเรียกคำสั่ง Syscall `__NR_bpf` ด้วยคำสั่ง `BPF_PROG_LOAD` หรือ `BPF_RAW_TRACEPOINT_OPEN`
-- เราสามารถใช้ `tracepoint/syscalls/sys_enter_bpf` เพื่อดักจับทุกคำสั่ง Syscall `bpf()`
-- ตรวจสอบชนิดโปรแกรม (`ins.prog_type`) และตรวจสอบสิทธิการเข้าถึงของผู้สั่งการ หากพบโพรเซสที่ไม่ได้รับอนุญาต พยายามโหลดโปรแกรมประเภท Kprobe หรือ XDP จะส่งสัญญาณแจ้งเตือนไปยังระบบ SIEM ทันที
+SEC("tracepoint/skb/kfree_skb")
+int trace_drop(struct trace_event_raw_kfree_skb *ctx)
+{
+    __u32 reason = BPF_CORE_READ(ctx, reason);        // libbpf ปรับ Offset ให้ตอนโหลด
+    if (bpf_core_field_exists(ctx->rx_sk)) {           // ฟิลด์นี้มีเฉพาะเคอร์เนลใหม่
+        /* ... */
+    }
+    return 0;
+}
+```
+ตรวจรูปแบบจริงของ Tracepoint บนเครื่องได้ที่ `/sys/kernel/tracing/events/<subsystem>/<event>/format` ทุกครั้งก่อนเขียนโค้ด
+
+### 7.1 วินิจฉัย Packet Drops ด้วย `tracepoint:skb:kfree_skb`
+เมื่อเคอร์เนลทิ้งแพ็กเก็ต จะเรียก `kfree_skb_reason()` และยิง Tracepoint `skb:kfree_skb` พร้อมรหัสสาเหตุ (`enum skb_drop_reason`):
+- ชื่อสาเหตุ (เช่น `NO_SOCKET`, `TCP_CSUM`, `NETFILTER_DROP`) ควรแปลงจาก **BTF ของเคอร์เนลที่รันอยู่** ไม่ใช่ตารางที่เขียนตายตัว เพราะค่าตัวเลขเปลี่ยนไปตามเวอร์ชันเคอร์เนล
+- **16 บิตบนของ reason คือ Subsystem** เช่นค่า `0x10058` ที่เคยดูเหมือนค่าขยะ จริง ๆ คือสาเหตุจาก Subsystem `mac80211` (Wi-Fi) รหัส `0x58`
+- PID/COMM ที่ได้ในอีเวนต์นี้มักเป็นบริบท SoftIRQ (เช่น `swapper/3`, `ksoftirqd`) **ไม่ใช่เจ้าของแพ็กเก็ต** ต้องระวังการตีความ
+- ตำแหน่งที่ดรอป (`location`) ควรแสดงเป็น `symbol+offset` โดยเทียบกับ `/proc/kallsyms`
+
+### 7.2 Socket Egress Control ด้วย `cgroup/connect4`
+- Hook `cgroup/connect4` ทำงานทุกครั้งที่โพรเซสใน cgroup เรียก `connect()` บน IPv4 ได้รับ `struct bpf_sock_addr` ที่อ่าน `user_ip4`, `user_port` ได้
+- คืนค่า `1` = อนุญาต, `0` = ปฏิเสธ (แอปพลิเคชันได้ `EPERM`) โดยไม่มีแพ็กเก็ต SYN ถูกส่งออก
+- **ต้องผูกกับ cgroup เฉพาะของแล็บเสมอ** (เช่น `/sys/fs/cgroup/w14-sock-enforce`) การผูกกับ Root cgroup จะกระทบทุกโพรเซสในเครื่อง แล็บเวอร์ชันใหม่จึงปฏิเสธ Root cgroup ถ้าไม่ระบุ `-allow-root`
+- Overhead: โปรแกรมรันหนึ่งครั้งต่อการเรียก `connect()` (ไม่ใช่ต่อแพ็กเก็ต) จึงต่ำ แต่ไม่ใช่ศูนย์
+- **ช่องทางหลบเลี่ยงที่ยืนยันแล้วจากการทดลอง**: UDP `sendto()` โดยไม่เรียก `connect()` (ต้องเพิ่ม Hook `cgroup/sendmsg4`), การเชื่อมต่อผ่าน IPv6 / IPv4-mapped IPv6 (ต้องเพิ่ม `cgroup/connect6`) และ Socket ที่สร้างก่อนโพรเซสถูกย้ายเข้า cgroup
+
+### 7.3 การตรวจจับ Reverse Shell ผ่าน `task_struct`
+- ใช้ `tracepoint/sched/sched_process_exec` (ทำงานครบทุก CPU) อ่าน `task->real_parent->comm` ด้วย `BPF_CORE_READ`
+- การจับคู่ชื่อแบบ **Prefix** (`"nc"`, `"pyth"`) ทำให้เกิด False Positive และการเทียบเฉพาะชื่อ `comm` หลบได้ง่ายด้วย `cp /bin/sh /tmp/x` แล็บเวอร์ชันใหม่จึงใช้:
+  1. ชื่อแบบ Exact Match จาก Map ที่แก้ไขได้ขณะรัน
+  2. **สัญญาณเชิงพฤติกรรม**: ตรวจว่า File Descriptor 0/1/2 ของ Shell เป็น Network Socket หรือไม่ (`task->files->fdt->fd[i]->...->skc_family`) ซึ่งจับ Shell ที่ถูกเปลี่ยนชื่อได้
+  3. ข้าม Unix Domain Socket เพราะ Node.js/libuv ใช้เป็น stdio ของโพรเซสลูกตามปกติ (False Positive ที่พบจริง)
+- **Evasion ที่ยังหลบได้**: Reverse Shell ที่ใช้ PTY (fd 0/1/2 เป็น `/dev/pts/*` ไม่ใช่ Socket) และสคริปต์ Shebang จะมี `comm` เป็นชื่อสคริปต์แทนชื่อ Interpreter
+
+### 7.4 eBPF Integrity Auditor: เฝ้าระวังการใช้ `bpf()` Syscall
+มัลแวร์ยุคใหม่ (เช่น BPFDoor, Symbiote, TripleCross) ใช้ eBPF ซ่อนตัว เครื่องมือตรวจสอบจึงต้องรู้ว่าใครโหลดโปรแกรม BPF อะไร:
+- **Hook หลัก**: `fentry/__sys_bpf` อ่าน `cmd` และ `attr` ด้วย CO-RE, **Fallback**: `raw_syscalls/sys_enter` กรอง `id == __NR_bpf`
+- **Startup Scan**: ตอนเริ่มทำงานให้ไล่ดูโปรแกรมที่ถูกโหลดไว้ก่อนแล้วด้วย `ebpf.ProgramGetNextID()` + `ebpf.NewProgramFromID()` และต้องทำ **หลัง** Attach Hook แล้ว เพื่อไม่ให้มีช่องว่างที่โปรแกรมหลุดรอดระหว่างสแกน
+- **ข้อจำกัดที่ต้องยอมรับ**: ผู้โจมตีที่มีสิทธิ์ root/`CAP_SYS_ADMIN` สามารถ kill หรือ detach ตัว Auditor ได้; การอ่าน `bpf_attr` จาก User Memory มีปัญหา TOCTOU; ถ้าต้องการ "บังคับ" ไม่ใช่แค่ "เฝ้าดู" ต้องใช้ BPF LSM Hook `bpf` / `bpf_prog_load`, BPF Token และ Program Signing ร่วมด้วย
+
+> ⚠️ **ข้อสังเกตจากเคอร์เนลทดลอง (Linux 7.0.0-38-generic, Ubuntu 26.04)**: พบว่าโปรแกรม BPF ที่ผูกกับ Tracepoint `syscalls:sys_enter_*` **บางตัว** ทำงานเฉพาะเมื่อ Syscall เกิดบน CPU 0 (ทดสอบ exec 24 ครั้งกระจายบน 8 CPU: `sys_enter_execve` จับได้ 3 ครั้ง ขณะที่ `raw_syscalls:sys_enter` และ `sched:sched_process_exec` จับได้ครบ 24 ครั้ง) พบอาการเดียวกันกับ `sys_enter_openat` แต่ `sys_enter_bpf` และ `sys_enter_getppid` ทำงานครบทุก CPU ยังไม่ได้ยืนยันสาเหตุในซอร์สโค้ดเคอร์เนล แล็บในหลักสูตรนี้จึงหลีกเลี่ยง `syscalls:sys_enter_*` สำหรับงานที่ต้องการความครบถ้วน และใช้ `sched_process_exec`, `raw_syscalls` หรือ `fentry` แทน **บทเรียนสำคัญ: เครื่องมือความปลอดภัยต้องทดสอบด้วยการกระจายเหตุการณ์ทุก CPU (`taskset -c N`) เสมอ**
 
 ---
 
 # บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 08)
 
 ### 8.1 การวัด Storage Block I/O Latency ด้วย Log2 Histograms
-การทำความเข้าใจความเร็วของดิสก์ระดับ Sub-millisecond จำเป็นต้องวัดความหน่วงของคำขอ I/O ตั้งแต่จังหวะส่งเข้าคิวจนถึงฮาร์ดแวร์ตอบสนอง:
-- จับคู่ Tracepoint `block:block_rq_issue` (บันทึก Timestamp ขาเริ่ม) กับ `block:block_rq_complete` (คำนวณ Delta เวลา) โดยใช้ `struct request *` หรือ Sector Number เป็นกุญแจ
-- คำนวณความหน่วงในระดับ Microseconds และจัดเก็บลงใน **Log2 Histogram Array Map**
-- User Space ดึงตารางแจกแจงความถี่มาพล็อตเป็นกราฟแท่ง ASCII แสดงการกระจายตัวของ Latency อย่างชัดเจน
+- ใช้ `tp_btf/block_rq_issue` และ `tp_btf/block_rq_complete` (BTF-enabled Tracepoint ได้ `struct request *` ตรง ๆ) และ Attach ด้วย `link.AttachTracing`
+- **Key ของ Map ที่ถูกต้องคือ Pointer ของ `struct request`** ไม่ใช่ (dev, sector) เพราะ Flush Request ไม่มี Sector จริง และ Partial Completion จะทำให้คู่ Issue/Complete จับคู่ผิด
+- คำนวณ Bucket ด้วย log2 แบบ Branch-free (เทคนิคเดียวกับ libbpf-tools) แทนการ Unroll 31 ขั้น
+- การเพิ่มค่าใน Histogram ต้องใช้ `__sync_fetch_and_add` และสร้าง Bucket ด้วย `BPF_NOEXIST` เพื่อไม่ให้สอง CPU เขียนทับกัน
+- แยก Histogram ตามดิสก์และชนิด I/O (READ / WRITE / OTHER) จะเห็นภาพชัดกว่ารวมกันทั้งหมด
+- **ข้อควรระวังเชิงปฏิบัติ**: `/tmp` บน Ubuntu เป็น tmpfs (อยู่ใน RAM) ต้องใช้ `/var/tmp` หรืออุปกรณ์จริงจึงจะเกิด Block I/O และบน Ubuntu 26.04 คำสั่ง `dd` ค่าเริ่มต้นเป็น Rust uutils ที่ล้มเหลวกับ `iflag=direct` บนอุปกรณ์ Block ให้ใช้ `gnudd` แทน
 
-### 8.2 การทำ CPU Profiling และถอดรหัส Kernel Call Stack ด้วย `perf_event`
-การหาคอขวดบน CPU ที่กินเวลาเคอร์เนลสูง:
-- ผูกโปรแกรม eBPF เข้ากับ `perf_event` แบบ Periodic Sampling (เช่น 99Hz เพื่อหลีกเลี่ยงการ Lockstep กับ Clock รอบการทำงาน)
-- ใช้ eBPF Helper `bpf_get_stackid(ctx, &stack_traces, BPF_F_FAST_STACK_CMP)` เพื่อเก็บรวบรวม Instruction Pointers ทั้งหมดใน Kernel Call Stack ลงใน `BPF_MAP_TYPE_STACK_TRACE`
-- ข้อพึงระวังของเคอร์เนลลินุกซ์: ค่า `value_size` ของ Stack Map ต้องจำกัดอยู่ที่ `127 * sizeof(__u64)` เสมอ (`PERF_MAX_STACK_DEPTH = 127`)
-- User Space อ่าน Address จาก Map และเปิดเทียบกับตารางสัญลักษณ์เคอร์เนล `/proc/kallsyms` เพื่อสร้าง Flamegraph
+### 8.2 On-CPU Profiler ด้วย `perf_event` Sampling และการถอดรหัส Stack
+- **On-CPU vs Off-CPU**: การ Sample ที่ `sched_switch` บอกได้แค่ว่าเธรด "หยุดรันที่ไหน" (Off-CPU / Blocking) **ไม่ได้บอกว่าเวลา CPU หมดไปกับอะไร** Profiler แบบ On-CPU ที่ถูกต้องต้อง Sample ตามเวลา
+- ฝั่ง Go เปิด `perf_event_open(PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_CLOCK, freq=99Hz)` ทีละ CPU แล้วผูกโปรแกรม `SEC("perf_event")` ด้วย `link.AttachRawLink{Attach: ebpf.AttachPerfEvent}` (มี Fallback เป็น ioctl `PERF_EVENT_IOC_SET_BPF`)
+- 99 Hz (ไม่ใช่ 100) เพื่อหลีกเลี่ยงการ Sample พร้อมกับงานที่ทำงานเป็นจังหวะตาม Timer (Lockstep)
+- `bpf_get_stackid()` ด้วย flags `0` และ **นับจำนวน Collision (`-EEXIST`) แล้วรายงาน** — การใช้ `BPF_F_REUSE_STACKID` จะเขียนทับ Stack เดิมที่ Hash ชนกันทำให้ตัวเลข Profile ผิดแบบเงียบ ๆ
+- Kernel Stack แปลงเป็นชื่อด้วย `/proc/kallsyms` ส่วน User Stack แปลงด้วย `/proc/<pid>/maps` + ตาราง Symbol ใน ELF; User Stack จะสมบูรณ์ได้ต้องคอมไพล์โปรแกรมเป้าหมายด้วย Frame Pointer (`-fno-omit-frame-pointer`) และฟังก์ชันที่ถูก Tail-call จะหายไปจาก Stack
+- ส่งออกเป็นรูปแบบ Folded Stack (`-folded out.txt`) สำหรับ `flamegraph.pl` ของ Brendan Gregg
+- ผลทดสอบจริง: Workload ที่ออกแบบให้ Hot Path ใช้เวลาสัดส่วน 2:1 วัดได้ ~1.93:1 ที่ 99 Hz
 
-### 8.3 การเฝ้าระวัง Page Faults และการส่งสัญญาณเตือน OOM Killer
-การบริหารหน่วยความจำในระบบ High-load:
-- สังเกตการณ์ User-space Page Faults ผ่าน `tracepoint:exceptions:page_fault_user` เพื่อวัดอัตราการขอหน่วยความจำใหม่ของโพรเซส
-- ติดตั้งตัวตรวจจับหายนะหน่วยความจำผ่าน `tracepoint:oom:mark_victim` ซึ่งเคอร์เนลจะยิงอีเวนต์ทันทีที่ OOM Killer ตัดสินใจสังหารโพรเซส พร้อมสกัดชื่อโพรเซสและคะแนน `oom_score` เพื่อแจ้งเตือนก่อนที่แอปพลิเคชันหลักจะล่ม
+### 8.3 การเฝ้าระวัง Page Faults และ OOM Killer
+- `tracepoint:exceptions:page_fault_user` มีเฉพาะบน x86 และชื่อ Struct เปลี่ยนไปตามเวอร์ชัน (`trace_event_raw_exceptions` / `x86_exceptions`) ให้เลือกด้วย CO-RE และอ่านผ่าน `BPF_CORE_READ` (การอ่าน ctx ตรง ๆ ในกรณีนี้ถูก Verifier ปฏิเสธด้วย "modified ctx ptr")
+- `tracepoint:oom:mark_victim` ฟิลด์ที่มีขึ้นกับเวอร์ชันเคอร์เนล ต้องตรวจด้วย `bpf_core_field_exists` ขนาดหน่วยความจำในอีเวนต์เป็นหน่วย kB อยู่แล้ว
+- **Task ปัจจุบันขณะที่ `mark_victim` ทำงาน คือโพรเซสที่ "ทำให้เกิด" OOM ไม่จำเป็นต้องเป็นโพรเซสที่ถูกฆ่า** ข้อมูลเหยื่อต้องอ่านจากฟิลด์ของอีเวนต์
+- ทดลอง OOM อย่างปลอดภัยใน cgroup ที่จำกัดหน่วยความจำ: `systemd-run --user --scope -p MemoryMax=50M -p MemorySwapMax=0 <โปรแกรม>` (ต้องปิด Swap ของ Scope ไม่เช่นนั้นจะไม่ถึง OOM)
 
 ---
 
 # บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 09)
 
-### 9.1 TCP Sockops และ `sk_msg` Fastpath Socket Bypass (ข้าม TCP/IP Stack)
-ในระบบ Microservices หรือ Sidecar Proxy (เช่น Envoy, Istio) ที่รันบนเครื่องโฮสต์เดียวกัน แพ็กเก็ต TCP ท้องถิ่น (`127.0.0.1` หรือ Intra-node Pods) ต้องเดินทางผ่าน TCP/IP Stack สองรอบ (Egress IP/TCP -> Loopback -> Ingress IP/TCP):
-- เราใช้คู่หู **Sockops** (`sockops` hook) ดักจับจังหวะ `BPF_SOCK_OPS_PASSIVE_ESTABLISHED_CB` และ `ACTIVE_ESTABLISHED_CB` เพื่อบันทึกคู่ Socket ลงใน `BPF_MAP_TYPE_SOCKHASH`
-- ติดตั้งโปรแกรม **sk_msg** (`SEC("sk_msg")`) เข้ากับ Socket Map
-- เมื่อแอปพลิเคชันเรียก `sendmsg()` โค้ด eBPF จะเรียก `bpf_msg_redirect_hash()` เพื่อส่ง Payload เข้าสู่ RX Queue ของ Socket ปลายทางโดยตรง ข้าม Routing, TCP State Machine, IP Packetization และ Netfilter ทั้งหมด ส่งผลให้ Throughput สูงขึ้นเกือบ 3 เท่า และ Latency ลดลงอย่างมีนัยสำคัญ
+### 9.1 TCP Sockops และ `sk_msg` Socket Redirect
+- โปรแกรม `sockops` จับ `BPF_SOCK_OPS_{ACTIVE,PASSIVE}_ESTABLISHED_CB` แล้วบันทึก Socket ลง `BPF_MAP_TYPE_SOCKHASH` ด้วย Key เป็น 4-tuple
+- โปรแกรม `sk_msg` ทำงานตอน `sendmsg()` สร้าง Key แบบ "กลับด้าน" เพื่อหา Socket ของคู่สนทนา แล้วเรียก `bpf_msg_redirect_hash(..., BPF_F_INGRESS)`
+- **กับดัก Byte Order (bug จริงที่เคยมีในแล็บนี้)**: `local_port` เป็น **Host Byte Order** ส่วน `remote_port` เป็น **Network Byte Order อยู่ใน 16 บิตบน** การสร้าง Key ทั้งสองฝั่งต้องใช้การแปลงแบบเดียวกัน (เช่น `local_port` ตรง ๆ และ `bpf_ntohl(remote_port)`) มิฉะนั้น Lookup จะไม่เจอ ทุกข้อความ Fallback ไปทาง Stack ปกติแบบเงียบ ๆ และตัวนับ "accelerated" ต้องเพิ่มเฉพาะเมื่อ Redirect สำเร็จจริง
+- สิ่งที่ถูกข้าม: Segment/IP Processing ของ Loopback (Routing, Netfilter, TCP Segmentation) **สิ่งที่ไม่ถูกข้าม**: 3-way Handshake และการปิด Connection ยังผ่าน Stack ปกติ และข้อมูลยังถูก Copy (ไม่ใช่ Zero-copy)
+- ผลข้างเคียง: `tcpdump -i lo` และ iptables จะมองไม่เห็น Payload ที่ถูก Redirect (สำคัญต่อการ Debug และ Audit)
+- ผลวัดจริง (Intel i3-12100, Loopback, 1 Stream, Median): Throughput จาก tcpbench 51.5 → 66.3 Gbit/s, จาก iperf3 ~66 → 105–114 Gbit/s, Round-trip Latency ข้อความ 64 ไบต์ (p50) 6.7 → 3.3 µs ตัวเลขขึ้นกับ CPU, ขนาดข้อความ และ Workload ให้วัดซ้ำบนเครื่องตนเอง
+- โปรแกรม `sockops` / `sk_msg` ไม่รองรับ `BPF_PROG_TEST_RUN` การทดสอบจึงต้องเป็น End-to-end ใน cgroup ทดสอบ
 
-### 9.2 สถาปัตยกรรม AF_XDP Zero-Copy Kernel-Bypass Packet Redirect
-เมื่อเครือข่ายต้องการความเร็วระดับ 10G / 40G / 100G:
-- สร้าง Address Family ใหม่ที่ชื่อว่า `AF_XDP` (XSK - XDP Sockets)
-- แอปพลิเคชันจัดสรรพื้นที่หน่วยความจำขนาดใหญ่ที่เรียกว่า **UMEM** (User Memory) ร่วมกับไดรเวอร์การ์ดเครือข่าย
-- eBPF โปรแกรมที่ XDP Hook จะตรวจสอบเงื่อนไขแพ็กเก็ต และเรียก `bpf_redirect_map(&xsks_map, queue_id, 0)`
-- แพ็กเก็ตจะถูก DMA (Direct Memory Access) ส่งตรงเข้าสู่ Fill/Rx Ring ของ UMEM ใน User Space ทันทีโดยไม่ต้องสร้าง `struct sk_buff` และไม่ต้องผ่าน Kernel Network Stack แม้แต่บรรทัดเดียว
+### 9.2 AF_XDP: ส่งแพ็กเก็ตจาก XDP ตรงสู่ User Space
+องค์ประกอบที่ต้องมีครบจึงจะรับแพ็กเก็ตได้ (แล็บเวอร์ชันแรกขาดฝั่ง Socket ทำให้ Redirect เป็น 0 ตลอด):
+1. **UMEM**: หน่วยความจำที่ User Space จองและลงทะเบียนด้วย `setsockopt(XDP_UMEM_REG)` แบ่งเป็น Frame ขนาดคงที่
+2. **4 Ring**: FILL (User ให้ Frame ว่างแก่เคอร์เนล), RX (เคอร์เนลส่ง Frame ที่มีแพ็กเก็ตกลับ), TX และ COMPLETION ทุก Ring ต้อง `mmap` เข้ามา
+3. **Bind** Socket เข้ากับ (ifindex, queue_id) แล้วใส่ fd ลง `BPF_MAP_TYPE_XSKMAP` โดยใช้ **RX Queue ID เป็น Key**
+4. โปรแกรม XDP เรียก `bpf_redirect_map(&xsks_map, ctx->rx_queue_index, XDP_PASS)` — Flag `XDP_PASS` เป็นค่า Fallback เมื่อไม่มี Socket ในช่องนั้น (เคอร์เนล 5.3+)
+
+**Copy mode vs Zero-copy**: บน veth หรือไดรเวอร์ที่ไม่รองรับ จะทำงานใน `XDP_COPY` (มีการ Copy หนึ่งครั้ง แต่ยังข้าม `sk_buff` และ Network Stack) การขอ `XDP_ZEROCOPY` บน veth ได้ `operation not supported` Zero-copy ต้องการไดรเวอร์ที่รองรับ (เช่น i40e, ice, mlx5) ตรวจโหมดได้ด้วย `ss --xdp` (`zc:0` / `zc:1`) ตัวเลขระดับหลายล้าน PPS ในบทความวิชาการ (เช่น Høiland-Jørgensen et al., CoNEXT 2018) วัดบน NIC จริงในโหมด Native/Zero-copy ไม่ควรนำมาอ้างกับการทดลองบน veth
+
+ผลทดสอบจริงในแล็บ: ส่ง UDP 20,005 แพ็กเก็ตผ่าน veth ระหว่าง netns ถูก Redirect และรับครบ 20,005 แพ็กเก็ต ดรอป 0 โดย UDP Counter ของเคอร์เนลฝั่งรับไม่เพิ่มขึ้นเลย (ยืนยันว่าแพ็กเก็ตไม่ผ่าน Network Stack) ส่วน Ping/ARP ยังทำงานปกติเพราะโปรแกรมเลือกส่งเฉพาะ IPv4/UDP เข้า AF_XDP
 
 ---
 
 # บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)
 
-### 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Zero-Overhead Tracing
-ในอดีต การใช้ Kprobes / Kretprobes ต้องพึ่งพาการสลับบริบท Breakpoint Interrupt (`int 3`) ทำให้มี Overhead ต่อการเรียกฟังก์ชันอยู่ที่ประมาณ 100ns - 300ns:
-- เทคโนโลยี **BPF Trampoline** ใช้ประโยชน์จาก ftrace nop instruction (5-byte NOP) ที่คอมไพเลอร์เตรียมไว้หน้าฟังก์ชันเคอร์เนลทุกตัว
-- เคอร์เนลจะเขียนทับ NOP ด้วย Direct Call Jump ข้ามเข้าสู่ JIT-compiled BPF Trampoline โดยตรง
-- ข้อได้เปรียบระดับปฏิวัติวงการ:
-  1. Overhead ลดลงเหลือต่ำกว่า **5 นาโนวินาที**
-  2. โปรแกรม `fentry` และ `fexit` สามารถเข้าถึงอาร์กิวเมนต์ของฟังก์ชันเคอร์เนลได้ตรงๆ เสมือนเป็นฟังก์ชัน C ปกติ (เช่น `int BPF_PROG(trace_open, int dfd, struct filename *name, struct open_how *how)`) โดยไม่ต้องพึ่งพา `PT_REGS_PARM`
-  3. `fexit` สามารถอ่านทั้งอาร์กิวเมนต์ขาเข้าและค่า Return Value (`ret`) ได้พร้อมกันในบริบทเดียว
+### 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Low-Overhead Tracing
+Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) หรือผ่าน ftrace เมื่อจุดที่ Probe เป็นต้นฟังก์ชัน (บนเคอร์เนลทดลอง 7.0 Kprobe ที่ต้นฟังก์ชันแสดงสถานะ `[FTRACE]`) แล้วจึงเรียกโปรแกรม BPF ผ่านชั้น `pt_regs` ส่วน Kretprobe ต้องแทรก Trampoline ที่ Return Address ของทุกการเรียก ซึ่งมีต้นทุนสูง
 
-### 10.2 BPF Iterators (`bpf_iter_task`) การท่องเคอร์เนลโดยตรงระดับ Memory
-การสำรวจสถานะของระบบขนาดใหญ่ (เช่น โปรเซสหมื่นตัว, การเชื่อมต่อ Socket แสนตัว):
-- BPF Iterators ทำงานโดยเปิด File Descriptor ผ่าน Syscall แล้วให้เคอร์เนลทำการ Iteration โครงสร้างข้อมูลภายในทีละโหนดใน Kernel Space
-- แต่ละรอบเคอร์เนลจะส่ง Pointer ของโครงสร้าง (เช่น `struct task_struct *task`) ให้กับฟังก์ชัน BPF `SEC("iter/task")`
-- โค้ด BPF สามารถฟิลเตอร์และจัดรูปแบบข้อมูลผ่าน `BPF_SEQ_PRINTF()` สตรีมออกมาทาง Read Syscall
-- ประสิทธิภาพ: การสำรวจข้อมูลโปรเซสทั้งหมดใช้เวลาเพียงเสี้ยวของมิลลิวินาที (Sub-millisecond) และไม่สร้าง Lock Contention บนระบบไฟล์ `/proc`
+- **BPF Trampoline** ใช้ ftrace NOP (5 ไบต์บน x86-64) ที่ต้นฟังก์ชันเคอร์เนล เคอร์เนลเขียนทับเป็น `call` ไปยัง Trampoline ที่ JIT สร้างขึ้นเฉพาะ ซึ่งเรียกโปรแกรม BPF ตรง ๆ
+- โปรแกรม `fentry`/`fexit` เข้าถึงอาร์กิวเมนต์ได้ตรงตาม Signature ใน BTF เช่น `int BPF_PROG(trace_open, int dfd, const char *filename, struct open_how *how)` โดยไม่ต้องใช้ `PT_REGS_PARM`
+- `fexit` อ่านได้ทั้งอาร์กิวเมนต์และค่าที่คืน (`ret`) ในบริบทเดียว **ชนิดของ `ret` ต้องตรงกับ BTF** เช่น `do_sys_openat2` บนเคอร์เนล 7.0 คืน `int` ไม่ใช่ `long` (bug จริงที่เคยมีในแล็บ)
+
+**ผลวัดจริง** (Week 22: Probe `count()` ที่เหมือนกันด้วย bpftrace บน `do_sys_openat2`, Workload `openat()+close()` 1 ล้านครั้ง Pin ไว้ 1 CPU, Best-of-9, 4 รอบ, Linux 7.0.0-38, Intel i3-12100):
+
+| ชนิด Probe | เวลาเพิ่มต่อการเรียก (โดยประมาณ) |
+| :--- | :--- |
+| kprobe | +45–50 ns |
+| kretprobe | +143–159 ns |
+| fentry | +13–26 ns |
+| fexit | +34–44 ns |
+
+- เมื่อเปิด `kernel.bpf_stats_enabled=1` ตัวโปรแกรม BPF เองใช้เวลาเฉลี่ย ~20–23 ns ต่อครั้งในทุกชนิด Probe ส่วนต่างที่เหลือคือต้นทุนของกลไก Attach
+- ข้อสรุปที่เชื่อถือได้: **fexit ถูกกว่า kretprobe อย่างชัดเจน** และ fentry ถูกกว่า kprobe แต่ **ไม่มีชนิดใดที่ "Zero-overhead" หรือต่ำกว่า 5 ns**
+- ข้อควรระวังในการอ้างตัวเลข: วัดขณะ CPU Governor เป็น `powersave` และมีงานอื่นรันอยู่ บางรอบได้ค่าติดลบจาก Baseline ที่แกว่ง หากจะอ้างในงานวิจัยให้วัดซ้ำบนเครื่องว่างด้วย Governor `performance` (ใช้ `make bench` ใน Week 22)
+
+### 10.2 BPF Iterators (`iter/task`) การท่องโครงสร้างเคอร์เนลโดยตรง
+- โปรแกรม `SEC("iter/task")` ถูกเรียกหนึ่งครั้งต่อ Task ฝั่ง User Space สร้าง Iterator ด้วย `BPF_ITER_CREATE` แล้ว `read()` ผลที่โปรแกรมเขียนผ่าน `BPF_SEQ_PRINTF()` (กลไก `seq_file`)
+- **`iter/task` วนทุกเธรด ไม่ใช่ทุกโพรเซส** ถ้าต้องการรายการโพรเซสให้กรองเฉพาะ `task->pid == task->tgid` (เวอร์ชันแรกของแล็บแสดง 603 แถวจาก 159 PID เพราะไม่ได้กรอง) แยก Kernel Thread ได้ด้วย Flag `PF_KTHREAD`
+- ใช้ `ctx->meta->seq_num == 0` เพื่อพิมพ์ Header เพียงครั้งเดียว
+- ผลวัดจริง (Week 23): Iterator ใช้ ~120–170 µs เทียบกับการไล่อ่าน `/proc/*/status` ~2.5–2.7 ms (เร็วกว่าราว 15–22 เท่า) แต่ต้องตีความอย่างระวัง เพราะงานไม่เท่ากัน: Iterator ใช้ `BPF_ITER_CREATE` 1 ครั้ง + `read()` 16 ครั้ง ขณะที่ `/proc` ต้อง `openat` 321 ครั้ง + `read` 1,089 ครั้ง ข้อได้เปรียบหลักคือจำนวน Syscall และการไม่ต้อง Format/Parse ข้อความ **ไม่ใช่ "Zero Context Switch"** เพราะยังมี Syscall อยู่
 
 ---
 
 ### บทสรุปและแนวทางการศึกษาต่อยอด (Next Steps)
-การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง (Hands-on Practice) หลังจากศึกษาเนื้อหาทั้ง 10 บทนี้แล้ว ให้ดำเนินการตามแบบฝึกหัดรายสัปดาห์ในไดเรกทอรี `phase01` ถึง `phase10` โดยเริ่มจากการสร้างเครือข่ายจำลองด้วย Network Namespaces ใน `week01` ไปจนถึงการสำรวจเคอร์เนลระดับลึกด้วย BPF Iterators ใน `week23`!
+การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง หลังจากศึกษาเนื้อหาทั้ง 10 บทแล้ว ให้ทำแล็บรายสัปดาห์ใน `phase01` ถึง `phase10` พร้อมแบบฝึกหัดท้ายบท 3 ระดับของแต่ละสัปดาห์ และฝึกนิสัยของวิศวกร eBPF ระดับโปรดักชัน 4 ข้อที่หลักสูตรนี้เน้นย้ำ:
+1. **ใช้ CO-RE (`vmlinux.h` + `BPF_CORE_READ`) เสมอ** ห้ามเขียน Struct ของเคอร์เนลเอง
+2. **เขียน Unit Test ด้วย `BPF_PROG_TEST_RUN`** (`make test`) และทดสอบ End-to-end บน netns/veth/cgroup ที่แยกจากระบบจริง
+3. **วัดก่อนอ้าง**: ทุกตัวเลขประสิทธิภาพต้องมาพร้อมวิธีวัด สภาพแวดล้อม และข้อจำกัด
+4. **ระบุ Threat Model และข้อจำกัด** ของเครื่องมือความปลอดภัยทุกครั้ง และทดสอบให้ครอบคลุมทุก CPU
+
+หัวข้อแนะนำสำหรับศึกษาต่อ: kfuncs, BPF Arena, `struct_ops` / sched_ext, BPF Token, netkit, Tail Calls, `bpf_loop` / Open-coded Iterators, `bpf_timer`, USDT และเครื่องมือในระบบนิเวศ เช่น Cilium, Tetragon, Falco

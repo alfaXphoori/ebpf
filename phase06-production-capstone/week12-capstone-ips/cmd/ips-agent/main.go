@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 	"time"
 
@@ -24,26 +23,32 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/sys/unix"
 )
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -target bpf bpf ../../bpf/ips_kern.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-mcpu=v3" -target bpf bpf ../../bpf/ips_kern.c
 
 // Reason code constants
 const (
-	ReasonBlacklist  = 1
-	ReasonSYNFlood   = 2
-	ReasonICMPFlood  = 3
-	ReasonManualBan  = 4
+	ReasonBlacklist = 1
+	ReasonSYNFlood  = 2
+	ReasonICMPFlood = 3
+	ReasonManualBan = 4
 
-	MetricPassed            = 0
-	MetricDroppedBlacklist  = 1
-	MetricDroppedRatelimit  = 2
-	MetricTotalBytes        = 3
+	MetricPassed           = 0
+	MetricDroppedBlacklist = 1
+	MetricDroppedRatelimit = 2
+	MetricTotalBytes       = 3
+	MetricAlertsLost       = 4
 
 	ConfSYNLimit  = 0
 	ConfICMPLimit = 1
 	ConfAutobanEn = 2
 	ConfWindowNs  = 3
+	ConfBanTTLNs  = 4
+
+	ActionBanned      = 1
+	ActionRateLimited = 2
 )
 
 // ipsAlert matches C struct ips_alert
@@ -55,7 +60,8 @@ type ipsAlert struct {
 	DstPort uint16
 	Proto   uint8
 	Reason  uint8
-	Pad     uint16
+	Action  uint8
+	Pad     uint8
 	Pps     uint32
 }
 
@@ -80,6 +86,17 @@ func reasonToString(r uint8) string {
 		return "MANUAL_BAN"
 	default:
 		return fmt.Sprintf("UNKNOWN(%d)", r)
+	}
+}
+
+func actionToString(a uint8) string {
+	switch a {
+	case ActionBanned:
+		return "AUTO-BANNED"
+	case ActionRateLimited:
+		return "RATE-LIMITED"
+	default:
+		return fmt.Sprintf("UNKNOWN(%d)", a)
 	}
 }
 
@@ -110,26 +127,60 @@ func ipToUint32(ipStr string) (uint32, error) {
 	return binary.LittleEndian.Uint32(parsed), nil
 }
 
-// Thread-safe manager for tracking banned IP lifetimes
+// monotonicNowNs returns CLOCK_MONOTONIC in nanoseconds: the same clock as
+// bpf_ktime_get_ns() in the kernel, so Go and eBPF timestamps are comparable.
+func monotonicNowNs() uint64 {
+	var ts unix.Timespec
+	if err := unix.ClockGettime(unix.CLOCK_MONOTONIC, &ts); err != nil {
+		log.Fatalf("clock_gettime(CLOCK_MONOTONIC) failed: %v", err)
+	}
+	return uint64(ts.Nano())
+}
+
+// ipsConfig holds the runtime thresholds written into config_map
+type ipsConfig struct {
+	SYNLimit  uint64
+	ICMPLimit uint64
+	Autoban   bool
+	Window    time.Duration
+	BanTTL    time.Duration
+}
+
+// applyConfig writes every config slot read by the XDP program into config_map
+func applyConfig(m *ebpf.Map, c ipsConfig) error {
+	var autoban uint64
+	if c.Autoban {
+		autoban = 1
+	}
+	values := map[uint32]uint64{
+		ConfSYNLimit:  c.SYNLimit,
+		ConfICMPLimit: c.ICMPLimit,
+		ConfAutobanEn: autoban,
+		ConfWindowNs:  uint64(c.Window.Nanoseconds()),
+		ConfBanTTLNs:  uint64(c.BanTTL.Nanoseconds()),
+	}
+	for k, v := range values {
+		if err := m.Put(&k, &v); err != nil {
+			return fmt.Errorf("config_map[%d]: %w", k, err)
+		}
+	}
+	return nil
+}
+
+// BanManager manages blacklist lifetimes.
+// The eBPF blacklist_map is the single source of truth: each entry carries its
+// own blocked_at_ns, so bans created in the kernel are expired even when their
+// ring buffer alert was never delivered to user space.
 type BanManager struct {
-	mu           sync.RWMutex
-	bannedTimes  map[uint32]time.Time
 	blacklistMap *ebpf.Map
 	ttl          time.Duration
 }
 
 func NewBanManager(m *ebpf.Map, ttl time.Duration) *BanManager {
 	return &BanManager{
-		bannedTimes:  make(map[uint32]time.Time),
 		blacklistMap: m,
 		ttl:          ttl,
 	}
-}
-
-func (bm *BanManager) RecordBan(ip uint32) {
-	bm.mu.Lock()
-	defer bm.mu.Unlock()
-	bm.bannedTimes[ip] = time.Now()
 }
 
 func (bm *BanManager) ManualBan(ipStr string, reason uint32) error {
@@ -139,7 +190,7 @@ func (bm *BanManager) ManualBan(ipStr string, reason uint32) error {
 	}
 
 	entry := blockEntry{
-		BlockedAtNs: uint64(time.Now().UnixNano()),
+		BlockedAtNs: monotonicNowNs(),
 		DropCount:   0,
 		DropBytes:   0,
 		Reason:      reason,
@@ -150,7 +201,6 @@ func (bm *BanManager) ManualBan(ipStr string, reason uint32) error {
 		return fmt.Errorf("failed to insert into blacklist map: %w", err)
 	}
 
-	bm.RecordBan(ipUint)
 	log.Printf("[CONTROL] IP %s manually blacklisted (reason=%d)", ipStr, reason)
 	return nil
 }
@@ -165,12 +215,43 @@ func (bm *BanManager) ManualUnban(ipStr string) error {
 		return fmt.Errorf("failed to delete from blacklist map: %w", err)
 	}
 
-	bm.mu.Lock()
-	delete(bm.bannedTimes, ipUint)
-	bm.mu.Unlock()
-
 	log.Printf("[CONTROL] IP %s unbanned from blacklist", ipStr)
 	return nil
+}
+
+// ExpireBans deletes every blacklist entry older than the TTL and returns the
+// removed IPs. Keys are collected first and deleted afterwards, because
+// deleting from a hash map while iterating it can restart the iteration.
+func (bm *BanManager) ExpireBans(nowNs uint64) ([]uint32, error) {
+	if bm.ttl <= 0 {
+		return nil, nil // TTL disabled: bans are permanent
+	}
+	ttlNs := uint64(bm.ttl.Nanoseconds())
+
+	var expired []uint32
+	var ipKey uint32
+	var entry blockEntry
+	iter := bm.blacklistMap.Iterate()
+	for iter.Next(&ipKey, &entry) {
+		if nowNs >= entry.BlockedAtNs && nowNs-entry.BlockedAtNs >= ttlNs {
+			expired = append(expired, ipKey)
+		}
+	}
+	if err := iter.Err(); err != nil {
+		return nil, fmt.Errorf("iterate blacklist map: %w", err)
+	}
+
+	removed := expired[:0]
+	for _, ip := range expired {
+		if err := bm.blacklistMap.Delete(&ip); err != nil {
+			if !errors.Is(err, ebpf.ErrKeyNotExist) {
+				log.Printf("[WARN] Failed to auto-unban IP %s: %v", uint32ToIP(ip), err)
+			}
+			continue
+		}
+		removed = append(removed, ip)
+	}
+	return removed, nil
 }
 
 func (bm *BanManager) RunEvictionTicker(ctx context.Context) {
@@ -182,28 +263,28 @@ func (bm *BanManager) RunEvictionTicker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			bm.mu.Lock()
-			now := time.Now()
-			for ip, banTime := range bm.bannedTimes {
-				if now.Sub(banTime) >= bm.ttl {
-					// Remove expired IP from eBPF map
-					if err := bm.blacklistMap.Delete(&ip); err != nil && !errors.Is(err, ebpf.ErrKeyNotExist) {
-						log.Printf("[WARN] Failed to auto-unban IP %s: %v", uint32ToIP(ip), err)
-					} else {
-						log.Printf("\033[1;32m[IPS UNBAN]\033[0m IP %s unbanned after %v TTL expiration", uint32ToIP(ip), bm.ttl)
-					}
-					delete(bm.bannedTimes, ip)
-				}
+			removed, err := bm.ExpireBans(monotonicNowNs())
+			if err != nil {
+				log.Printf("[WARN] TTL sweep failed: %v", err)
+				continue
 			}
-			bm.mu.Unlock()
+			for _, ip := range removed {
+				log.Printf("\033[1;32m[IPS UNBAN]\033[0m IP %s unbanned after %v TTL expiration", uint32ToIP(ip), bm.ttl)
+			}
 		}
 	}
 }
 
+// CountActiveBans counts entries currently present in the kernel blacklist_map
 func (bm *BanManager) CountActiveBans() int {
-	bm.mu.RLock()
-	defer bm.mu.RUnlock()
-	return len(bm.bannedTimes)
+	var ipKey uint32
+	var entry blockEntry
+	n := 0
+	iter := bm.blacklistMap.Iterate()
+	for iter.Next(&ipKey, &entry) {
+		n++
+	}
+	return n
 }
 
 // Prometheus IPS Collector
@@ -234,6 +315,11 @@ var (
 		"Total network bytes processed by Smart IPS",
 		nil, nil,
 	)
+	metricAlertsLostDesc = prometheus.NewDesc(
+		"ips_alerts_lost_total",
+		"Total alerts that could not be reserved in the ring buffer (buffer full)",
+		nil, nil,
+	)
 	metricActiveBansDesc = prometheus.NewDesc(
 		"ips_active_blacklisted_ips",
 		"Current number of active blacklisted IP addresses",
@@ -246,6 +332,7 @@ func (c *ipsPrometheusCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- metricDropBlacklistDesc
 	ch <- metricDropRateLimitDesc
 	ch <- metricTotalBytesDesc
+	ch <- metricAlertsLostDesc
 	ch <- metricActiveBansDesc
 }
 
@@ -266,6 +353,7 @@ func (c *ipsPrometheusCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(metricDropBlacklistDesc, prometheus.CounterValue, float64(readMetric(MetricDroppedBlacklist)))
 	ch <- prometheus.MustNewConstMetric(metricDropRateLimitDesc, prometheus.CounterValue, float64(readMetric(MetricDroppedRatelimit)))
 	ch <- prometheus.MustNewConstMetric(metricTotalBytesDesc, prometheus.CounterValue, float64(readMetric(MetricTotalBytes)))
+	ch <- prometheus.MustNewConstMetric(metricAlertsLostDesc, prometheus.CounterValue, float64(readMetric(MetricAlertsLost)))
 	ch <- prometheus.MustNewConstMetric(metricActiveBansDesc, prometheus.GaugeValue, float64(c.banMgr.CountActiveBans()))
 }
 
@@ -274,6 +362,7 @@ type BlacklistResponseItem struct {
 	DropCount uint64 `json:"drop_count"`
 	DropBytes uint64 `json:"drop_bytes"`
 	Reason    string `json:"reason"`
+	BannedFor string `json:"banned_for"`
 }
 
 func main() {
@@ -282,6 +371,7 @@ func main() {
 	portFlag := flag.String("http-port", ":2112", "HTTP server port for Prometheus & REST API")
 	synLimitFlag := flag.Uint64("syn-limit", 100, "TCP SYN rate limit threshold per second")
 	icmpLimitFlag := flag.Uint64("icmp-limit", 50, "ICMP Echo rate limit threshold per second")
+	autobanFlag := flag.Bool("autoban", true, "Auto-ban offending IPs (false = rate-limit only: drop just the packets above the threshold)")
 	flag.Parse()
 
 	// 1. Remove Memlock memory limits
@@ -303,21 +393,19 @@ func main() {
 	defer objs.Close()
 
 	// 4. Configure Thresholds in config_map
-	kSyn := uint32(ConfSYNLimit)
-	kIcmp := uint32(ConfICMPLimit)
-	kAutoban := uint32(ConfAutobanEn)
-	kWin := uint32(ConfWindowNs)
+	cfg := ipsConfig{
+		SYNLimit:  *synLimitFlag,
+		ICMPLimit: *icmpLimitFlag,
+		Autoban:   *autobanFlag,
+		Window:    time.Second,
+		BanTTL:    *ttlFlag,
+	}
+	if err := applyConfig(objs.ConfigMap, cfg); err != nil {
+		log.Fatalf("Failed to write config_map: %v", err)
+	}
 
-	vAutoban := uint64(1)
-	vWin := uint64(1000000000) // 1 second in ns
-
-	_ = objs.ConfigMap.Put(&kSyn, synLimitFlag)
-	_ = objs.ConfigMap.Put(&kIcmp, icmpLimitFlag)
-	_ = objs.ConfigMap.Put(&kAutoban, &vAutoban)
-	_ = objs.ConfigMap.Put(&kWin, &vWin)
-
-	log.Printf("[CONFIG] SYN Limit=%d pps, ICMP Limit=%d pps, Window=1s, Auto-Ban TTL=%v",
-		*synLimitFlag, *icmpLimitFlag, *ttlFlag)
+	log.Printf("[CONFIG] SYN Limit=%d pps, ICMP Limit=%d pps, Window=%v, Auto-Ban=%v, Ban TTL=%v",
+		cfg.SYNLimit, cfg.ICMPLimit, cfg.Window, cfg.Autoban, cfg.BanTTL)
 
 	// 5. Attach XDP Program
 	xdpLink, err := link.AttachXDP(link.XDPOptions{
@@ -365,11 +453,10 @@ func main() {
 			reasonStr := reasonToString(alert.Reason)
 			protoStr := protoToString(alert.Proto)
 
-			// Record in TTL manager
-			banMgr.RecordBan(alert.SrcIP)
-
-			log.Printf("\033[1;31m[IPS ALERT]\033[0m %-11s | Proto=%-4s | Src=%s:%d -> Dst=%s:%d | Rate=%d PPS | Action=AUTO-BANNED",
-				reasonStr, protoStr, srcIP, alert.SrcPort, dstIP, alert.DstPort, alert.Pps)
+			// TTL is tracked by blocked_at_ns inside blacklist_map itself,
+			// so nothing needs to be recorded here.
+			log.Printf("\033[1;31m[IPS ALERT]\033[0m %-11s | Proto=%-4s | Src=%s:%d -> Dst=%s:%d | Rate=%d PPS | Action=%s",
+				reasonStr, protoStr, srcIP, alert.SrcPort, dstIP, alert.DstPort, alert.Pps, actionToString(alert.Action))
 		}
 	}()
 
@@ -395,18 +482,28 @@ func main() {
 		switch r.Method {
 		case http.MethodGet:
 			w.Header().Set("Content-Type", "application/json")
-			var items []BlacklistResponseItem
+			items := []BlacklistResponseItem{}
 
+			nowNs := monotonicNowNs()
 			iter := objs.BlacklistMap.Iterate()
 			var ipKey uint32
 			var entry blockEntry
 			for iter.Next(&ipKey, &entry) {
+				var age time.Duration
+				if nowNs > entry.BlockedAtNs {
+					age = time.Duration(nowNs - entry.BlockedAtNs).Truncate(time.Second)
+				}
 				items = append(items, BlacklistResponseItem{
 					IP:        uint32ToIP(ipKey),
 					DropCount: entry.DropCount,
 					DropBytes: entry.DropBytes,
 					Reason:    reasonToString(uint8(entry.Reason)),
+					BannedFor: age.String(),
 				})
+			}
+			if err := iter.Err(); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 			_ = json.NewEncoder(w).Encode(items)
 
@@ -468,7 +565,7 @@ func main() {
     <h1>Smart eBPF Intrusion Prevention System (IPS)</h1>
     <div class="card">
         <h3>System Status</h3>
-        <p>Interface: <strong>{{.Interface}}</strong> | SYN Limit: <strong>{{.SYNLimit}} pps</strong> | ICMP Limit: <strong>{{.ICMPLimit}} pps</strong> | Ban TTL: <strong>{{.BanTTL}}</strong></p>
+        <p>Interface: <strong>{{.Interface}}</strong> | SYN Limit: <strong>{{.SYNLimit}} pps</strong> | ICMP Limit: <strong>{{.ICMPLimit}} pps</strong> | Auto-Ban: <strong>{{.Autoban}}</strong> | Ban TTL: <strong>{{.BanTTL}}</strong></p>
         <p>Telemetry: <a href="/metrics">Prometheus /metrics</a> | REST API: <a href="/api/blacklist">/api/blacklist</a></p>
     </div>
 </body>
@@ -478,6 +575,7 @@ func main() {
 			"Interface": *ifaceFlag,
 			"SYNLimit":  *synLimitFlag,
 			"ICMPLimit": *icmpLimitFlag,
+			"Autoban":   *autobanFlag,
 			"BanTTL":    *ttlFlag,
 		})
 	})

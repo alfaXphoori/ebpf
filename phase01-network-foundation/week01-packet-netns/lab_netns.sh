@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# eBPF Noob to Hero - Week 01: Network Namespaces & veth Pair Lab
+# eBPF Zero to Hero - Week 01: Network Namespaces & veth Pair Lab
 # Script: lab_netns.sh
 # Description: Automates creation, testing, packet capture, and cleanup of
-#              isolated Linux Network Namespaces (ns1 <-> ns2) with a veth pair.
+#              isolated Linux Network Namespaces (w01-ns1 <-> w01-ns2) with a veth pair.
+#              All names are prefixed with 'w01-' so this lab never collides with
+#              other labs (or host interfaces) running on the same machine.
 # Author: eBPF Mastery Team
 # ==============================================================================
 
@@ -19,10 +21,10 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # --- Network Configuration Constants ---
-NS1="ns1"
-NS2="ns2"
-VETH1="veth1"
-VETH2="veth2"
+NS1="w01-ns1"
+NS2="w01-ns2"
+VETH1="w01-veth1"
+VETH2="w01-veth2"
 IP_NS1="10.10.1.1/24"
 IP_NS2="10.10.1.2/24"
 RAW_IP_NS1="10.10.1.1"
@@ -54,7 +56,7 @@ log_step() {
 check_root() {
     if [[ "${EUID}" -ne 0 ]]; then
         log_error "This script requires root privileges to manage network namespaces and veth pairs."
-        echo -e "Please run with sudo: ${BOLD}sudo $0 $@${NC}"
+        echo -e "Please run with sudo: ${BOLD}sudo $0 $*${NC}"
         exit 1
     fi
 }
@@ -77,12 +79,12 @@ clean_lab() {
     fi
 
     # Delete namespaces (this automatically tears down associated veth interfaces inside)
-    if ip netns list | grep -q "^${NS1}\b"; then
+    if [[ -e "/run/netns/${NS1}" ]]; then
         ip netns del "${NS1}"
         log_info "Deleted namespace: ${NS1}"
     fi
 
-    if ip netns list | grep -q "^${NS2}\b"; then
+    if [[ -e "/run/netns/${NS2}" ]]; then
         ip netns del "${NS2}"
         log_info "Deleted namespace: ${NS2}"
     fi
@@ -133,10 +135,10 @@ setup_lab() {
 
     log_info "Step 6: Disabling TX/RX checksum and segment offloading (TSO/GSO/GRO)"
     # Disabling hardware offloading ensures raw sockets observe realistic, fully calculated checksums
-    ip netns exec "${NS1}" ethtool -K "${VETH1}" rx off tx off tso off gso off gro off 2>/dev/null || {
+    ip netns exec "${NS1}" ethtool -K "${VETH1}" rx off tx off tso off gso off gro off >/dev/null 2>&1 || {
         log_warn "ethtool could not disable some offload features on ${VETH1} (may be non-critical in virtualized environments)"
     }
-    ip netns exec "${NS2}" ethtool -K "${VETH2}" rx off tx off tso off gso off gro off 2>/dev/null || {
+    ip netns exec "${NS2}" ethtool -K "${VETH2}" rx off tx off tso off gso off gro off >/dev/null 2>&1 || {
         log_warn "ethtool could not disable some offload features on ${VETH2} (may be non-critical in virtualized environments)"
     }
 
@@ -191,13 +193,14 @@ capture_demo() {
         exit 1
     fi
 
-    if ! ip netns list | grep -q "^${NS2}\b"; then
+    if ! [[ -e "/run/netns/${NS2}" ]]; then
         log_info "Namespaces not found. Running setup first..."
         setup_lab
     fi
 
     log_info "Spawning raw_sniffer.py inside namespace '${NS2}' capturing on '${VETH2}' (count: 4)..."
-    ip netns exec "${NS2}" python3 "${sniffer_script}" --interface "${VETH2}" --count 4 &
+    # timeout -s INT: never hang if fewer than 4 frames arrive (sniffer still prints stats)
+    ip netns exec "${NS2}" timeout -s INT 15 python3 "${sniffer_script}" --interface "${VETH2}" --count 4 &
     local sniffer_pid=$!
     echo "${sniffer_pid}" > /tmp/raw_sniffer_week01.pid
 
@@ -219,9 +222,9 @@ print_usage() {
     echo -e "${BOLD}Usage:${NC} sudo $0 [command]"
     echo ""
     echo -e "${BOLD}Commands:${NC}"
-    echo -e "  ${GREEN}setup${NC}    Create isolated namespaces (ns1, ns2) and veth pair with IPs"
+    echo -e "  ${GREEN}setup${NC}    Create isolated namespaces (${NS1}, ${NS2}) and veth pair with IPs"
     echo -e "  ${GREEN}test${NC}     Run bidirectional ICMP ping tests between namespaces"
-    echo -e "  ${GREEN}capture${NC}  Run raw_sniffer.py in ns2 while generating traffic from ns1"
+    echo -e "  ${GREEN}capture${NC}  Run raw_sniffer.py in ${NS2} while generating traffic from ${NS1}"
     echo -e "  ${GREEN}status${NC}   Show current namespaces, interfaces, and IP configurations"
     echo -e "  ${GREEN}clean${NC}    Tear down and remove all created namespaces and virtual links"
     echo -e "  ${GREEN}help${NC}     Show this help message"
@@ -230,7 +233,7 @@ print_usage() {
 }
 
 main() {
-    check_root
+    check_root "$@"
 
     local cmd="${1:-default}"
 

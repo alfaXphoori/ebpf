@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -30,8 +31,11 @@ type fexitEvent struct {
 }
 
 func main() {
+	commFilter := flag.String("comm", "", "show only events whose process name (comm) equals this value, e.g. -comm cat")
+	flag.Parse()
+
 	fmt.Println("======================================================================")
-	fmt.Println(" eBPF Trampoline (fentry & fexit) Ultra-Low Latency Tracing")
+	fmt.Println(" eBPF Trampoline (fentry & fexit) do_sys_openat2 Latency Tracer")
 	fmt.Println("======================================================================")
 
 	if err := rlimit.RemoveMemlock(); err != nil {
@@ -68,9 +72,12 @@ func main() {
 	}
 	defer rd.Close()
 
-	log.Printf("[INFO] Tracing file open duration with <5ns trampoline overhead...\n\n")
+	if *commFilter != "" {
+		log.Printf("[INFO] Filtering events: comm == %q (filter applied in userspace)\n", *commFilter)
+	}
+	log.Printf("[INFO] Tracing do_sys_openat2 latency (fentry -> fexit). Press Ctrl+C to stop.\n\n")
 
-	fmt.Printf("%-9s %-6s %-16s %-10s %-10s %s\n",
+	fmt.Printf("%-9s %-8s %-16s %-10s %-10s %s\n",
 		"TIME", "PID", "COMM", "FD / RET", "LATENCY", "FILENAME")
 	fmt.Println("---------------------------------------------------------------------------------------------------")
 
@@ -97,15 +104,18 @@ func main() {
 			continue
 		}
 
-		comm := string(bytes.TrimRight(ev.Comm[:], "\x00"))
-		filename := string(bytes.TrimRight(ev.Filename[:], "\x00"))
+		comm := cString(ev.Comm[:])
+		if *commFilter != "" && comm != *commFilter {
+			continue
+		}
+		filename := cString(ev.Filename[:])
 
 		retStr := fmt.Sprintf("%d", ev.Ret)
 		if ev.Ret < 0 {
 			retStr = fmt.Sprintf("ERR(%d)", ev.Ret)
 		}
 
-		fmt.Printf("%-9s %-6d %-16s %-10s %-10s %s\n",
+		fmt.Printf("%-9s %-8d %-16s %-10s %-10s %s\n",
 			time.Now().Format("15:04:05"),
 			ev.Pid,
 			comm,
@@ -116,4 +126,14 @@ func main() {
 	}
 
 	fmt.Println("[SUCCESS] BPF Trampoline detached safely.")
+}
+
+// cString converts a NUL-terminated C char array into a Go string.
+// (bpf_get_current_comm / bpf_probe_read_user_str ใส่ NUL ปิดท้าย แต่ไบต์หลัง NUL
+// ไม่รับประกันว่าเป็นศูนย์ จึงต้องตัดที่ NUL ตัวแรก ไม่ใช่ TrimRight)
+func cString(b []byte) string {
+	if i := bytes.IndexByte(b, 0); i >= 0 {
+		b = b[:i]
+	}
+	return string(b)
 }

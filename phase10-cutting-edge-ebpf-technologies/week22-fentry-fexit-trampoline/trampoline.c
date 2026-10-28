@@ -36,7 +36,10 @@ struct {
 } start_map SEC(".maps");
 
 /*
- * BPF Trampoline fentry: Zero-overhead entry hook into do_sys_openat2
+ * BPF Trampoline fentry: entry hook ของ do_sys_openat2
+ * เคอร์เนล patch จุด ftrace (nop 5 ไบต์) ต้นฟังก์ชันให้ "call" ไปยัง trampoline ที่ JIT สร้างขึ้น
+ * ไม่ใช่ "zero overhead": วัดจริงบน Linux 7.0 ด้วย bench/run_bench.sh ได้ระดับหลายสิบ ns
+ * ต่อการเรียก (รวมเวลารันตัวโปรแกรม BPF เอง ~20 ns) ดูวิธีวัดและข้อควรระวังใน README
  */
 SEC("fentry/do_sys_openat2")
 int BPF_PROG(trace_openat2_entry, int dfd, const char *filename, struct open_how *how)
@@ -49,11 +52,14 @@ int BPF_PROG(trace_openat2_entry, int dfd, const char *filename, struct open_how
 }
 
 /*
- * BPF Trampoline fexit: Zero-overhead return hook into do_sys_openat2
- * Automatically receives original function arguments PLUS the return value 'ret'
+ * BPF Trampoline fexit: return hook ของ do_sys_openat2
+ * ได้รับทั้งอาร์กิวเมนต์เดิมทุกตัว + ค่า return เป็นพารามิเตอร์ตัวสุดท้าย
+ * ชนิดของ ret ต้องตรงกับ BTF ของเคอร์เนล: บน Linux 7.0 คือ
+ *   static int do_sys_openat2(int dfd, const char __user *filename, struct open_how *how);
+ * (ตรวจด้วย: sudo bpftrace -lv 'fexit:do_sys_openat2' -> int retval)
  */
 SEC("fexit/do_sys_openat2")
-int BPF_PROG(trace_openat2_exit, int dfd, const char *filename, struct open_how *how, long ret)
+int BPF_PROG(trace_openat2_exit, int dfd, const char *filename, struct open_how *how, int ret)
 {
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u64 *start_ts = bpf_map_lookup_elem(&start_map, &pid_tgid);
@@ -71,7 +77,7 @@ int BPF_PROG(trace_openat2_exit, int dfd, const char *filename, struct open_how 
 
     e->duration_ns = duration_ns;
     e->pid = pid_tgid >> 32;
-    e->ret = (__s32)ret;
+    e->ret = ret;
     bpf_get_current_comm(&e->comm, sizeof(e->comm));
     bpf_probe_read_user_str(&e->filename, sizeof(e->filename), filename);
 

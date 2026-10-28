@@ -3,13 +3,16 @@
 
 package main
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang bpf biolatency.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -cc clang -cflags "-I../../" bpf biolatency.c
 
 import (
+	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -18,29 +21,59 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 )
 
-func renderHistogram(hist [32]uint64) {
+const maxSlots = 32
+
+var opNames = []string{"READ", "WRITE", "OTHER (flush/discard)"}
+
+// histID ระบุ Histogram หนึ่งชุด: ดิสก์ (dev_t) + ประเภทคำสั่ง
+type histID struct {
+	dev uint32
+	op  uint32
+}
+
+// devName แปลง dev_t ของเคอร์เนล (major<<20 | minor) เป็นชื่ออุปกรณ์ เช่น "sda", "nvme0n1"
+func devName(dev uint32) string {
+	major, minor := dev>>20, dev&((1<<20)-1)
+	path := fmt.Sprintf("/sys/dev/block/%d:%d/uevent", major, minor)
+	if f, err := os.Open(path); err == nil {
+		defer f.Close()
+		sc := bufio.NewScanner(f)
+		for sc.Scan() {
+			if name, ok := strings.CutPrefix(sc.Text(), "DEVNAME="); ok {
+				return fmt.Sprintf("%s (%d:%d)", name, major, minor)
+			}
+		}
+	}
+	return fmt.Sprintf("dev %d:%d", major, minor)
+}
+
+func renderHistogram(title string, hist [maxSlots]uint64) {
 	var maxCount uint64
-	for _, v := range hist {
+	last := -1
+	for i, v := range hist {
 		if v > maxCount {
 			maxCount = v
 		}
+		if v > 0 {
+			last = i
+		}
+	}
+	if last < 0 {
+		return
 	}
 
-	fmt.Printf("\n%-18s : %-8s %s\n", "Latency (us)", "Count", "Distribution")
-	fmt.Println("----------------------------------------------------------------------")
+	fmt.Printf("\n%s\n", title)
+	fmt.Printf("%-24s : %-8s %s\n", "Latency (us)", "Count", "Distribution")
+	fmt.Println("----------------------------------------------------------------------------")
 
-	for i := 0; i < 30; i++ {
+	// แสดงตั้งแต่ช่อง 0 จนถึงช่องสุดท้ายที่มีข้อมูล (แบบเดียวกับ bcc/libbpf-tools)
+	for i := 0; i <= last; i++ {
 		low := uint64(1) << i
 		high := (uint64(1) << (i + 1)) - 1
 		if i == 0 {
-			low = 0
-			high = 1
+			low = 0 // ช่อง 0 รวม 0 และ 1 us เพราะ log2(0) = log2(1) = 0
 		}
 		count := hist[i]
-
-		if count == 0 && (i > 15 && i < 28) {
-			continue // skip empty trailing large buckets
-		}
 
 		barLen := 0
 		if maxCount > 0 {
@@ -48,12 +81,16 @@ func renderHistogram(hist [32]uint64) {
 		}
 		bar := strings.Repeat("*", barLen)
 
-		fmt.Printf("%-8d -> %-7d : %-8d |%-40s|\n", low, high, count, bar)
+		fmt.Printf("%10d -> %-10d : %-8d |%-40s|\n", low, high, count, bar)
 	}
-	fmt.Println("----------------------------------------------------------------------")
+	fmt.Println("----------------------------------------------------------------------------")
 }
 
 func main() {
+	interval := flag.Duration("interval", 3*time.Second, "ระยะเวลาระหว่างการพิมพ์สรุปยอดสะสม")
+	duration := flag.Duration("duration", 0, "หยุดอัตโนมัติหลังเวลาที่กำหนด (0 = รอจนกด Ctrl+C)")
+	flag.Parse()
+
 	fmt.Println("======================================================================")
 	fmt.Println(" eBPF Block I/O Latency Analyzer (CO-RE biolatency)")
 	fmt.Println("======================================================================")
@@ -68,25 +105,31 @@ func main() {
 	}
 	defer objs.Close()
 
-	tpIssue, err := link.Tracepoint("block", "block_rq_issue", objs.TraceRqIssue, nil)
+	// tp_btf ใช้ link.AttachTracing (BPF_TRACE_RAW_TP) ไม่ใช่ link.Tracepoint
+	tpIssue, err := link.AttachTracing(link.TracingOptions{Program: objs.TraceRqIssue})
 	if err != nil {
-		log.Fatalf("Failed to attach block_rq_issue: %v", err)
+		log.Fatalf("Failed to attach tp_btf/block_rq_issue: %v", err)
 	}
 	defer tpIssue.Close()
 
-	tpComplete, err := link.Tracepoint("block", "block_rq_complete", objs.TraceRqComplete, nil)
+	tpComplete, err := link.AttachTracing(link.TracingOptions{Program: objs.TraceRqComplete})
 	if err != nil {
-		log.Fatalf("Failed to attach block_rq_complete: %v", err)
+		log.Fatalf("Failed to attach tp_btf/block_rq_complete: %v", err)
 	}
 	defer tpComplete.Close()
 
-	log.Printf("[INFO] Attached to 'block:block_rq_issue' & 'block:block_rq_complete'!")
+	log.Printf("[INFO] Attached to 'tp_btf/block_rq_issue' & 'tp_btf/block_rq_complete'!")
 	log.Printf("[INFO] Tracing disk I/O requests. (Press Ctrl+C to stop and view histogram)\n\n")
 
 	stopper := make(chan os.Signal, 1)
 	signal.Notify(stopper, os.Interrupt, syscall.SIGTERM)
 
-	ticker := time.NewTicker(3 * time.Second)
+	var timeout <-chan time.Time
+	if *duration > 0 {
+		timeout = time.After(*duration)
+	}
+
+	ticker := time.NewTicker(*interval)
 	defer ticker.Stop()
 
 	for {
@@ -103,17 +146,62 @@ func main() {
 			fmt.Printf("[%s] Total I/O Ops: %-6d | Cumulative: %-8d us | Avg Latency: %-6d us\n",
 				time.Now().Format("15:04:05"), cnt, lat, avgLat)
 
+		case <-timeout:
+			printFinal(&objs)
+			return
 		case <-stopper:
-			fmt.Println("\n[INFO] Detaching probes and generating final I/O latency histogram...")
-			var hist [32]uint64
-			for i := uint32(0); i < 32; i++ {
-				var val uint64
-				if err := objs.IoLatencyHist.Lookup(&i, &val); err == nil {
-					hist[i] = val
-				}
-			}
-			renderHistogram(hist)
+			printFinal(&objs)
 			return
 		}
+	}
+}
+
+func printFinal(objs *bpfObjects) {
+	fmt.Println("\n[INFO] Detaching probes and generating final I/O latency histograms...")
+
+	hists := map[histID]*[maxSlots]uint64{}
+	var (
+		key bpfHistKey
+		val uint64
+	)
+	iter := objs.IoLatencyHist.Iterate()
+	for iter.Next(&key, &val) {
+		id := histID{dev: key.Dev, op: key.Op}
+		if hists[id] == nil {
+			hists[id] = &[maxSlots]uint64{}
+		}
+		if key.Slot < maxSlots {
+			hists[id][key.Slot] += val
+		}
+	}
+	if err := iter.Err(); err != nil {
+		log.Printf("[WARN] iterate histogram: %v", err)
+	}
+	if len(hists) == 0 {
+		fmt.Println("(no completed block I/O requests were observed)")
+		return
+	}
+
+	ids := make([]histID, 0, len(hists))
+	for id := range hists {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		if ids[i].dev != ids[j].dev {
+			return ids[i].dev < ids[j].dev
+		}
+		return ids[i].op < ids[j].op
+	})
+
+	for _, id := range ids {
+		op := "UNKNOWN"
+		if int(id.op) < len(opNames) {
+			op = opNames[id.op]
+		}
+		var total uint64
+		for _, c := range hists[id] {
+			total += c
+		}
+		renderHistogram(fmt.Sprintf("disk = %s, op = %s, requests = %d", devName(id.dev), op, total), *hists[id])
 	}
 }

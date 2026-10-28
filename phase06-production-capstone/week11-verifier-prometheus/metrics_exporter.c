@@ -25,8 +25,9 @@ struct proto_metric {
 
 /*
  * BPF_MAP_TYPE_PERCPU_ARRAY:
- * Allocates a separate array for each active CPU core in the system.
- * Eliminates atomic lock contention (cache bouncing) completely, achieving 10M+ PPS.
+ * Allocates a separate copy of the array for every possible CPU.
+ * Each CPU only writes its own copy, so there is no atomic instruction and
+ * no cache-line bouncing between cores; user space sums the copies on read.
  */
 struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -96,7 +97,8 @@ int xdp_metrics_prog(struct xdp_md *ctx)
     /*
      * 3. Lookup into Per-CPU array:
      * Returns a pointer to this CPU's local memory slot.
-     * No atomics (LOCK XADD) needed! Normal increment is safe.
+     * No atomics (LOCK XADD) needed: an XDP program runs to completion on
+     * one CPU without migrating, so nobody else writes this slot concurrently.
      */
     struct proto_metric *metric = bpf_map_lookup_elem(&traffic_metrics, &proto_idx);
     if (metric) {

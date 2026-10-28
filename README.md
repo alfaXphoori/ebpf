@@ -7,8 +7,8 @@
 
 ## 📚 แหล่งเรียนรู้หลักและสคริปต์สภาพแวดล้อม (Core References)
 
-- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 6 บท ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
-- ⚙️ **สคริปต์ติดตั้งสภาพแวดล้อมอัตโนมัติ**: [`scripts/setup_env.sh`](scripts/setup_env.sh) — Provisioning Ubuntu 24.04 LTS (Kernel 6.8+), ตรวจสอบ BTF, สร้าง `vmlinux.h` และตั้งค่า BPF LSM
+- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 10 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
+- ⚙️ **สคริปต์ติดตั้งสภาพแวดล้อมอัตโนมัติ**: [`scripts/setup_env.sh`](scripts/setup_env.sh) — Provisioning Ubuntu 24.04 LTS (Kernel 6.8+) / 26.04 LTS (Kernel 7.0+), ตรวจสอบ BTF, สร้าง `vmlinux.h` และตั้งค่า BPF LSM
 
 ---
 
@@ -46,7 +46,7 @@
 |  - Week 13: วินิจฉัยแพ็กเก็ตสูญหายในเคอร์เนลด้วย Dropwatch (tracepoint:skb:kfree_skb)               |
 |  - Week 14: ระบบความปลอดภัย Zero-Trust Socket Egress Control ด้วย cgroup/connect4                  |
 |  - Week 15: ตรวจจับ Reverse Shell และ Web RCE ทันทีในเคอร์เนลด้วย task_struct real_parent          |
-|  - Week 16: ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล (sys_enter_bpf Integrity)   |
+|  - Week 16: ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล (fentry/__sys_bpf Integrity)|
 +----------------------------------------------------------------------------------------------------+
 | เฟส 08: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (System Performance)          |
 |  - Week 17: สร้าง Storage I/O Latency Log2 Histogram (biolatency: block_rq_issue/complete)         |
@@ -55,10 +55,10 @@
 +----------------------------------------------------------------------------------------------------+
 | เฟส 09: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (Socket Acceleration & AF_XDP)          |
 |  - Week 20: เร่งความเร็ว Local TCP ด้วย Sockops และ sk_msg Socket Bypass (ข้าม TCP/IP Stack)        |
-|  - Week 21: AF_XDP (XSK) Zero-Copy Kernel-Bypass Packet Redirect ด้วย BPF_MAP_TYPE_XSKMAP           |
+|  - Week 21: AF_XDP (XSK) Kernel-Bypass Packet Redirect ด้วย UMEM + BPF_MAP_TYPE_XSKMAP               |
 +----------------------------------------------------------------------------------------------------+
 | เฟส 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (Cutting-Edge Modern eBPF Technologies)                 |
-|  - Week 22: BPF Trampoline (fentry / fexit) ดักฟังฟังก์ชันเคอร์เนลแบบ Zero-Overhead (< 5ns)         |
+|  - Week 22: BPF Trampoline (fentry / fexit) ดักฟังฟังก์ชันเคอร์เนลแบบ Low-Overhead (เทียบกับ kprobe)  |
 |  - Week 23: BPF Task Iterators (bpf_iter_task) ท่องโครงสร้างเคอร์เนลโดยตรง ไม่ง้อ /proc             |
 +----------------------------------------------------------------------------------------------------+
 ```
@@ -75,23 +75,23 @@
 | **04** | Kernel Latency Observability with BCC & Python | [`week04/README.md`](phase02-first-step-ebpf/week04-bcc-python/README.md) | • [`tcp_v4_latency.py`](phase02-first-step-ebpf/week04-bcc-python/tcp_v4_latency.py) |
 | **05** | Modern eBPF CO-RE & Pure Go Control Plane | [`week05/README.md`](phase03-modern-ebpf-core/week05-libbpf-cilium-go/README.md) | • [`counter.c`](phase03-modern-ebpf-core/week05-libbpf-cilium-go/counter.c)<br>• [`main.go`](phase03-modern-ebpf-core/week05-libbpf-cilium-go/main.go)<br>• [`Makefile`](phase03-modern-ebpf-core/week05-libbpf-cilium-go/Makefile)<br>• [`go.mod`](phase03-modern-ebpf-core/week05-libbpf-cilium-go/go.mod) |
 | **06** | eBPF Maps Architecture & Race Condition Mitigation | [`week06/README.md`](phase03-modern-ebpf-core/week06-ebpf-maps/README.md) | • [`syscall_stats.c`](phase03-modern-ebpf-core/week06-ebpf-maps/syscall_stats.c)<br>• [`main.go`](phase03-modern-ebpf-core/week06-ebpf-maps/main.go)<br>• [`Makefile`](phase03-modern-ebpf-core/week06-ebpf-maps/Makefile)<br>• [`go.mod`](phase03-modern-ebpf-core/week06-ebpf-maps/go.mod) |
-| **07** | High-Speed XDP Parsing & Bounds Checking | [`week07/README.md`](phase04-high-speed-networking/week07-xdp-parsing/README.md) | • [`xdp_firewall.c`](phase04-high-speed-networking/week07-xdp-parsing/xdp_firewall.c)<br>• [`main.go`](phase04-high-speed-networking/week07-xdp-parsing/main.go)<br>• [`Makefile`](phase04-high-speed-networking/week07-xdp-parsing/Makefile)<br>• [`go.mod`](phase04-high-speed-networking/week07-xdp-parsing/go.mod) |
-| **08** | XDP Load Balancer & TC Egress Checksum Mangling | [`week08/README.md`](phase04-high-speed-networking/week08-tc-loadbalancer/README.md) | • [`xdp_lb.c`](phase04-high-speed-networking/week08-tc-loadbalancer/xdp_lb.c)<br>• [`tc_egress.c`](phase04-high-speed-networking/week08-tc-loadbalancer/tc_egress.c)<br>• [`main.go`](phase04-high-speed-networking/week08-tc-loadbalancer/main.go)<br>• [`Makefile`](phase04-high-speed-networking/week08-tc-loadbalancer/Makefile)<br>• [`go.mod`](phase04-high-speed-networking/week08-tc-loadbalancer/go.mod) |
+| **07** | High-Speed XDP Parsing & Bounds Checking | [`week07/README.md`](phase04-high-speed-networking/week07-xdp-parsing/README.md) | • [`xdp_firewall.c`](phase04-high-speed-networking/week07-xdp-parsing/xdp_firewall.c)<br>• [`main.go`](phase04-high-speed-networking/week07-xdp-parsing/main.go)<br>• [`main_test.go`](phase04-high-speed-networking/week07-xdp-parsing/main_test.go)<br>• [`Makefile`](phase04-high-speed-networking/week07-xdp-parsing/Makefile)<br>• [`go.mod`](phase04-high-speed-networking/week07-xdp-parsing/go.mod) |
+| **08** | XDP Load Balancer & TC Egress Checksum Mangling | [`week08/README.md`](phase04-high-speed-networking/week08-tc-loadbalancer/README.md) | • [`xdp_lb.c`](phase04-high-speed-networking/week08-tc-loadbalancer/xdp_lb.c)<br>• [`tc_egress.c`](phase04-high-speed-networking/week08-tc-loadbalancer/tc_egress.c)<br>• [`main.go`](phase04-high-speed-networking/week08-tc-loadbalancer/main.go)<br>• [`main_test.go`](phase04-high-speed-networking/week08-tc-loadbalancer/main_test.go)<br>• [`Makefile`](phase04-high-speed-networking/week08-tc-loadbalancer/Makefile)<br>• [`go.mod`](phase04-high-speed-networking/week08-tc-loadbalancer/go.mod) |
 | **09** | BPF Ring Buffer MPSC Streaming & TLS Uprobes | [`week09/README.md`](phase05-security-observability/week09-ringbuf-uprobes/README.md) | • [`ringbuf_events.c`](phase05-security-observability/week09-ringbuf-uprobes/ringbuf_events.c)<br>• [`main.go`](phase05-security-observability/week09-ringbuf-uprobes/main.go)<br>• [`Makefile`](phase05-security-observability/week09-ringbuf-uprobes/Makefile)<br>• [`go.mod`](phase05-security-observability/week09-ringbuf-uprobes/go.mod) |
 | **10** | Proactive Kernel Security with BPF LSM | [`week10/README.md`](phase05-security-observability/week10-bpf-lsm/README.md) | • [`lsm_file_guard.c`](phase05-security-observability/week10-bpf-lsm/lsm_file_guard.c)<br>• [`main.go`](phase05-security-observability/week10-bpf-lsm/main.go)<br>• [`Makefile`](phase05-security-observability/week10-bpf-lsm/Makefile)<br>• [`go.mod`](phase05-security-observability/week10-bpf-lsm/go.mod) |
-| **11** | Verifier Invariant Optimization & Prometheus Metrics | [`week11/README.md`](phase06-production-capstone/week11-verifier-prometheus/README.md) | • [`metrics_exporter.c`](phase06-production-capstone/week11-verifier-prometheus/metrics_exporter.c)<br>• [`main.go`](phase06-production-capstone/week11-verifier-prometheus/main.go)<br>• [`Makefile`](phase06-production-capstone/week11-verifier-prometheus/Makefile)<br>• [`go.mod`](phase06-production-capstone/week11-verifier-prometheus/go.mod) |
-| **12** | Production Capstone: Autonomous eBPF IPS Engine | [`week12/README.md`](phase06-production-capstone/week12-capstone-ips/README.md) | • [`ips_kern.c`](phase06-production-capstone/week12-capstone-ips/bpf/ips_kern.c)<br>• [`ips-agent/main.go`](phase06-production-capstone/week12-capstone-ips/cmd/ips-agent/main.go)<br>• [`Makefile`](phase06-production-capstone/week12-capstone-ips/Makefile)<br>• [`go.mod`](phase06-production-capstone/week12-capstone-ips/go.mod) |
+| **11** | Verifier Invariant Optimization & Prometheus Metrics | [`week11/README.md`](phase06-production-capstone/week11-verifier-prometheus/README.md) | • [`metrics_exporter.c`](phase06-production-capstone/week11-verifier-prometheus/metrics_exporter.c)<br>• [`main.go`](phase06-production-capstone/week11-verifier-prometheus/main.go)<br>• [`metrics_test.go`](phase06-production-capstone/week11-verifier-prometheus/metrics_test.go)<br>• [`verifier_fail/verifier_fail.c`](phase06-production-capstone/week11-verifier-prometheus/verifier_fail/verifier_fail.c)<br>• [`verifier_fail/main.go`](phase06-production-capstone/week11-verifier-prometheus/verifier_fail/main.go)<br>• [`Makefile`](phase06-production-capstone/week11-verifier-prometheus/Makefile)<br>• [`go.mod`](phase06-production-capstone/week11-verifier-prometheus/go.mod) |
+| **12** | Production Capstone: Autonomous eBPF IPS Engine | [`week12/README.md`](phase06-production-capstone/week12-capstone-ips/README.md) | • [`ips_kern.c`](phase06-production-capstone/week12-capstone-ips/bpf/ips_kern.c)<br>• [`ips-agent/main.go`](phase06-production-capstone/week12-capstone-ips/cmd/ips-agent/main.go)<br>• [`cmd/ips-agent/ips_test.go`](phase06-production-capstone/week12-capstone-ips/cmd/ips-agent/ips_test.go)<br>• [`Makefile`](phase06-production-capstone/week12-capstone-ips/Makefile)<br>• [`go.mod`](phase06-production-capstone/week12-capstone-ips/go.mod) |
 | **13** | Kernel Dropwatch & Packet Loss Diagnostics | [`week13/README.md`](phase07-advanced-security-observability/week13-kfree-skb-dropwatch/README.md) | • [`dropwatch.c`](phase07-advanced-security-observability/week13-kfree-skb-dropwatch/dropwatch.c)<br>• [`main.go`](phase07-advanced-security-observability/week13-kfree-skb-dropwatch/main.go)<br>• [`Makefile`](phase07-advanced-security-observability/week13-kfree-skb-dropwatch/Makefile)<br>• [`go.mod`](phase07-advanced-security-observability/week13-kfree-skb-dropwatch/go.mod) |
 | **14** | Zero-Trust Socket Egress Control | [`week14/README.md`](phase07-advanced-security-observability/week14-cgroup-sock-addr/README.md) | • [`sock_enforce.c`](phase07-advanced-security-observability/week14-cgroup-sock-addr/sock_enforce.c)<br>• [`main.go`](phase07-advanced-security-observability/week14-cgroup-sock-addr/main.go)<br>• [`Makefile`](phase07-advanced-security-observability/week14-cgroup-sock-addr/Makefile)<br>• [`go.mod`](phase07-advanced-security-observability/week14-cgroup-sock-addr/go.mod) |
 | **15** | Reverse Shell & Interactive Threat Guard | [`week15/README.md`](phase07-advanced-security-observability/week15-reverse-shell-guard/README.md) | • [`revshell_detect.c`](phase07-advanced-security-observability/week15-reverse-shell-guard/revshell_detect.c)<br>• [`main.go`](phase07-advanced-security-observability/week15-reverse-shell-guard/main.go)<br>• [`Makefile`](phase07-advanced-security-observability/week15-reverse-shell-guard/Makefile)<br>• [`go.mod`](phase07-advanced-security-observability/week15-reverse-shell-guard/go.mod) |
 | **16** | eBPF Rootkit Detector & Integrity Scanner | [`week16/README.md`](phase07-advanced-security-observability/week16-ebpf-integrity-audit/README.md) | • [`bpf_audit.c`](phase07-advanced-security-observability/week16-ebpf-integrity-audit/bpf_audit.c)<br>• [`main.go`](phase07-advanced-security-observability/week16-ebpf-integrity-audit/main.go)<br>• [`Makefile`](phase07-advanced-security-observability/week16-ebpf-integrity-audit/Makefile)<br>• [`go.mod`](phase07-advanced-security-observability/week16-ebpf-integrity-audit/go.mod) |
 | **17** | Block I/O Latency Histogram (biolatency) | [`week17/README.md`](phase08-system-performance-observability/week17-block-io-biolatency/README.md) | • [`biolatency.c`](phase08-system-performance-observability/week17-block-io-biolatency/biolatency.c)<br>• [`main.go`](phase08-system-performance-observability/week17-block-io-biolatency/main.go)<br>• [`Makefile`](phase08-system-performance-observability/week17-block-io-biolatency/Makefile)<br>• [`go.mod`](phase08-system-performance-observability/week17-block-io-biolatency/go.mod) |
-| **18** | On-CPU Profiler & Call Stack Unwinding | [`week18/README.md`](phase08-system-performance-observability/week18-cpu-profiler-stacks/README.md) | • [`cpu_stacks.c`](phase08-system-performance-observability/week18-cpu-profiler-stacks/cpu_stacks.c)<br>• [`main.go`](phase08-system-performance-observability/week18-cpu-profiler-stacks/main.go)<br>• [`Makefile`](phase08-system-performance-observability/week18-cpu-profiler-stacks/Makefile)<br>• [`go.mod`](phase08-system-performance-observability/week18-cpu-profiler-stacks/go.mod) |
+| **18** | On-CPU Profiler & Call Stack Unwinding | [`week18/README.md`](phase08-system-performance-observability/week18-cpu-profiler-stacks/README.md) | • [`cpu_stacks.c`](phase08-system-performance-observability/week18-cpu-profiler-stacks/cpu_stacks.c)<br>• [`main.go`](phase08-system-performance-observability/week18-cpu-profiler-stacks/main.go)<br>• [`usersyms.go`](phase08-system-performance-observability/week18-cpu-profiler-stacks/usersyms.go)<br>• [`workload/busy.c`](phase08-system-performance-observability/week18-cpu-profiler-stacks/workload/busy.c)<br>• [`Makefile`](phase08-system-performance-observability/week18-cpu-profiler-stacks/Makefile)<br>• [`go.mod`](phase08-system-performance-observability/week18-cpu-profiler-stacks/go.mod) |
 | **19** | Memory Page Faults & OOM Victim Watcher | [`week19/README.md`](phase08-system-performance-observability/week19-memory-oom-watcher/README.md) | • [`oom_watcher.c`](phase08-system-performance-observability/week19-memory-oom-watcher/oom_watcher.c)<br>• [`main.go`](phase08-system-performance-observability/week19-memory-oom-watcher/main.go)<br>• [`Makefile`](phase08-system-performance-observability/week19-memory-oom-watcher/Makefile)<br>• [`go.mod`](phase08-system-performance-observability/week19-memory-oom-watcher/go.mod) |
-| **20** | TCP Sockops & sk_msg Fastpath Bypass | [`week20/README.md`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/README.md) | • [`sockops.c`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/sockops.c)<br>• [`main.go`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/main.go)<br>• [`Makefile`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/Makefile)<br>• [`go.mod`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/go.mod) |
-| **21** | AF_XDP Zero-Copy Kernel-Bypass Redirect | [`week21/README.md`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/README.md) | • [`xsk_kern.c`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/xsk_kern.c)<br>• [`main.go`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/main.go)<br>• [`Makefile`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/Makefile)<br>• [`go.mod`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/go.mod) |
-| **22** | Modern BPF Trampoline (fentry / fexit) | [`week22/README.md`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/README.md) | • [`trampoline.c`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/trampoline.c)<br>• [`main.go`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/main.go)<br>• [`Makefile`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/Makefile)<br>• [`go.mod`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/go.mod) |
-| **23** | Kernel Traversal with BPF Iterators | [`week23/README.md`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/README.md) | • [`task_iter.c`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/task_iter.c)<br>• [`main.go`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/main.go)<br>• [`Makefile`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/Makefile)<br>• [`go.mod`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/go.mod) |
+| **20** | TCP Sockops & sk_msg Fastpath Bypass | [`week20/README.md`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/README.md) | • [`sockops.c`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/sockops.c)<br>• [`main.go`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/main.go)<br>• [`main_test.go`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/main_test.go)<br>• [`cmd/tcpbench/main.go`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/cmd/tcpbench/main.go)<br>• [`Makefile`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/Makefile)<br>• [`go.mod`](phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass/go.mod) |
+| **21** | AF_XDP Kernel-Bypass Redirect (UMEM & XSKMAP) | [`week21/README.md`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/README.md) | • [`xsk_kern.c`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/xsk_kern.c)<br>• [`main.go`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/main.go)<br>• [`xsk.go`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/xsk.go)<br>• [`main_test.go`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/main_test.go)<br>• [`Makefile`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/Makefile)<br>• [`go.mod`](phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/go.mod) |
+| **22** | Modern BPF Trampoline (fentry / fexit) | [`week22/README.md`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/README.md) | • [`trampoline.c`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/trampoline.c)<br>• [`main.go`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/main.go)<br>• [`main_test.go`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/main_test.go)<br>• [`bench/openbench.c`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/bench/openbench.c)<br>• [`bench/run_bench.sh`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/bench/run_bench.sh)<br>• [`Makefile`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/Makefile)<br>• [`go.mod`](phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline/go.mod) |
+| **23** | Kernel Traversal with BPF Iterators | [`week23/README.md`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/README.md) | • [`task_iter.c`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/task_iter.c)<br>• [`main.go`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/main.go)<br>• [`main_test.go`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/main_test.go)<br>• [`Makefile`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/Makefile)<br>• [`go.mod`](phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators/go.mod) |
 
 ---
 
@@ -100,7 +100,7 @@
 ```
 .
 ├── docs/
-│   └── MASTER_STUDY_GUIDE.md              # หนังสือคู่มือและทฤษฎีฉบับสมบูรณ์ 6 บท (ภาษาไทย)
+│   └── MASTER_STUDY_GUIDE.md              # หนังสือคู่มือและทฤษฎีฉบับสมบูรณ์ 10 บท (ภาษาไทย)
 ├── scripts/
 │   └── setup_env.sh                       # สคริปต์ติดตั้ง Toolchain และสภาพแวดล้อมอัตโนมัติ
 ├── phase01-network-foundation/
@@ -132,11 +132,15 @@
 │   └── week19-memory-oom-watcher/         # ตรวจจับ Page Faults และเฝ้าระวัง OOM Killer แบบเรียลไทม์
 ├── phase09-high-throughput-socket-acceleration/
 │   ├── week20-tcp-sockops-bypass/         # เร่งความเร็ว Local TCP ด้วย Sockops และ sk_msg Fastpath
-│   └── week21-af-xdp-redirect/            # Zero-Copy Kernel-Bypass แพ็กเก็ตด้วย AF_XDP (XSKMAP)
+│   └── week21-af-xdp-redirect/            # Kernel-Bypass แพ็กเก็ตด้วย AF_XDP Socket (UMEM + XSKMAP)
 ├── phase10-cutting-edge-ebpf-technologies/
 │   ├── week22-fentry-fexit-trampoline/    # เทคโนโลยี BPF Trampoline (fentry/fexit) Zero-Overhead Tracing
 │   └── week23-bpf-iterators/              # BPF Iterators (bpf_iter_task) ท่องเคอร์เนลโดยไม่พึ่ง /proc
+├── .github/workflows/ci.yml               # CI: build ทุกแล็บ + รัน BPF_PROG_TEST_RUN tests บน GitHub Actions
+├── LICENSES/                              # ตัวบทสัญญาอนุญาต GPL-2.0 และ MIT
 ├── .gitignore                             # การยกเว้นไฟล์ Binary, Object, และ Cache
+├── LICENSE                                # สรุปสัญญาอนุญาตแยกตามส่วนประกอบ (GPL-2.0 / MIT)
+├── Makefile                               # Build / Test ทุกแล็บในคำสั่งเดียว (make, make test, make week07)
 └── README.md                              # เอกสารแนะนำโครงการนี้
 ```
 
@@ -184,10 +188,25 @@ sudo ./scripts/setup_env.sh
    ```bash
    cd phase04-high-speed-networking/week07-xdp-parsing
    make
-   sudo ./bin/xdp_firewall -iface lo -block 192.168.1.100
+   sudo ./bin/xdp-firewall -iface lo -block-ip 192.168.1.100
    ```
+4. **ทำแบบฝึกหัดท้ายบท**: ทุกสัปดาห์มีหัวข้อ "แบบฝึกหัดท้ายบท (Exercises)" แบ่ง 3 ระดับ (พื้นฐาน / ปานกลาง / ท้าทาย) อยู่ท้าย README ของสัปดาห์นั้น
+
+### Build และ Test ทุกแล็บจาก Root ของ Repository
+
+```bash
+make              # สร้าง vmlinux.h (ถ้ายังไม่มี) แล้ว go generate + go build ทุกแล็บ
+make test         # รัน Unit Tests ด้วย BPF_PROG_TEST_RUN (ต้องใช้ sudo) ในแล็บที่มีชุดทดสอบ
+make week07       # build เฉพาะสัปดาห์ที่ 7
+make week07-test  # test เฉพาะสัปดาห์ที่ 7
+make clean        # ลบไฟล์ที่ generate และไบนารีทั้งหมด
+```
+
+> Unit Tests ใช้ `BPF_PROG_TEST_RUN` ป้อนแพ็กเก็ตที่สร้างขึ้นเองเข้าโปรแกรม eBPF โดยตรงแล้วตรวจผลลัพธ์ (เช่น `XDP_DROP` / `XDP_PASS`) โดยไม่ต้องผูกโปรแกรมเข้ากับการ์ดเครือข่ายจริง จึงรันใน CI ได้ และใช้เป็นเครื่องมือตรวจงานนักศึกษาอัตโนมัติได้ด้วย ทุกครั้งที่ push ขึ้น `main` GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) จะ build ทุกแล็บและรันชุดทดสอบบน Ubuntu 24.04 เพื่อยืนยันว่าโค้ด CO-RE ยังทำงานข้ามเวอร์ชันเคอร์เนลได้
 
 ---
 
 ## 📜 ข้อกำหนดด้านความปลอดภัยและสัญญาอนุญาต (License)
-โค้ดโปรแกรมเคอร์เนล eBPF ในคลังข้อมูลนี้เผยแพร่ภายใต้สัญญาอนุญาต **GPL-2.0** เพื่อให้สามารถเรียกใช้งาน Kernel BPF Helper Functions ได้อย่างสมบูรณ์ โค้ดฝั่ง User Space เผยแพร่ภายใต้ **MIT License**
+โค้ดโปรแกรมเคอร์เนล eBPF ในคลังข้อมูลนี้เผยแพร่ภายใต้สัญญาอนุญาต **GPL-2.0** เพื่อให้สามารถเรียกใช้งาน Kernel BPF Helper Functions ได้อย่างสมบูรณ์ โค้ดฝั่ง User Space สคริปต์ และเอกสารเผยแพร่ภายใต้ **MIT License** รายละเอียดดูที่ [`LICENSE`](LICENSE) และตัวบทเต็มใน [`LICENSES/`](LICENSES/)
+
+> ⚠️ **ข้อกำหนดด้านจริยธรรม**: แล็บด้านความปลอดภัย (เช่น การดักอ่าน TLS plaintext ใน Week 09, การจำลอง Reverse Shell ใน Week 15) ให้ทดลองบนเครื่องหรือ VM ของตนเอง หรือระบบที่ได้รับอนุญาตเป็นลายลักษณ์อักษรเท่านั้น

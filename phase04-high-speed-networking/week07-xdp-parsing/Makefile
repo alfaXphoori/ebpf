@@ -7,7 +7,7 @@ BINARY := $(BIN_DIR)/xdp-firewall
 IFACE ?= lo
 BLOCK_IP ?= 127.0.0.100
 
-.PHONY: all generate build run clean
+.PHONY: all generate build test run clean
 
 all: generate build
 
@@ -21,6 +21,11 @@ build:
 	@echo "===> Building userspace binary $(BINARY)..."
 	mkdir -p $(BIN_DIR)
 	go build -v -o $(BINARY) .
+
+# Run BPF_PROG_TEST_RUN unit tests (needs root: go test re-executes the test binary via sudo)
+test: generate
+	@echo "===> Running BPF_PROG_TEST_RUN unit tests (main_test.go)..."
+	go test -exec sudo -v ./...
 
 # Run with target interface and optional block IP
 run: build

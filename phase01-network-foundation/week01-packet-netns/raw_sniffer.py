@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 ================================================================================
-eBPF Noob to Hero - Week 01: Low-Level Packet Sniffer
+eBPF Zero to Hero - Week 01: Low-Level Packet Sniffer
 Script: raw_sniffer.py
 Description: Captures raw Layer 2 Ethernet frames using Linux AF_PACKET raw sockets
              and performs manual byte-level header parsing and bitwise flag extraction
@@ -308,11 +308,12 @@ def main():
     )
     args = parser.parse_args()
 
-    # Graceful exit handler
+    # Graceful exit handler: convert SIGINT into KeyboardInterrupt so the main loop's
+    # `finally` block prints the statistics exactly once. (An explicit handler is also
+    # needed when the sniffer runs as a background job of a non-interactive shell,
+    # where SIGINT is inherited as "ignored".)
     def sigint_handler(sig, frame):
-        print(f"\n{CLR_YELLOW}[!] Interrupted by user. Exiting...{CLR_RESET}")
-        print_stats_summary()
-        sys.exit(0)
+        raise KeyboardInterrupt
 
     signal.signal(signal.SIGINT, sigint_handler)
 
@@ -344,7 +345,7 @@ def main():
         sys.exit(1)
 
     print(f"{CLR_CYAN}{CLR_BOLD}======================================================{CLR_RESET}")
-    print(f"{CLR_GREEN}{CLR_BOLD} eBPF Noob to Hero - Week 01: Low-Level Raw Sniffer   {CLR_RESET}")
+    print(f"{CLR_GREEN}{CLR_BOLD} eBPF Zero to Hero - Week 01: Low-Level Raw Sniffer   {CLR_RESET}")
     print(f"{CLR_CYAN}{CLR_BOLD}======================================================{CLR_RESET}")
     print(f" Capturing on : {CLR_BOLD}{bind_target}{CLR_RESET}")
     print(f" Filter       : {CLR_BOLD}{args.protocol.upper()}{CLR_RESET}")
@@ -373,9 +374,15 @@ def main():
                 if args.protocol not in ["all", "arp"]:
                     continue
 
+                if len(l3_payload) < 28:
+                    continue
                 captured += 1
                 arp_data = parse_arp(l3_payload)
-                print(f"[{timestamp}] {CLR_YELLOW}[ARP]{CLR_RESET} {src_mac} -> {dst_mac} | {arp_data['opcode']}: Who has {arp_data['target_ip']}? Tell {arp_data['sender_ip']}")
+                if arp_data["opcode"] == "ARP Reply":
+                    arp_text = f"{arp_data['sender_ip']} is at {arp_data['sender_mac']}"
+                else:
+                    arp_text = f"Who has {arp_data['target_ip']}? Tell {arp_data['sender_ip']}"
+                print(f"[{timestamp}] {CLR_YELLOW}[ARP]{CLR_RESET} {src_mac} -> {dst_mac} | {arp_data['opcode']}: {arp_text}")
                 if args.verbose:
                     print(format_hexdump(l3_payload))
                 continue
@@ -395,6 +402,8 @@ def main():
                     if args.protocol not in ["all", "icmp"]:
                         continue
 
+                    if len(l4_payload) < 4:
+                        continue
                     captured += 1
                     icmp_info, payload = parse_icmp(l4_payload)
                     print(
@@ -411,6 +420,8 @@ def main():
                     if args.protocol not in ["all", "tcp"]:
                         continue
 
+                    if len(l4_payload) < 20:
+                        continue
                     captured += 1
                     tcp_info, payload = parse_tcp(l4_payload)
                     print(
@@ -427,6 +438,8 @@ def main():
                     if args.protocol not in ["all", "udp"]:
                         continue
 
+                    if len(l4_payload) < 8:
+                        continue
                     captured += 1
                     udp_info, payload = parse_udp(l4_payload)
                     print(
@@ -446,10 +459,11 @@ def main():
             else:
                 # Other Layer 2 protocols (e.g. IPv6 0x86DD)
                 if args.protocol == "all":
+                    captured += 1
                     print(f"[{timestamp}] [L2-Other] EtherType={hex(eth_type)} {src_mac} -> {dst_mac}")
 
     except KeyboardInterrupt:
-        pass
+        print(f"\n{CLR_YELLOW}[!] Interrupted by user. Exiting...{CLR_RESET}")
     finally:
         print_stats_summary()
         raw_sock.close()

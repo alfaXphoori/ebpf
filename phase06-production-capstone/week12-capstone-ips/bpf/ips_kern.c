@@ -24,23 +24,35 @@ char LICENSE[] SEC("license") = "Dual BSD/GPL";
 #define METRIC_DROPPED_BLACKLIST  1
 #define METRIC_DROPPED_RATELIMIT  2
 #define METRIC_TOTAL_BYTES        3
+#define METRIC_ALERTS_LOST        4   /* ringbuf full: alert could not be reserved */
+
+/* Alert actions (what the data plane did to the offending source) */
+#define ACTION_BANNED        1   /* inserted into blacklist_map (auto-ban enabled) */
+#define ACTION_RATE_LIMITED  2   /* only packets above the threshold are dropped */
 
 /* Configuration Map Indices */
 #define CONF_SYN_LIMIT    0
 #define CONF_ICMP_LIMIT   1
-#define CONF_AUTOBAN_EN   2
+#define CONF_AUTOBAN_EN   2   /* 0 = rate-limit only, 1 = auto-ban offenders */
 #define CONF_WINDOW_NS    3
+#define CONF_BAN_TTL_NS   4   /* 0 = bans never expire in the data plane */
+#define CONF_MAX          5
+
+/* Defaults used when a config slot is still 0 (ARRAY maps are zero-initialised) */
+#define DEFAULT_SYN_LIMIT   100
+#define DEFAULT_ICMP_LIMIT  50
+#define DEFAULT_WINDOW_NS   1000000000ULL /* 1 second */
 
 /* Value struct for Blacklist Map */
 struct block_entry {
-    __u64 blocked_at_ns;
+    __u64 blocked_at_ns;   /* CLOCK_MONOTONIC (bpf_ktime_get_ns) - used for TTL expiry */
     __u64 drop_count;
     __u64 drop_bytes;
     __u32 reason;
     __u32 pad;
 };
 
-/* Value struct for Rate Tracker */
+/* Value struct for Rate Tracker (Fixed / Tumbling Window counter) */
 struct rate_state {
     __u64 window_start_ns;
     __u32 syn_count;
@@ -56,7 +68,8 @@ struct ips_alert {
     __u16 dst_port;
     __u8  proto;
     __u8  reason;
-    __u16 pad;
+    __u8  action;   /* ACTION_BANNED or ACTION_RATE_LIMITED */
+    __u8  pad;
     __u32 pps;
 };
 
@@ -76,12 +89,12 @@ struct {
     __uint(max_entries, 65536);
 } rate_tracker SEC(".maps");
 
-/* 3. Per-CPU Telemetry Metrics: 0=Passed, 1=Drop BL, 2=Drop RateLimit, 3=Total Bytes */
+/* 3. Per-CPU Telemetry Metrics: 0=Passed, 1=Drop BL, 2=Drop RateLimit, 3=Total Bytes, 4=Alerts Lost */
 struct {
     __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
     __type(key, __u32);
     __type(value, __u64);
-    __uint(max_entries, 4);
+    __uint(max_entries, 5);
 } ips_metrics SEC(".maps");
 
 /* 4. Security Alerts Ring Buffer (4 MB) */
@@ -90,21 +103,31 @@ struct {
     __uint(max_entries, 1 << 22); /* 4 MB */
 } ips_events SEC(".maps");
 
-/* 5. Configuration Map: 0=SYN Limit, 1=ICMP Limit, 2=Auto-ban, 3=Window NS */
+/* 5. Configuration Map: 0=SYN Limit, 1=ICMP Limit, 2=Auto-ban, 3=Window NS, 4=Ban TTL NS */
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __type(key, __u32);
     __type(value, __u64);
-    __uint(max_entries, 4);
+    __uint(max_entries, CONF_MAX);
 } config_map SEC(".maps");
 
-/* Helper to increment Per-CPU metrics safely */
+/*
+ * Helper to increment Per-CPU metrics:
+ * each CPU owns its own slot, so a plain += is safe (no atomics needed).
+ */
 static __always_inline void inc_metric(__u32 idx, __u64 delta)
 {
     __u64 *val = bpf_map_lookup_elem(&ips_metrics, &idx);
     if (val) {
         *val += delta;
     }
+}
+
+/* Helper to read a config slot; returns 0 if the slot does not exist */
+static __always_inline __u64 get_conf(__u32 idx)
+{
+    __u64 *val = bpf_map_lookup_elem(&config_map, &idx);
+    return val ? *val : 0;
 }
 
 /*
@@ -150,14 +173,29 @@ int xdp_smart_ips(struct xdp_md *ctx)
     __u32 dst_ip = iph->daddr;
     __u64 now = bpf_ktime_get_ns();
 
-    /* 3. Check Blacklist Map */
+    /*
+     * 3. Check Blacklist Map
+     * blacklist_map is a shared (non per-CPU) hash: packets from the same source
+     * can hit this entry on several CPUs at once, so the counters must be
+     * updated with atomic adds (__sync_fetch_and_add -> BPF_ATOMIC_ADD).
+     */
     struct block_entry *b_entry = bpf_map_lookup_elem(&blacklist_map, &src_ip);
     if (b_entry) {
-        b_entry->drop_count++;
-        b_entry->drop_bytes += pkt_len;
-        inc_metric(METRIC_DROPPED_BLACKLIST, 1);
-        inc_metric(METRIC_TOTAL_BYTES, pkt_len);
-        return XDP_DROP;
+        __u64 ban_ttl = get_conf(CONF_BAN_TTL_NS);
+        __u64 banned_for = now - b_entry->blocked_at_ns;
+
+        /*
+         * Data-plane TTL: an expired ban is ignored here even if the Go agent
+         * has not yet removed it (e.g. its ringbuf alert was lost). The agent's
+         * reaper deletes the stale entry on its next sweep.
+         */
+        if (ban_ttl == 0 || now < b_entry->blocked_at_ns || banned_for < ban_ttl) {
+            __sync_fetch_and_add(&b_entry->drop_count, 1);
+            __sync_fetch_and_add(&b_entry->drop_bytes, pkt_len);
+            inc_metric(METRIC_DROPPED_BLACKLIST, 1);
+            inc_metric(METRIC_TOTAL_BYTES, pkt_len);
+            return XDP_DROP;
+        }
     }
 
     /* 4. Dynamic Flood Rate Limiting for TCP SYN & ICMP */
@@ -200,82 +238,105 @@ int xdp_smart_ips(struct xdp_md *ctx)
         return XDP_PASS;
     }
 
-    /* 5. Read Configuration Limits */
-    __u32 syn_idx = CONF_SYN_LIMIT;
-    __u32 icmp_idx = CONF_ICMP_LIMIT;
-    __u32 win_idx = CONF_WINDOW_NS;
-    __u64 *cfg_syn = bpf_map_lookup_elem(&config_map, &syn_idx);
-    __u64 *cfg_icmp = bpf_map_lookup_elem(&config_map, &icmp_idx);
-    __u64 *cfg_win = bpf_map_lookup_elem(&config_map, &win_idx);
+    /* 5. Read Configuration (0 = not configured -> use default) */
+    __u64 syn_threshold = get_conf(CONF_SYN_LIMIT);
+    __u64 icmp_threshold = get_conf(CONF_ICMP_LIMIT);
+    __u64 window_ns = get_conf(CONF_WINDOW_NS);
+    __u64 autoban_en = get_conf(CONF_AUTOBAN_EN);
 
-    __u32 syn_threshold = cfg_syn ? (__u32)*cfg_syn : 100;
-    __u32 icmp_threshold = cfg_icmp ? (__u32)*cfg_icmp : 50;
-    __u64 window_ns = cfg_win ? *cfg_win : 1000000000ULL; /* 1 sec default */
+    if (syn_threshold == 0)
+        syn_threshold = DEFAULT_SYN_LIMIT;
+    if (icmp_threshold == 0)
+        icmp_threshold = DEFAULT_ICMP_LIMIT;
+    if (window_ns == 0)
+        window_ns = DEFAULT_WINDOW_NS;
 
     /* 6. Update Rate Tracker */
     struct rate_state *r_state = bpf_map_lookup_elem(&rate_tracker, &src_ip);
-    struct rate_state initial_state = {0};
-
     if (!r_state) {
-        initial_state.window_start_ns = now;
-        if (is_syn) initial_state.syn_count = 1;
-        if (is_icmp_echo) initial_state.icmp_count = 1;
-        bpf_map_update_elem(&rate_tracker, &src_ip, &initial_state, BPF_ANY);
-        inc_metric(METRIC_PASSED, 1);
-        inc_metric(METRIC_TOTAL_BYTES, pkt_len);
-        return XDP_PASS;
+        struct rate_state initial_state = {
+            .window_start_ns = now,
+        };
+        /* BPF_NOEXIST: if another CPU created the entry first, keep its counters */
+        bpf_map_update_elem(&rate_tracker, &src_ip, &initial_state, BPF_NOEXIST);
+        r_state = bpf_map_lookup_elem(&rate_tracker, &src_ip);
+        if (!r_state) {
+            inc_metric(METRIC_PASSED, 1);
+            inc_metric(METRIC_TOTAL_BYTES, pkt_len);
+            return XDP_PASS;
+        }
     }
 
-    /* Check if 1-second sliding window expired */
-    if (now - r_state->window_start_ns > window_ns) {
-        r_state->window_start_ns = now;
-        r_state->syn_count = 0;
-        r_state->icmp_count = 0;
+    /*
+     * Fixed (Tumbling) Window: counters are reset once the current window
+     * is older than window_ns. Only the CPU that wins the compare-and-swap on
+     * window_start_ns performs the reset, so concurrent CPUs cannot reset the
+     * same window twice. (now < start can happen when another CPU just moved
+     * the window forward with a slightly later timestamp - not an expiry.)
+     */
+    __u64 start = r_state->window_start_ns;
+    if (now > start && now - start > window_ns) {
+        if (__sync_val_compare_and_swap(&r_state->window_start_ns, start, now) == start) {
+            r_state->syn_count = 0;
+            r_state->icmp_count = 0;
+        }
     }
 
+    /* Atomic increment; the returned old value + 1 is this packet's position in the window */
+    __u32 count;
+    __u64 threshold;
+    __u8 violation_reason;
     if (is_syn) {
-        r_state->syn_count++;
-    }
-    if (is_icmp_echo) {
-        r_state->icmp_count++;
+        count = __sync_fetch_and_add(&r_state->syn_count, 1) + 1;
+        threshold = syn_threshold;
+        violation_reason = REASON_SYN_FLOOD;
+    } else {
+        count = __sync_fetch_and_add(&r_state->icmp_count, 1) + 1;
+        threshold = icmp_threshold;
+        violation_reason = REASON_ICMP_FLOOD;
     }
 
     /* 7. Threshold Violation Detection */
-    __u8 violation_reason = 0;
-    __u32 current_pps = 0;
+    if (count > threshold) {
+        __u8 action = ACTION_RATE_LIMITED;
 
-    if (is_syn && r_state->syn_count > syn_threshold) {
-        violation_reason = REASON_SYN_FLOOD;
-        current_pps = r_state->syn_count;
-    } else if (is_icmp_echo && r_state->icmp_count > icmp_threshold) {
-        violation_reason = REASON_ICMP_FLOOD;
-        current_pps = r_state->icmp_count;
-    }
+        if (autoban_en) {
+            /* Auto-Ban: Insert offending IP into Blacklist Map immediately */
+            struct block_entry new_ban = {
+                .blocked_at_ns = now,
+                .drop_count = 1,
+                .drop_bytes = pkt_len,
+                .reason = violation_reason,
+                .pad = 0,
+            };
+            bpf_map_update_elem(&blacklist_map, &src_ip, &new_ban, BPF_ANY);
+            action = ACTION_BANNED;
+        }
 
-    if (violation_reason != 0) {
-        /* Auto-Ban: Insert offending IP into Blacklist Map immediately */
-        struct block_entry new_ban = {
-            .blocked_at_ns = now,
-            .drop_count = 1,
-            .drop_bytes = pkt_len,
-            .reason = violation_reason,
-            .pad = 0,
-        };
-        bpf_map_update_elem(&blacklist_map, &src_ip, &new_ban, BPF_ANY);
-
-        /* Stream alert via Ring Buffer to User Space */
-        struct ips_alert *alert = bpf_ringbuf_reserve(&ips_events, sizeof(*alert), 0);
-        if (alert) {
-            alert->ts_ns = now;
-            alert->src_ip = src_ip;
-            alert->dst_ip = dst_ip;
-            alert->src_port = src_port;
-            alert->dst_port = dst_port;
-            alert->proto = iph->protocol;
-            alert->reason = violation_reason;
-            alert->pad = 0;
-            alert->pps = current_pps;
-            bpf_ringbuf_submit(alert, 0);
+        /*
+         * Stream alert via Ring Buffer to User Space.
+         * Rate-limit-only mode drops every packet above the threshold, so only
+         * the first violating packet of each window raises an alert.
+         */
+        if (autoban_en || count == threshold + 1) {
+            struct ips_alert *alert = bpf_ringbuf_reserve(&ips_events, sizeof(*alert), 0);
+            if (alert) {
+                alert->ts_ns = now;
+                alert->src_ip = src_ip;
+                alert->dst_ip = dst_ip;
+                alert->src_port = src_port;
+                alert->dst_port = dst_port;
+                alert->proto = iph->protocol;
+                alert->reason = violation_reason;
+                alert->action = action;
+                alert->pad = 0;
+                alert->pps = count;
+                bpf_ringbuf_submit(alert, 0);
+            } else {
+                /* Ring buffer full: the ban (if any) still carries blocked_at_ns,
+                 * so TTL expiry does not depend on this alert being delivered. */
+                inc_metric(METRIC_ALERTS_LOST, 1);
+            }
         }
 
         inc_metric(METRIC_DROPPED_RATELIMIT, 1);

@@ -1,0 +1,17 @@
+eBPF Zero to Hero
+Copyright (c) 2026 Phoori Chantima
+
+This repository is dual-licensed by component:
+
+  * eBPF kernel-side programs (*.c files loaded into the kernel, e.g.
+    xdp_firewall.c, bpf/ips_kern.c) are licensed under the GNU General
+    Public License, version 2 (GPL-2.0-only). See LICENSES/GPL-2.0.txt.
+    This is required for programs that call GPL-only BPF helper functions
+    (they declare `char LICENSE[] SEC("license") = "GPL"` or "Dual BSD/GPL").
+
+  * Everything else -- user-space Go control planes, Python and shell
+    scripts, Makefiles, documentation and lab guides -- is licensed under
+    the MIT License. See LICENSES/MIT.txt.
+
+The generated header vmlinux.h is produced from your own running kernel's
+BTF by scripts/setup_env.sh and is not distributed with this repository.
