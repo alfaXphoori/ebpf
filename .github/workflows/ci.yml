@@ -1,4 +1,6 @@
 # Build every lab and run BPF_PROG_TEST_RUN unit tests on a real kernel.
+# The course's primary target is Linux 7.0 (Ubuntu 26.04), tested locally with
+# `make test`; this hosted-runner job is an extra CO-RE compatibility check.
 # GitHub's ubuntu-24.04 runners are full VMs with BTF and passwordless sudo,
 # so eBPF programs can be loaded and test-run (but not attached to real NICs).
 name: ci

@@ -1,0 +1,749 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2122" viewBox="0 0 1200 2122">
+<rect width="100%" height="100%" fill="#f8f8f8"/>
+<text x="600.0" y="18" text-anchor="middle" font-size="15" font-family="Verdana, sans-serif">System-wide on-CPU profile — Linux 7.0.0-38, 99 Hz, 5 s</text>
+<text x="600.0" y="30" text-anchor="middle" font-size="10" fill="#555" font-family="Verdana, sans-serif">1192 samples · width = share of on-CPU samples · orange = kernel frame (_[k]) · yellow = user frame</text>
+<g><title>all (1192 samples, 100.00%)</title><rect x="10.00" y="2082" width="1180.00" height="15" fill="#ccc" rx="2"/>
+<text x="13.00" y="2094" font-size="11" font-family="Verdana, sans-serif">all</text>
+</g>
+<g><title>2.1.312 (6 samples, 0.50%)</title><rect x="10.00" y="2066" width="5.94" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x19dfa2e] (5 samples, 0.42%)</title><rect x="10.99" y="2050" width="4.95" height="15" fill="rgb(236,193,51)" rx="2"/>
+</g>
+<g><title>__libc_start_main (5 samples, 0.42%)</title><rect x="10.99" y="2034" width="4.95" height="15" fill="rgb(244,209,59)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0x2a601] (5 samples, 0.42%)</title><rect x="10.99" y="2018" width="4.95" height="15" fill="rgb(236,192,51)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x2240a81] (5 samples, 0.42%)</title><rect x="10.99" y="2002" width="4.95" height="15" fill="rgb(228,177,43)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x213b3ea] (5 samples, 0.42%)</title><rect x="10.99" y="1986" width="4.95" height="15" fill="rgb(244,208,59)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x214003c] (5 samples, 0.42%)</title><rect x="10.99" y="1970" width="4.95" height="15" fill="rgb(243,207,58)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x1e654a6] (5 samples, 0.42%)</title><rect x="10.99" y="1954" width="4.95" height="15" fill="rgb(248,216,63)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x308a9cb] (5 samples, 0.42%)</title><rect x="10.99" y="1938" width="4.95" height="15" fill="rgb(249,219,64)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x224006a] (5 samples, 0.42%)</title><rect x="10.99" y="1922" width="4.95" height="15" fill="rgb(233,186,48)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x308a67a] (5 samples, 0.42%)</title><rect x="10.99" y="1906" width="4.95" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x2655796] (5 samples, 0.42%)</title><rect x="10.99" y="1890" width="4.95" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x6775124] (5 samples, 0.42%)</title><rect x="10.99" y="1874" width="4.95" height="15" fill="rgb(236,193,51)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x6618df5] (5 samples, 0.42%)</title><rect x="10.99" y="1858" width="4.95" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x62f19e4] (5 samples, 0.42%)</title><rect x="10.99" y="1842" width="4.95" height="15" fill="rgb(252,224,67)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x62f60b0] (5 samples, 0.42%)</title><rect x="10.99" y="1826" width="4.95" height="15" fill="rgb(244,209,59)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x54279c4] (5 samples, 0.42%)</title><rect x="10.99" y="1810" width="4.95" height="15" fill="rgb(225,170,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="10.99" y="1794" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="10.99" y="1778" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="10.99" y="1762" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="10.99" y="1746" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="10.99" y="1730" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="10.99" y="1714" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="11.98" y="1698" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>bash (21 samples, 1.76%)</title><rect x="16.93" y="2066" width="20.79" height="15" fill="rgb(250,220,65)" rx="2"/>
+</g>
+<g><title>0x60bc7c1e4235 (6 samples, 0.50%)</title><rect x="16.93" y="2050" width="5.94" height="15" fill="rgb(239,198,54)" rx="2"/>
+</g>
+<g><title>0x7e5f77da8718 (6 samples, 0.50%)</title><rect x="16.93" y="2034" width="5.94" height="15" fill="rgb(252,224,67)" rx="2"/>
+</g>
+<g><title>0x7e5f77da8601 (6 samples, 0.50%)</title><rect x="16.93" y="2018" width="5.94" height="15" fill="rgb(253,227,68)" rx="2"/>
+</g>
+<g><title>0x60bc7c1e41f6 (6 samples, 0.50%)</title><rect x="16.93" y="2002" width="5.94" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x60bc7c1f0d4f (6 samples, 0.50%)</title><rect x="16.93" y="1986" width="5.94" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x60bc7c2081b2 (6 samples, 0.50%)</title><rect x="16.93" y="1970" width="5.94" height="15" fill="rgb(252,224,67)" rx="2"/>
+</g>
+<g><title>0x60bc7c205d16 (6 samples, 0.50%)</title><rect x="16.93" y="1954" width="5.94" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>0x60bc7c20487b (6 samples, 0.50%)</title><rect x="16.93" y="1938" width="5.94" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x60bc7c216803 (6 samples, 0.50%)</title><rect x="16.93" y="1922" width="5.94" height="15" fill="rgb(245,210,60)" rx="2"/>
+</g>
+<g><title>0x60bc7c2055e9 (6 samples, 0.50%)</title><rect x="16.93" y="1906" width="5.94" height="15" fill="rgb(248,217,63)" rx="2"/>
+</g>
+<g><title>0x60bc7c2076ba (6 samples, 0.50%)</title><rect x="16.93" y="1890" width="5.94" height="15" fill="rgb(238,197,53)" rx="2"/>
+</g>
+<g><title>0x60bc7c2067ca (6 samples, 0.50%)</title><rect x="16.93" y="1874" width="5.94" height="15" fill="rgb(247,215,62)" rx="2"/>
+</g>
+<g><title>0x60bc7c20506f (6 samples, 0.50%)</title><rect x="16.93" y="1858" width="5.94" height="15" fill="rgb(231,182,46)" rx="2"/>
+</g>
+<g><title>0x60bc7c2096d8 (6 samples, 0.50%)</title><rect x="16.93" y="1842" width="5.94" height="15" fill="rgb(250,221,65)" rx="2"/>
+</g>
+<g><title>0x60bc7c20765b (6 samples, 0.50%)</title><rect x="16.93" y="1826" width="5.94" height="15" fill="rgb(233,187,48)" rx="2"/>
+</g>
+<g><title>0x60bc7c2081b2 (6 samples, 0.50%)</title><rect x="16.93" y="1810" width="5.94" height="15" fill="rgb(252,224,67)" rx="2"/>
+</g>
+<g><title>0x60bc7c20560f (6 samples, 0.50%)</title><rect x="16.93" y="1794" width="5.94" height="15" fill="rgb(240,201,55)" rx="2"/>
+</g>
+<g><title>0x60bc7c208340 (6 samples, 0.50%)</title><rect x="16.93" y="1778" width="5.94" height="15" fill="rgb(249,219,64)" rx="2"/>
+</g>
+<g><title>0x60bc7c2081b2 (6 samples, 0.50%)</title><rect x="16.93" y="1762" width="5.94" height="15" fill="rgb(252,224,67)" rx="2"/>
+</g>
+<g><title>0x60bc7c205d16 (6 samples, 0.50%)</title><rect x="16.93" y="1746" width="5.94" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>0x60bc7c203ad4 (6 samples, 0.50%)</title><rect x="16.93" y="1730" width="5.94" height="15" fill="rgb(254,229,69)" rx="2"/>
+</g>
+<g><title>0x60bc7c217ced (4 samples, 0.34%)</title><rect x="18.91" y="1714" width="3.96" height="15" fill="rgb(235,190,50)" rx="2"/>
+</g>
+<g><title>0x7e5f77e75f0b (4 samples, 0.34%)</title><rect x="18.91" y="1698" width="3.96" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>entry_SYSCALL_64_after_hwframe_[k] (4 samples, 0.34%)</title><rect x="18.91" y="1682" width="3.96" height="15" fill="rgb(214,101,40)" rx="2"/>
+</g>
+<g><title>do_syscall_64_[k] (4 samples, 0.34%)</title><rect x="18.91" y="1666" width="3.96" height="15" fill="rgb(244,137,40)" rx="2"/>
+</g>
+<g><title>x64_sys_call_[k] (4 samples, 0.34%)</title><rect x="18.91" y="1650" width="3.96" height="15" fill="rgb(220,109,40)" rx="2"/>
+</g>
+<g><title>__x64_sys_execve_[k] (4 samples, 0.34%)</title><rect x="18.91" y="1634" width="3.96" height="15" fill="rgb(224,112,40)" rx="2"/>
+</g>
+<g><title>do_execveat_common.isra.0_[k] (4 samples, 0.34%)</title><rect x="18.91" y="1618" width="3.96" height="15" fill="rgb(222,110,40)" rx="2"/>
+</g>
+<g><title>bprm_execve_[k] (3 samples, 0.25%)</title><rect x="18.91" y="1602" width="2.97" height="15" fill="rgb(252,146,40)" rx="2"/>
+</g>
+<g><title>bprm_execve.part.0_[k] (3 samples, 0.25%)</title><rect x="18.91" y="1586" width="2.97" height="15" fill="rgb(233,123,40)" rx="2"/>
+</g>
+<g><title>0x7e5f77e75f0b (3 samples, 0.25%)</title><rect x="22.87" y="2050" width="2.97" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>entry_SYSCALL_64_after_hwframe_[k] (3 samples, 0.25%)</title><rect x="22.87" y="2034" width="2.97" height="15" fill="rgb(214,101,40)" rx="2"/>
+</g>
+<g><title>do_syscall_64_[k] (3 samples, 0.25%)</title><rect x="22.87" y="2018" width="2.97" height="15" fill="rgb(244,137,40)" rx="2"/>
+</g>
+<g><title>x64_sys_call_[k] (3 samples, 0.25%)</title><rect x="22.87" y="2002" width="2.97" height="15" fill="rgb(220,109,40)" rx="2"/>
+</g>
+<g><title>__x64_sys_execve_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1986" width="2.97" height="15" fill="rgb(224,112,40)" rx="2"/>
+</g>
+<g><title>do_execveat_common.isra.0_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1970" width="2.97" height="15" fill="rgb(222,110,40)" rx="2"/>
+</g>
+<g><title>bprm_execve_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1954" width="2.97" height="15" fill="rgb(252,146,40)" rx="2"/>
+</g>
+<g><title>bprm_execve.part.0_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1938" width="2.97" height="15" fill="rgb(233,123,40)" rx="2"/>
+</g>
+<g><title>exec_binprm_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1922" width="2.97" height="15" fill="rgb(222,110,40)" rx="2"/>
+</g>
+<g><title>load_elf_binary_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1906" width="2.97" height="15" fill="rgb(213,100,40)" rx="2"/>
+</g>
+<g><title>begin_new_exec_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1890" width="2.97" height="15" fill="rgb(212,99,40)" rx="2"/>
+</g>
+<g><title>exec_mmap_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1874" width="2.97" height="15" fill="rgb(238,130,40)" rx="2"/>
+</g>
+<g><title>mmput_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1858" width="2.97" height="15" fill="rgb(236,128,40)" rx="2"/>
+</g>
+<g><title>__mmput_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1842" width="2.97" height="15" fill="rgb(241,133,40)" rx="2"/>
+</g>
+<g><title>exit_mmap_[k] (3 samples, 0.25%)</title><rect x="22.87" y="1826" width="2.97" height="15" fill="rgb(233,124,40)" rx="2"/>
+</g>
+<g><title>_start (11 samples, 0.92%)</title><rect x="26.83" y="2050" width="10.89" height="15" fill="rgb(233,187,48)" rx="2"/>
+</g>
+<g><title>__libc_start_main (11 samples, 0.92%)</title><rect x="26.83" y="2034" width="10.89" height="15" fill="rgb(244,209,59)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0x2a601] (11 samples, 0.92%)</title><rect x="26.83" y="2018" width="10.89" height="15" fill="rgb(236,192,51)" rx="2"/>
+</g>
+<g><title>main (11 samples, 0.92%)</title><rect x="26.83" y="2002" width="10.89" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>reader_loop (11 samples, 0.92%)</title><rect x="26.83" y="1986" width="10.89" height="15" fill="rgb(231,182,46)" rx="2"/>
+</g>
+<g><title>execute_command (11 samples, 0.92%)</title><rect x="26.83" y="1970" width="10.89" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1954" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>[bash+0x5587b] (11 samples, 0.92%)</title><rect x="26.83" y="1938" width="10.89" height="15" fill="rgb(250,220,65)" rx="2"/>
+</g>
+<g><title>[bash+0x67803] (11 samples, 0.92%)</title><rect x="26.83" y="1922" width="10.89" height="15" fill="rgb(228,177,43)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1906" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1890" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1874" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1858" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>[bash+0x5a6d8] (11 samples, 0.92%)</title><rect x="26.83" y="1842" width="10.89" height="15" fill="rgb(249,219,64)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1826" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>execute_command (11 samples, 0.92%)</title><rect x="26.83" y="1810" width="10.89" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>execute_command_internal (11 samples, 0.92%)</title><rect x="26.83" y="1794" width="10.89" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>[bash+0x59340] (8 samples, 0.67%)</title><rect x="26.83" y="1778" width="7.92" height="15" fill="rgb(238,196,53)" rx="2"/>
+</g>
+<g><title>execute_command (8 samples, 0.67%)</title><rect x="26.83" y="1762" width="7.92" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>execute_command_internal (8 samples, 0.67%)</title><rect x="26.83" y="1746" width="7.92" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>[bash+0x54ad4] (6 samples, 0.50%)</title><rect x="26.83" y="1730" width="5.94" height="15" fill="rgb(249,219,64)" rx="2"/>
+</g>
+<g><title>[bash+0x68811] (6 samples, 0.50%)</title><rect x="26.83" y="1714" width="5.94" height="15" fill="rgb(240,201,55)" rx="2"/>
+</g>
+<g><title>make_child (6 samples, 0.50%)</title><rect x="26.83" y="1698" width="5.94" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>fork (6 samples, 0.50%)</title><rect x="26.83" y="1682" width="5.94" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>_Fork (6 samples, 0.50%)</title><rect x="26.83" y="1666" width="5.94" height="15" fill="rgb(235,190,50)" rx="2"/>
+</g>
+<g><title>entry_SYSCALL_64_after_hwframe_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1650" width="2.97" height="15" fill="rgb(214,101,40)" rx="2"/>
+</g>
+<g><title>do_syscall_64_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1634" width="2.97" height="15" fill="rgb(244,137,40)" rx="2"/>
+</g>
+<g><title>x64_sys_call_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1618" width="2.97" height="15" fill="rgb(220,109,40)" rx="2"/>
+</g>
+<g><title>__x64_sys_clone_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1602" width="2.97" height="15" fill="rgb(211,98,40)" rx="2"/>
+</g>
+<g><title>__do_sys_clone_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1586" width="2.97" height="15" fill="rgb(252,146,40)" rx="2"/>
+</g>
+<g><title>kernel_clone_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1570" width="2.97" height="15" fill="rgb(227,117,40)" rx="2"/>
+</g>
+<g><title>copy_process_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1554" width="2.97" height="15" fill="rgb(247,141,40)" rx="2"/>
+</g>
+<g><title>dup_mm.constprop.0_[k] (3 samples, 0.25%)</title><rect x="27.82" y="1538" width="2.97" height="15" fill="rgb(223,111,40)" rx="2"/>
+</g>
+<g><title>[bash+0x593c5] (3 samples, 0.25%)</title><rect x="34.75" y="1778" width="2.97" height="15" fill="rgb(251,223,66)" rx="2"/>
+</g>
+<g><title>execute_command (3 samples, 0.25%)</title><rect x="34.75" y="1762" width="2.97" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>execute_command_internal (3 samples, 0.25%)</title><rect x="34.75" y="1746" width="2.97" height="15" fill="rgb(246,213,61)" rx="2"/>
+</g>
+<g><title>busy (495 samples, 41.53%)</title><rect x="37.72" y="2066" width="490.02" height="15" fill="rgb(241,202,56)" rx="2"/>
+<text x="40.72" y="2078" font-size="11" font-family="Verdana, sans-serif">busy</text>
+</g>
+<g><title>_start (495 samples, 41.53%)</title><rect x="37.72" y="2050" width="490.02" height="15" fill="rgb(233,187,48)" rx="2"/>
+<text x="40.72" y="2062" font-size="11" font-family="Verdana, sans-serif">_start</text>
+</g>
+<g><title>__libc_start_main (495 samples, 41.53%)</title><rect x="37.72" y="2034" width="490.02" height="15" fill="rgb(244,209,59)" rx="2"/>
+<text x="40.72" y="2046" font-size="11" font-family="Verdana, sans-serif">__libc_start_main</text>
+</g>
+<g><title>[libc.so.6+0x2a601] (495 samples, 41.53%)</title><rect x="37.72" y="2018" width="490.02" height="15" fill="rgb(236,192,51)" rx="2"/>
+<text x="40.72" y="2030" font-size="11" font-family="Verdana, sans-serif">[libc.so.6+0x2a601]</text>
+</g>
+<g><title>main (495 samples, 41.53%)</title><rect x="37.72" y="2002" width="490.02" height="15" fill="rgb(254,228,69)" rx="2"/>
+<text x="40.72" y="2014" font-size="11" font-family="Verdana, sans-serif">main</text>
+</g>
+<g><title>run_workload (495 samples, 41.53%)</title><rect x="37.72" y="1986" width="490.02" height="15" fill="rgb(251,223,66)" rx="2"/>
+<text x="40.72" y="1998" font-size="11" font-family="Verdana, sans-serif">run_workload</text>
+</g>
+<g><title>hot_path_a (341 samples, 28.61%)</title><rect x="37.72" y="1970" width="337.57" height="15" fill="rgb(229,179,44)" rx="2"/>
+<text x="40.72" y="1982" font-size="11" font-family="Verdana, sans-serif">hot_path_a</text>
+</g>
+<g><title>spin (341 samples, 28.61%)</title><rect x="37.72" y="1954" width="337.57" height="15" fill="rgb(232,185,47)" rx="2"/>
+<text x="40.72" y="1966" font-size="11" font-family="Verdana, sans-serif">spin</text>
+</g>
+<g><title>hot_path_b (154 samples, 12.92%)</title><rect x="375.29" y="1970" width="152.45" height="15" fill="rgb(230,180,45)" rx="2"/>
+<text x="378.29" y="1982" font-size="11" font-family="Verdana, sans-serif">hot_path_b</text>
+</g>
+<g><title>spin (154 samples, 12.92%)</title><rect x="375.29" y="1954" width="152.45" height="15" fill="rgb(232,185,47)" rx="2"/>
+<text x="378.29" y="1966" font-size="11" font-family="Verdana, sans-serif">spin</text>
+</g>
+<g><title>cc1plus (421 samples, 35.32%)</title><rect x="529.71" y="2066" width="416.76" height="15" fill="rgb(230,181,45)" rx="2"/>
+<text x="532.71" y="2078" font-size="11" font-family="Verdana, sans-serif">cc1plus</text>
+</g>
+<g><title>0x2 (3 samples, 0.25%)</title><rect x="535.65" y="2050" width="2.97" height="15" fill="rgb(238,196,53)" rx="2"/>
+</g>
+<g><title>0x3d (3 samples, 0.25%)</title><rect x="553.47" y="2050" width="2.97" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>0x4 (3 samples, 0.25%)</title><rect x="556.44" y="2050" width="2.97" height="15" fill="rgb(248,216,63)" rx="2"/>
+</g>
+<g><title>0x70e0000 (4 samples, 0.34%)</title><rect x="579.21" y="2050" width="3.96" height="15" fill="rgb(228,177,43)" rx="2"/>
+</g>
+<g><title>0x1000 (4 samples, 0.34%)</title><rect x="579.21" y="2034" width="3.96" height="15" fill="rgb(238,197,53)" rx="2"/>
+</g>
+<g><title>0x7d2a651fc888 (3 samples, 0.25%)</title><rect x="655.44" y="2050" width="2.97" height="15" fill="rgb(231,182,46)" rx="2"/>
+</g>
+<g><title>0x7d2a69c21258 (5 samples, 0.42%)</title><rect x="659.40" y="2050" width="4.95" height="15" fill="rgb(233,186,48)" rx="2"/>
+</g>
+<g><title>_Z6tsubstP9tree_nodeS0_iS0_ (4 samples, 0.34%)</title><rect x="660.39" y="2034" width="3.96" height="15" fill="rgb(239,198,54)" rx="2"/>
+</g>
+<g><title>0x7d2a69c29f18 (6 samples, 0.50%)</title><rect x="671.28" y="2050" width="5.94" height="15" fill="rgb(236,193,51)" rx="2"/>
+</g>
+<g><title>0xd (8 samples, 0.67%)</title><rect x="686.12" y="2050" width="7.92" height="15" fill="rgb(250,221,65)" rx="2"/>
+</g>
+<g><title>_Z11walk_tree_1PP9tree_nodePFS0_S1_PiPvES3_P8hash_setIS0_Lb0E19default_hash_traitsIS0_EEPFS0_S1_S2_S5_S3_SA_E (3 samples, 0.25%)</title><rect x="691.07" y="2034" width="2.97" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0x198449] (3 samples, 0.25%)</title><rect x="795.02" y="2050" width="2.97" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>asm_exc_page_fault_[k] (3 samples, 0.25%)</title><rect x="795.02" y="2034" width="2.97" height="15" fill="rgb(210,96,40)" rx="2"/>
+</g>
+<g><title>exc_page_fault_[k] (3 samples, 0.25%)</title><rect x="795.02" y="2018" width="2.97" height="15" fill="rgb(253,148,40)" rx="2"/>
+</g>
+<g><title>do_user_addr_fault_[k] (3 samples, 0.25%)</title><rect x="795.02" y="2002" width="2.97" height="15" fill="rgb(217,105,40)" rx="2"/>
+</g>
+<g><title>handle_mm_fault_[k] (3 samples, 0.25%)</title><rect x="795.02" y="1986" width="2.97" height="15" fill="rgb(253,148,40)" rx="2"/>
+</g>
+<g><title>__handle_mm_fault_[k] (3 samples, 0.25%)</title><rect x="795.02" y="1970" width="2.97" height="15" fill="rgb(231,121,40)" rx="2"/>
+</g>
+<g><title>[missing] (10 samples, 0.84%)</title><rect x="802.94" y="2050" width="9.90" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>_Z12ggc_set_markPKv (8 samples, 0.67%)</title><rect x="828.67" y="2050" width="7.92" height="15" fill="rgb(230,181,45)" rx="2"/>
+</g>
+<g><title>_Z24gt_ggc_mx_lang_tree_nodePv (7 samples, 0.59%)</title><rect x="876.19" y="2050" width="6.93" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>_Z26ggc_internal_alloc_no_dtormPFvPvEmm (10 samples, 0.84%)</title><rect x="888.07" y="2050" width="9.90" height="15" fill="rgb(247,214,62)" rx="2"/>
+</g>
+<g><title>_Z27type_dependent_expression_pP9tree_node (4 samples, 0.34%)</title><rect x="903.91" y="2050" width="3.96" height="15" fill="rgb(233,187,48)" rx="2"/>
+</g>
+<g><title>_Z6build19tree_codeP9tree_nodeS1_ (3 samples, 0.25%)</title><rect x="912.82" y="2050" width="2.97" height="15" fill="rgb(234,189,49)" rx="2"/>
+</g>
+<g><title>_Z6tsubstP9tree_nodeS0_iS0_ (3 samples, 0.25%)</title><rect x="915.79" y="2050" width="2.97" height="15" fill="rgb(239,198,54)" rx="2"/>
+</g>
+<g><title>htab_find_slot_with_hash (3 samples, 0.25%)</title><rect x="940.54" y="2050" width="2.97" height="15" fill="rgb(235,191,50)" rx="2"/>
+</g>
+<g><title>claude (8 samples, 0.67%)</title><rect x="946.48" y="2066" width="7.92" height="15" fill="rgb(241,202,56)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x19dfa2e] (8 samples, 0.67%)</title><rect x="946.48" y="2050" width="7.92" height="15" fill="rgb(236,193,51)" rx="2"/>
+</g>
+<g><title>__libc_start_main (8 samples, 0.67%)</title><rect x="946.48" y="2034" width="7.92" height="15" fill="rgb(244,209,59)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0x2a601] (8 samples, 0.67%)</title><rect x="946.48" y="2018" width="7.92" height="15" fill="rgb(236,192,51)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x2240a81] (8 samples, 0.67%)</title><rect x="946.48" y="2002" width="7.92" height="15" fill="rgb(228,177,43)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x213b3ea] (8 samples, 0.67%)</title><rect x="946.48" y="1986" width="7.92" height="15" fill="rgb(244,208,59)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x214003c] (8 samples, 0.67%)</title><rect x="946.48" y="1970" width="7.92" height="15" fill="rgb(243,207,58)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x1e654ae] (8 samples, 0.67%)</title><rect x="946.48" y="1954" width="7.92" height="15" fill="rgb(230,180,45)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x20a73f7] (7 samples, 0.59%)</title><rect x="946.48" y="1938" width="6.93" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x3089b4c] (7 samples, 0.59%)</title><rect x="946.48" y="1922" width="6.93" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x223fcd7] (5 samples, 0.42%)</title><rect x="946.48" y="1906" width="4.95" height="15" fill="rgb(230,181,45)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x22a2fde] (5 samples, 0.42%)</title><rect x="946.48" y="1890" width="4.95" height="15" fill="rgb(244,208,59)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x5dc5778] (5 samples, 0.42%)</title><rect x="946.48" y="1874" width="4.95" height="15" fill="rgb(235,191,50)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x54279c4] (5 samples, 0.42%)</title><rect x="946.48" y="1858" width="4.95" height="15" fill="rgb(225,170,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1842" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1826" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1810" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1794" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1778" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1762" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (5 samples, 0.42%)</title><rect x="946.48" y="1746" width="4.95" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (4 samples, 0.34%)</title><rect x="946.48" y="1730" width="3.96" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="946.48" y="1714" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="946.48" y="1698" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="946.48" y="1682" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="946.48" y="1666" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="946.48" y="1650" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>[anon:JSJITCode] (3 samples, 0.25%)</title><rect x="946.48" y="1634" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>cmake (36 samples, 3.02%)</title><rect x="954.40" y="2066" width="35.64" height="15" fill="rgb(229,179,44)" rx="2"/>
+<text x="957.40" y="2078" font-size="11" font-family="Verdana, sans-serif">cm..</text>
+</g>
+<g><title>0x5bfed2f8b285 (21 samples, 1.76%)</title><rect x="954.40" y="2050" width="20.79" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x70bebc808718 (21 samples, 1.76%)</title><rect x="954.40" y="2034" width="20.79" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>0x70bebc808601 (21 samples, 1.76%)</title><rect x="954.40" y="2018" width="20.79" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed2f6bdf2 (21 samples, 1.76%)</title><rect x="954.40" y="2002" width="20.79" height="15" fill="rgb(245,210,60)" rx="2"/>
+</g>
+<g><title>0x5bfed2f948fc (21 samples, 1.76%)</title><rect x="954.40" y="1986" width="20.79" height="15" fill="rgb(239,198,54)" rx="2"/>
+</g>
+<g><title>0x5bfed32b3d0c (20 samples, 1.68%)</title><rect x="954.40" y="1970" width="19.80" height="15" fill="rgb(232,185,47)" rx="2"/>
+</g>
+<g><title>0x5bfed32a05e6 (20 samples, 1.68%)</title><rect x="954.40" y="1954" width="19.80" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>0x5bfed329cb05 (20 samples, 1.68%)</title><rect x="954.40" y="1938" width="19.80" height="15" fill="rgb(235,190,50)" rx="2"/>
+</g>
+<g><title>0x5bfed30e5341 (20 samples, 1.68%)</title><rect x="954.40" y="1922" width="19.80" height="15" fill="rgb(248,217,63)" rx="2"/>
+</g>
+<g><title>0x5bfed328a158 (20 samples, 1.68%)</title><rect x="954.40" y="1906" width="19.80" height="15" fill="rgb(254,229,69)" rx="2"/>
+</g>
+<g><title>0x5bfed30c3ca9 (20 samples, 1.68%)</title><rect x="954.40" y="1890" width="19.80" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>0x5bfed317b265 (20 samples, 1.68%)</title><rect x="954.40" y="1874" width="19.80" height="15" fill="rgb(249,218,64)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (20 samples, 1.68%)</title><rect x="954.40" y="1858" width="19.80" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (20 samples, 1.68%)</title><rect x="954.40" y="1842" width="19.80" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (20 samples, 1.68%)</title><rect x="954.40" y="1826" width="19.80" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed338ad2d (14 samples, 1.17%)</title><rect x="954.40" y="1810" width="13.86" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3388ab4 (14 samples, 1.17%)</title><rect x="954.40" y="1794" width="13.86" height="15" fill="rgb(237,195,52)" rx="2"/>
+</g>
+<g><title>0x5bfed338648e (14 samples, 1.17%)</title><rect x="954.40" y="1778" width="13.86" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3384604 (14 samples, 1.17%)</title><rect x="954.40" y="1762" width="13.86" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed33835a5 (14 samples, 1.17%)</title><rect x="954.40" y="1746" width="13.86" height="15" fill="rgb(247,214,62)" rx="2"/>
+</g>
+<g><title>0x5bfed3368099 (14 samples, 1.17%)</title><rect x="954.40" y="1730" width="13.86" height="15" fill="rgb(251,222,66)" rx="2"/>
+</g>
+<g><title>0x5bfed3179c54 (14 samples, 1.17%)</title><rect x="954.40" y="1714" width="13.86" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (14 samples, 1.17%)</title><rect x="954.40" y="1698" width="13.86" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (14 samples, 1.17%)</title><rect x="954.40" y="1682" width="13.86" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (14 samples, 1.17%)</title><rect x="954.40" y="1666" width="13.86" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed339bc69 (14 samples, 1.17%)</title><rect x="954.40" y="1650" width="13.86" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3398336 (14 samples, 1.17%)</title><rect x="954.40" y="1634" width="13.86" height="15" fill="rgb(237,194,52)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (14 samples, 1.17%)</title><rect x="954.40" y="1618" width="13.86" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (14 samples, 1.17%)</title><rect x="954.40" y="1602" width="13.86" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed33ac80f (14 samples, 1.17%)</title><rect x="954.40" y="1586" width="13.86" height="15" fill="rgb(234,189,49)" rx="2"/>
+</g>
+<g><title>0x5bfed3179c54 (14 samples, 1.17%)</title><rect x="954.40" y="1570" width="13.86" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (14 samples, 1.17%)</title><rect x="954.40" y="1554" width="13.86" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (14 samples, 1.17%)</title><rect x="954.40" y="1538" width="13.86" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (14 samples, 1.17%)</title><rect x="954.40" y="1522" width="13.86" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (14 samples, 1.17%)</title><rect x="954.40" y="1506" width="13.86" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (11 samples, 0.92%)</title><rect x="954.40" y="1490" width="10.89" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (11 samples, 0.92%)</title><rect x="954.40" y="1474" width="10.89" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed339bc69 (11 samples, 0.92%)</title><rect x="954.40" y="1458" width="10.89" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3398336 (11 samples, 0.92%)</title><rect x="954.40" y="1442" width="10.89" height="15" fill="rgb(237,194,52)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (10 samples, 0.84%)</title><rect x="954.40" y="1426" width="9.90" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (10 samples, 0.84%)</title><rect x="954.40" y="1410" width="9.90" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (10 samples, 0.84%)</title><rect x="954.40" y="1394" width="9.90" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (10 samples, 0.84%)</title><rect x="954.40" y="1378" width="9.90" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (10 samples, 0.84%)</title><rect x="954.40" y="1362" width="9.90" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed338ad2d (10 samples, 0.84%)</title><rect x="954.40" y="1346" width="9.90" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3388ab4 (10 samples, 0.84%)</title><rect x="954.40" y="1330" width="9.90" height="15" fill="rgb(237,195,52)" rx="2"/>
+</g>
+<g><title>0x5bfed338648e (10 samples, 0.84%)</title><rect x="954.40" y="1314" width="9.90" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3384604 (10 samples, 0.84%)</title><rect x="954.40" y="1298" width="9.90" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed33835a5 (8 samples, 0.67%)</title><rect x="956.38" y="1282" width="7.92" height="15" fill="rgb(247,214,62)" rx="2"/>
+</g>
+<g><title>0x5bfed3368099 (8 samples, 0.67%)</title><rect x="956.38" y="1266" width="7.92" height="15" fill="rgb(251,222,66)" rx="2"/>
+</g>
+<g><title>0x5bfed3179c54 (8 samples, 0.67%)</title><rect x="956.38" y="1250" width="7.92" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (8 samples, 0.67%)</title><rect x="956.38" y="1234" width="7.92" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (8 samples, 0.67%)</title><rect x="956.38" y="1218" width="7.92" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (8 samples, 0.67%)</title><rect x="956.38" y="1202" width="7.92" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed339bc69 (8 samples, 0.67%)</title><rect x="956.38" y="1186" width="7.92" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3398336 (8 samples, 0.67%)</title><rect x="956.38" y="1170" width="7.92" height="15" fill="rgb(237,194,52)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (8 samples, 0.67%)</title><rect x="956.38" y="1154" width="7.92" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (8 samples, 0.67%)</title><rect x="956.38" y="1138" width="7.92" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed33ac80f (8 samples, 0.67%)</title><rect x="956.38" y="1122" width="7.92" height="15" fill="rgb(234,189,49)" rx="2"/>
+</g>
+<g><title>0x5bfed3179c54 (8 samples, 0.67%)</title><rect x="956.38" y="1106" width="7.92" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (8 samples, 0.67%)</title><rect x="956.38" y="1090" width="7.92" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (8 samples, 0.67%)</title><rect x="956.38" y="1074" width="7.92" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (8 samples, 0.67%)</title><rect x="956.38" y="1058" width="7.92" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (8 samples, 0.67%)</title><rect x="956.38" y="1042" width="7.92" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (8 samples, 0.67%)</title><rect x="956.38" y="1026" width="7.92" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (8 samples, 0.67%)</title><rect x="956.38" y="1010" width="7.92" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed339bc69 (8 samples, 0.67%)</title><rect x="956.38" y="994" width="7.92" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3398336 (8 samples, 0.67%)</title><rect x="956.38" y="978" width="7.92" height="15" fill="rgb(237,194,52)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (7 samples, 0.59%)</title><rect x="956.38" y="962" width="6.93" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (7 samples, 0.59%)</title><rect x="956.38" y="946" width="6.93" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (7 samples, 0.59%)</title><rect x="956.38" y="930" width="6.93" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (7 samples, 0.59%)</title><rect x="956.38" y="914" width="6.93" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (7 samples, 0.59%)</title><rect x="956.38" y="898" width="6.93" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed338ad2d (7 samples, 0.59%)</title><rect x="956.38" y="882" width="6.93" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3388ab4 (7 samples, 0.59%)</title><rect x="956.38" y="866" width="6.93" height="15" fill="rgb(237,195,52)" rx="2"/>
+</g>
+<g><title>0x5bfed338648e (7 samples, 0.59%)</title><rect x="956.38" y="850" width="6.93" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3384604 (7 samples, 0.59%)</title><rect x="956.38" y="834" width="6.93" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed33835a5 (7 samples, 0.59%)</title><rect x="956.38" y="818" width="6.93" height="15" fill="rgb(247,214,62)" rx="2"/>
+</g>
+<g><title>0x5bfed3368099 (7 samples, 0.59%)</title><rect x="956.38" y="802" width="6.93" height="15" fill="rgb(251,222,66)" rx="2"/>
+</g>
+<g><title>0x5bfed3179c54 (7 samples, 0.59%)</title><rect x="956.38" y="786" width="6.93" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (7 samples, 0.59%)</title><rect x="956.38" y="770" width="6.93" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (7 samples, 0.59%)</title><rect x="956.38" y="754" width="6.93" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (7 samples, 0.59%)</title><rect x="956.38" y="738" width="6.93" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed339bc69 (7 samples, 0.59%)</title><rect x="956.38" y="722" width="6.93" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3398336 (7 samples, 0.59%)</title><rect x="956.38" y="706" width="6.93" height="15" fill="rgb(237,194,52)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (7 samples, 0.59%)</title><rect x="956.38" y="690" width="6.93" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (7 samples, 0.59%)</title><rect x="956.38" y="674" width="6.93" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed33ac80f (7 samples, 0.59%)</title><rect x="956.38" y="658" width="6.93" height="15" fill="rgb(234,189,49)" rx="2"/>
+</g>
+<g><title>0x5bfed3179c54 (7 samples, 0.59%)</title><rect x="956.38" y="642" width="6.93" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (7 samples, 0.59%)</title><rect x="956.38" y="626" width="6.93" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (7 samples, 0.59%)</title><rect x="956.38" y="610" width="6.93" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (7 samples, 0.59%)</title><rect x="956.38" y="594" width="6.93" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (5 samples, 0.42%)</title><rect x="958.36" y="578" width="4.95" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (4 samples, 0.34%)</title><rect x="958.36" y="562" width="3.96" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (4 samples, 0.34%)</title><rect x="958.36" y="546" width="3.96" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed339bc69 (4 samples, 0.34%)</title><rect x="958.36" y="530" width="3.96" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3398336 (4 samples, 0.34%)</title><rect x="958.36" y="514" width="3.96" height="15" fill="rgb(237,194,52)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (3 samples, 0.25%)</title><rect x="958.36" y="498" width="2.97" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (3 samples, 0.25%)</title><rect x="958.36" y="482" width="2.97" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (3 samples, 0.25%)</title><rect x="958.36" y="466" width="2.97" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (3 samples, 0.25%)</title><rect x="958.36" y="450" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (3 samples, 0.25%)</title><rect x="965.29" y="1490" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed32140ff (3 samples, 0.25%)</title><rect x="965.29" y="1474" width="2.97" height="15" fill="rgb(239,199,54)" rx="2"/>
+</g>
+<g><title>0x5bfed338ad2d (3 samples, 0.25%)</title><rect x="965.29" y="1458" width="2.97" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3388ab4 (3 samples, 0.25%)</title><rect x="965.29" y="1442" width="2.97" height="15" fill="rgb(237,195,52)" rx="2"/>
+</g>
+<g><title>0x5bfed338648e (3 samples, 0.25%)</title><rect x="965.29" y="1426" width="2.97" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3384604 (3 samples, 0.25%)</title><rect x="965.29" y="1410" width="2.97" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x5bfed33f8e1d (6 samples, 0.50%)</title><rect x="968.26" y="1810" width="5.94" height="15" fill="rgb(249,218,64)" rx="2"/>
+</g>
+<g><title>0x5bfed316f931 (6 samples, 0.50%)</title><rect x="968.26" y="1794" width="5.94" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>0x5bfed377731a (6 samples, 0.50%)</title><rect x="968.26" y="1778" width="5.94" height="15" fill="rgb(231,182,46)" rx="2"/>
+</g>
+<g><title>0x5bfed30bc278 (3 samples, 0.25%)</title><rect x="971.22" y="1762" width="2.97" height="15" fill="rgb(239,198,54)" rx="2"/>
+</g>
+<g><title>0x5bfed317a255 (3 samples, 0.25%)</title><rect x="971.22" y="1746" width="2.97" height="15" fill="rgb(226,172,41)" rx="2"/>
+</g>
+<g><title>0x5bfed3179284 (3 samples, 0.25%)</title><rect x="971.22" y="1730" width="2.97" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>0x5bfed3178e1e (3 samples, 0.25%)</title><rect x="971.22" y="1714" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>0x5bfed339feab (3 samples, 0.25%)</title><rect x="971.22" y="1698" width="2.97" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed317821e (3 samples, 0.25%)</title><rect x="971.22" y="1682" width="2.97" height="15" fill="rgb(245,211,60)" rx="2"/>
+</g>
+<g><title>0x5bfed339e198 (3 samples, 0.25%)</title><rect x="971.22" y="1666" width="2.97" height="15" fill="rgb(234,188,49)" rx="2"/>
+</g>
+<g><title>0x5bfed33a84b7 (3 samples, 0.25%)</title><rect x="971.22" y="1650" width="2.97" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>find (4 samples, 0.34%)</title><rect x="992.01" y="2066" width="3.96" height="15" fill="rgb(252,224,67)" rx="2"/>
+</g>
+<g><title>ld (5 samples, 0.42%)</title><rect x="996.96" y="2066" width="4.95" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>mi-scavenger (4 samples, 0.34%)</title><rect x="1001.91" y="2066" width="3.96" height="15" fill="rgb(240,201,55)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0x1375cc] (4 samples, 0.34%)</title><rect x="1001.91" y="2050" width="3.96" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0xa3dfa] (4 samples, 0.34%)</title><rect x="1001.91" y="2034" width="3.96" height="15" fill="rgb(233,186,48)" rx="2"/>
+</g>
+<g><title>[2.1.312+0x2487fd9] (3 samples, 0.25%)</title><rect x="1001.91" y="2018" width="2.97" height="15" fill="rgb(227,174,42)" rx="2"/>
+</g>
+<g><title>python3 (10 samples, 0.84%)</title><rect x="1007.85" y="2066" width="9.90" height="15" fill="rgb(237,195,52)" rx="2"/>
+</g>
+<g><title>0x672c45 (10 samples, 0.84%)</title><rect x="1007.85" y="2050" width="9.90" height="15" fill="rgb(232,185,47)" rx="2"/>
+</g>
+<g><title>0x7f2c4522c718 (5 samples, 0.42%)</title><rect x="1012.80" y="2034" width="4.95" height="15" fill="rgb(233,186,48)" rx="2"/>
+</g>
+<g><title>0x7f2c4522c601 (5 samples, 0.42%)</title><rect x="1012.80" y="2018" width="4.95" height="15" fill="rgb(242,205,57)" rx="2"/>
+</g>
+<g><title>0x673874 (5 samples, 0.42%)</title><rect x="1012.80" y="2002" width="4.95" height="15" fill="rgb(239,198,54)" rx="2"/>
+</g>
+<g><title>0x6c44e9 (4 samples, 0.34%)</title><rect x="1013.79" y="1986" width="3.96" height="15" fill="rgb(230,181,45)" rx="2"/>
+</g>
+<g><title>0x6c6839 (4 samples, 0.34%)</title><rect x="1013.79" y="1970" width="3.96" height="15" fill="rgb(231,183,46)" rx="2"/>
+</g>
+<g><title>0x6c6d6b (4 samples, 0.34%)</title><rect x="1013.79" y="1954" width="3.96" height="15" fill="rgb(244,209,59)" rx="2"/>
+</g>
+<g><title>0x6c76c1 (4 samples, 0.34%)</title><rect x="1013.79" y="1938" width="3.96" height="15" fill="rgb(249,218,64)" rx="2"/>
+</g>
+<g><title>0x6cab01 (4 samples, 0.34%)</title><rect x="1013.79" y="1922" width="3.96" height="15" fill="rgb(247,215,62)" rx="2"/>
+</g>
+<g><title>0x547ee6 (4 samples, 0.34%)</title><rect x="1013.79" y="1906" width="3.96" height="15" fill="rgb(250,221,65)" rx="2"/>
+</g>
+<g><title>0x553c56 (3 samples, 0.25%)</title><rect x="1013.79" y="1890" width="2.97" height="15" fill="rgb(253,227,68)" rx="2"/>
+</g>
+<g><title>0x5c9fee (3 samples, 0.25%)</title><rect x="1013.79" y="1874" width="2.97" height="15" fill="rgb(246,212,61)" rx="2"/>
+</g>
+<g><title>0x6a7953 (3 samples, 0.25%)</title><rect x="1013.79" y="1858" width="2.97" height="15" fill="rgb(227,174,42)" rx="2"/>
+</g>
+<g><title>0x5cb577 (3 samples, 0.25%)</title><rect x="1013.79" y="1842" width="2.97" height="15" fill="rgb(249,219,64)" rx="2"/>
+</g>
+<g><title>0x576c5f (3 samples, 0.25%)</title><rect x="1013.79" y="1826" width="2.97" height="15" fill="rgb(254,229,69)" rx="2"/>
+</g>
+<g><title>0x58cce4 (3 samples, 0.25%)</title><rect x="1013.79" y="1810" width="2.97" height="15" fill="rgb(242,205,57)" rx="2"/>
+</g>
+<g><title>0x5515bc (3 samples, 0.25%)</title><rect x="1013.79" y="1794" width="2.97" height="15" fill="rgb(240,200,55)" rx="2"/>
+</g>
+<g><title>sha256sum (4 samples, 0.34%)</title><rect x="1018.74" y="2066" width="3.96" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>sleep (151 samples, 12.67%)</title><rect x="1022.70" y="2066" width="149.48" height="15" fill="rgb(248,217,63)" rx="2"/>
+<text x="1025.70" y="2078" font-size="11" font-family="Verdana, sans-serif">sleep</text>
+</g>
+<g><title>0x7e5f77e75f0b (4 samples, 0.34%)</title><rect x="1134.56" y="2050" width="3.96" height="15" fill="rgb(243,206,58)" rx="2"/>
+</g>
+<g><title>entry_SYSCALL_64_after_hwframe_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="2034" width="3.96" height="15" fill="rgb(214,101,40)" rx="2"/>
+</g>
+<g><title>do_syscall_64_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="2018" width="3.96" height="15" fill="rgb(244,137,40)" rx="2"/>
+</g>
+<g><title>x64_sys_call_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="2002" width="3.96" height="15" fill="rgb(220,109,40)" rx="2"/>
+</g>
+<g><title>__x64_sys_execve_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="1986" width="3.96" height="15" fill="rgb(224,112,40)" rx="2"/>
+</g>
+<g><title>do_execveat_common.isra.0_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="1970" width="3.96" height="15" fill="rgb(222,110,40)" rx="2"/>
+</g>
+<g><title>bprm_execve_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="1954" width="3.96" height="15" fill="rgb(252,146,40)" rx="2"/>
+</g>
+<g><title>bprm_execve.part.0_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="1938" width="3.96" height="15" fill="rgb(233,123,40)" rx="2"/>
+</g>
+<g><title>exec_binprm_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="1922" width="3.96" height="15" fill="rgb(222,110,40)" rx="2"/>
+</g>
+<g><title>load_elf_binary_[k] (4 samples, 0.34%)</title><rect x="1134.56" y="1906" width="3.96" height="15" fill="rgb(213,100,40)" rx="2"/>
+</g>
+<g><title>[ld-linux-x86-64.so.2+0x23348] (3 samples, 0.25%)</title><rect x="1145.45" y="2050" width="2.97" height="15" fill="rgb(249,218,64)" rx="2"/>
+</g>
+<g><title>[ld-linux-x86-64.so.2+0x244e1] (3 samples, 0.25%)</title><rect x="1145.45" y="2034" width="2.97" height="15" fill="rgb(251,223,66)" rx="2"/>
+</g>
+<g><title>[ld-linux-x86-64.so.2+0x22dc6] (3 samples, 0.25%)</title><rect x="1145.45" y="2018" width="2.97" height="15" fill="rgb(247,214,62)" rx="2"/>
+</g>
+<g><title>entry_SYSCALL_64_after_hwframe_[k] (22 samples, 1.85%)</title><rect x="1150.40" y="2050" width="21.78" height="15" fill="rgb(214,101,40)" rx="2"/>
+</g>
+<g><title>do_syscall_64_[k] (22 samples, 1.85%)</title><rect x="1150.40" y="2034" width="21.78" height="15" fill="rgb(244,137,40)" rx="2"/>
+</g>
+<g><title>x64_sys_call_[k] (22 samples, 1.85%)</title><rect x="1150.40" y="2018" width="21.78" height="15" fill="rgb(220,109,40)" rx="2"/>
+</g>
+<g><title>__x64_sys_exit_group_[k] (20 samples, 1.68%)</title><rect x="1150.40" y="2002" width="19.80" height="15" fill="rgb(245,138,40)" rx="2"/>
+</g>
+<g><title>do_group_exit_[k] (20 samples, 1.68%)</title><rect x="1150.40" y="1986" width="19.80" height="15" fill="rgb(221,109,40)" rx="2"/>
+</g>
+<g><title>do_exit_[k] (20 samples, 1.68%)</title><rect x="1150.40" y="1970" width="19.80" height="15" fill="rgb(239,130,40)" rx="2"/>
+</g>
+<g><title>exit_mm_[k] (19 samples, 1.59%)</title><rect x="1150.40" y="1954" width="18.81" height="15" fill="rgb(247,140,40)" rx="2"/>
+</g>
+<g><title>mmput_[k] (19 samples, 1.59%)</title><rect x="1150.40" y="1938" width="18.81" height="15" fill="rgb(236,128,40)" rx="2"/>
+</g>
+<g><title>__mmput_[k] (19 samples, 1.59%)</title><rect x="1150.40" y="1922" width="18.81" height="15" fill="rgb(241,133,40)" rx="2"/>
+</g>
+<g><title>exit_mmap_[k] (19 samples, 1.59%)</title><rect x="1150.40" y="1906" width="18.81" height="15" fill="rgb(233,124,40)" rx="2"/>
+</g>
+<g><title>unmap_vmas_[k] (16 samples, 1.34%)</title><rect x="1153.37" y="1890" width="15.84" height="15" fill="rgb(233,123,40)" rx="2"/>
+</g>
+<g><title>unmap_single_vma_[k] (16 samples, 1.34%)</title><rect x="1153.37" y="1874" width="15.84" height="15" fill="rgb(230,120,40)" rx="2"/>
+</g>
+<g><title>unmap_page_range_[k] (16 samples, 1.34%)</title><rect x="1153.37" y="1858" width="15.84" height="15" fill="rgb(247,140,40)" rx="2"/>
+</g>
+<g><title>zap_pmd_range.isra.0_[k] (16 samples, 1.34%)</title><rect x="1153.37" y="1842" width="15.84" height="15" fill="rgb(210,96,40)" rx="2"/>
+</g>
+<g><title>zap_pte_range_[k] (16 samples, 1.34%)</title><rect x="1153.37" y="1826" width="15.84" height="15" fill="rgb(216,103,40)" rx="2"/>
+</g>
+<g><title>zap_present_ptes.constprop.0_[k] (15 samples, 1.26%)</title><rect x="1154.36" y="1810" width="14.85" height="15" fill="rgb(238,130,40)" rx="2"/>
+</g>
+<g><title>folio_remove_rmap_ptes_[k] (3 samples, 0.25%)</title><rect x="1154.36" y="1794" width="2.97" height="15" fill="rgb(236,127,40)" rx="2"/>
+</g>
+<g><title>strings (11 samples, 0.92%)</title><rect x="1172.18" y="2066" width="10.89" height="15" fill="rgb(241,202,56)" rx="2"/>
+</g>
+<g><title>0x587906c82ea5 (5 samples, 0.42%)</title><rect x="1172.18" y="2050" width="4.95" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>0x7e63172bf718 (5 samples, 0.42%)</title><rect x="1172.18" y="2034" width="4.95" height="15" fill="rgb(250,220,65)" rx="2"/>
+</g>
+<g><title>0x7e63172bf601 (5 samples, 0.42%)</title><rect x="1172.18" y="2018" width="4.95" height="15" fill="rgb(226,173,41)" rx="2"/>
+</g>
+<g><title>0x587906c83841 (5 samples, 0.42%)</title><rect x="1172.18" y="2002" width="4.95" height="15" fill="rgb(252,225,67)" rx="2"/>
+</g>
+<g><title>0x642f2e485ea5 (6 samples, 0.50%)</title><rect x="1177.13" y="2050" width="5.94" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>0x7a5f1e8c1718 (6 samples, 0.50%)</title><rect x="1177.13" y="2034" width="5.94" height="15" fill="rgb(240,201,55)" rx="2"/>
+</g>
+<g><title>0x7a5f1e8c1601 (6 samples, 0.50%)</title><rect x="1177.13" y="2018" width="5.94" height="15" fill="rgb(250,220,65)" rx="2"/>
+</g>
+<g><title>0x642f2e486841 (6 samples, 0.50%)</title><rect x="1177.13" y="2002" width="5.94" height="15" fill="rgb(248,217,63)" rx="2"/>
+</g>
+<g><title>systemd (3 samples, 0.25%)</title><rect x="1183.07" y="2066" width="2.97" height="15" fill="rgb(229,178,44)" rx="2"/>
+</g>
+<g><title>[systemd+0xe3b5] (3 samples, 0.25%)</title><rect x="1183.07" y="2050" width="2.97" height="15" fill="rgb(242,204,57)" rx="2"/>
+</g>
+<g><title>__libc_start_main (3 samples, 0.25%)</title><rect x="1183.07" y="2034" width="2.97" height="15" fill="rgb(244,209,59)" rx="2"/>
+</g>
+<g><title>[libc.so.6+0x2a601] (3 samples, 0.25%)</title><rect x="1183.07" y="2018" width="2.97" height="15" fill="rgb(236,192,51)" rx="2"/>
+</g>
+<g><title>[systemd+0xc961] (3 samples, 0.25%)</title><rect x="1183.07" y="2002" width="2.97" height="15" fill="rgb(249,218,64)" rx="2"/>
+</g>
+<g><title>manager_loop (3 samples, 0.25%)</title><rect x="1183.07" y="1986" width="2.97" height="15" fill="rgb(243,207,58)" rx="2"/>
+</g>
+<g><title>sd_event_run (3 samples, 0.25%)</title><rect x="1183.07" y="1970" width="2.97" height="15" fill="rgb(236,192,51)" rx="2"/>
+</g>
+<g><title>sd_event_dispatch (3 samples, 0.25%)</title><rect x="1183.07" y="1954" width="2.97" height="15" fill="rgb(254,228,69)" rx="2"/>
+</g>
+<g><title>[libsystemd-shared-259.so+0x2dbdb4] (3 samples, 0.25%)</title><rect x="1183.07" y="1938" width="2.97" height="15" fill="rgb(225,171,40)" rx="2"/>
+</g>
+<g><title>tailscaled (3 samples, 0.25%)</title><rect x="1186.04" y="2066" width="2.97" height="15" fill="rgb(236,192,51)" rx="2"/>
+</g>
+</svg>

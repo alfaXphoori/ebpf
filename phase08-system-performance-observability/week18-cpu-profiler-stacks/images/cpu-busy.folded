@@ -1,0 +1,2 @@
+busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin 402
+busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;spin 192

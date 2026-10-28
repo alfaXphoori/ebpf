@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # eBPF Development Environment Setup Script
-# Target: Ubuntu 24.04 LTS (Linux 6.8+) / Ubuntu 26.04 LTS (Linux 7.0+)
+# Target: Ubuntu 26.04 LTS (Linux 7.0+) - primary, all labs verified here
+#         Ubuntu 24.04 LTS (Linux 6.8)  - best-effort via CO-RE
 # ==============================================================================
 
 set -euo pipefail
@@ -58,9 +59,11 @@ KERNEL_MAJOR=$(uname -r | cut -d'.' -f1)
 KERNEL_MINOR=$(uname -r | cut -d'.' -f2)
 
 if (( KERNEL_MAJOR < 5 || (KERNEL_MAJOR == 5 && KERNEL_MINOR < 15) )); then
-    log_warn "Current kernel is $(uname -r). eBPF modern features (CO-RE, Ring Buffer, BPF LSM) require 5.15+ (6.8+ recommended)."
+    log_warn "Current kernel is $(uname -r). eBPF modern features (CO-RE, Ring Buffer, BPF LSM) require 5.15+ (7.0+ recommended)."
+elif (( KERNEL_MAJOR < 7 )); then
+    log_warn "Kernel $(uname -r) is supported best-effort only. The course labs are verified on Linux 7.0+ (Ubuntu 26.04)."
 else
-    log_success "Kernel version $(uname -r) meets minimum requirements (>= 5.15)."
+    log_success "Kernel version $(uname -r) matches the course's primary target (Linux 7.0+)."
 fi
 
 # 3. Verify BTF Support in Running Kernel

@@ -323,6 +323,14 @@ sudo ./bin/cpu-profiler -d 5s -top 3 -folded all.txt
 ```
 
 ### ขั้นตอนที่ 5: สร้าง Flame Graph
+
+**วิธีที่ 1 — ตัว render ที่มากับแล็บ** ([`flamegraph.py`](flamegraph.py), ใช้แค่ Python 3 standard library ไม่ต้องดาวน์โหลดอะไรเพิ่ม ได้ SVG แบบ static ที่เปิดดูบน GitHub ได้ทันที):
+```bash
+python3 flamegraph.py out.txt --title "busy on-CPU" > cpu.svg
+python3 flamegraph.py all.txt --title "system on-CPU" --min-width 2 > all.svg   # --min-width ตัดเฟรมที่แคบกว่า 2px ให้ไฟล์เล็กลง
+```
+
+**วิธีที่ 2 — `flamegraph.pl` ต้นฉบับของ Brendan Gregg** (SVG แบบ interactive: คลิก zoom, ค้นหาได้):
 ```bash
 git clone --depth 1 https://github.com/brendangregg/FlameGraph
 ./FlameGraph/flamegraph.pl --title "busy on-CPU" out.txt > cpu.svg
@@ -509,6 +517,20 @@ busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;s
 - **#3 `link`** (ตัว linker ของ Go จากงาน build อื่นบนเครื่อง) จบไปก่อนที่ profiler จะทันอ่าน `/proc/<pid>/maps` จึงเหลือแต่ที่อยู่ดิบ — นี่คือข้อจำกัดของ symbolization ฝั่ง userspace ที่ต้องเข้าใจ
 - มี user stack collision 3 ครั้ง (จาก ~353 unique chains) — โปรแกรมรายงานให้เห็นแทนที่จะทิ้งเงียบ ๆ
 
+### 4.5 Flame Graph ที่ได้จริง (render ด้วย `flamegraph.py`)
+
+Capture รอบใหม่บนเครื่องเดียวกัน (Linux 7.0.0-38, 99 Hz) แล้ว render ด้วย `python3 flamegraph.py` ตัวเลข sample จึงต่างจากข้อ 4.1/4.3 เล็กน้อย
+
+**(ก) เฉพาะ PID ของ `busy`** — `-p <pid> -d 6s` ได้ 594 samples: `hot_path_a` 402 : `hot_path_b` 192 ≈ **2.09 : 1** (ค่าที่ออกแบบไว้ 2 : 1) ไฟล์ folded ต้นฉบับอยู่ที่ [`images/cpu-busy.folded`](images/cpu-busy.folded) ให้ลอง render เองได้
+
+![busy on-CPU flame graph](images/cpu-busy.svg)
+
+**(ข) ทั้งระบบขณะ `busy` ทำงาน** — `-d 5s` ได้ 1,192 samples (625 unique stacks, ตัดเฟรมที่แคบกว่า 2px) `busy` อยู่ซ้ายสุด (341 : 154 ≈ 2.2 : 1) ก้อนใหญ่ตรงกลางคือ `cc1plus` (คอมไพเลอร์ C++ จากงาน build อื่นที่รันบนเครื่องขณะนั้น) และเฟรมสีส้มทางขวาคือ kernel stack (`_[k]`) ของโพรเซสที่อยู่ใน syscall เช่น `sleep`
+
+![system-wide on-CPU flame graph](images/cpu-system.svg)
+
+> วิธีอ่าน: แกน Y คือความลึกของ stack (ล่าง = ราก, บน = ฟังก์ชันที่กำลังรันอยู่จริงตอน sample) แกน X **ไม่ใช่เวลา** แต่เป็นสัดส่วน sample เรียงตามตัวอักษร เฟรมที่ "กว้างและอยู่บนสุด" (plateau) คือจุดที่ CPU ใช้เวลามากที่สุด — ในกราฟ (ก) คือ `spin` ใต้ `hot_path_a`
+
 ---
 
 ## 5. ข้อจำกัด (Limitations)
@@ -531,7 +553,7 @@ busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;s
 - [x] ใช้ `BPF_MAP_TYPE_STACK_TRACE` และเข้าใจผลของ flags `0` / `BPF_F_FAST_STACK_CMP` / `BPF_F_REUSE_STACKID` รวมถึงการนับ `-EEXIST`
 - [x] ใช้ `const volatile` + `RewriteConstants` ทำตัวกรอง PID
 - [x] Symbolize kernel stack (kallsyms) และ user stack (maps + ELF)
-- [x] สร้างไฟล์ folded stack และอธิบายวิธีอ่าน Flame Graph
+- [x] สร้างไฟล์ folded stack, render เป็น Flame Graph (SVG) และอธิบายวิธีอ่าน
 - [x] ยืนยันความถูกต้องของ profiler ด้วย workload ที่รู้สัดส่วนล่วงหน้า (2:1)
 
 ---
