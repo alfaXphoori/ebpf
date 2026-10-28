@@ -57,11 +57,24 @@ Linux Security Modules (LSM) คือเฟรมเวิร์กของ Li
 2. **Boot-time**: ต้องมี `bpf` อยู่ในรายการ LSM ที่ active (กำหนดด้วย `CONFIG_LSM` ตอน build หรือพารามิเตอร์ `lsm=` ตอนบูต)
    ```bash
    cat /sys/kernel/security/lsm
-   # เครื่อง lab (Ubuntu 26.04, Linux 7.0.0-38-generic) ได้:
-   # lockdown,capability,landlock,yama,apparmor,ima,evm     <-- ไม่มี bpf
+   # เครื่อง lab (Ubuntu 26.04, Linux 7.0.0-38-generic) ค่าเริ่มต้นได้:
+   # lockdown,capability,landlock,yama,apparmor,ima,evm          <-- ไม่มี bpf
+   # หลังเพิ่ม lsm=...,bpf ใน GRUB แล้วรีบูต ได้:
+   # lockdown,capability,landlock,yama,apparmor,bpf,ima,evm      <-- มี bpf
    ```
 
-**ขั้นตอนเปิดผ่าน GRUB (Ubuntu/Debian)** -- แนะนำให้ทำใน **VM สำหรับแล็บ** และ *ยังไม่ได้ทดสอบบนเครื่อง lab ที่ใช้เขียนบทนี้* (เพราะไม่ได้รับอนุญาตให้แก้ kernel cmdline):
+**ขั้นตอนเปิดผ่าน GRUB (Ubuntu/Debian)** -- แนะนำให้ทำใน **VM สำหรับแล็บ** หรือเครื่องที่ตนเองดูแล
+
+> **ทดสอบจริงบนเครื่อง lab (Ubuntu 26.04, Linux 7.0.0-38-generic)**: ใช้ค่า `CONFIG_LSM` ของเคอร์เนลแล้วต่อท้ายด้วย `bpf` ใส่ใน `/etc/default/grub` (backup ไฟล์เดิมก่อน):
+> ```bash
+> grep CONFIG_LSM= /boot/config-$(uname -r)     # CONFIG_LSM="landlock,lockdown,yama,integrity,apparmor"
+> sudo cp -a /etc/default/grub /etc/default/grub.bak-before-bpf-lsm
+> # แก้บรรทัดเป็น: GRUB_CMDLINE_LINUX="lsm=landlock,lockdown,yama,integrity,apparmor,bpf"
+> sudo update-grub && sudo reboot
+> ```
+> หลังรีบูต `/sys/kernel/security/lsm` = `lockdown,capability,landlock,yama,apparmor,bpf,ima,evm` (LSM เดิมครบทุกตัว + `bpf`) — ชื่อ `integrity` ใน `CONFIG_LSM` จะกลายเป็น `ima,evm` ในรายการที่ active บนเคอร์เนลใหม่ ส่วนวิธีด้านล่างที่อ่านจากรายการ active ปัจจุบันก็ใช้ได้เช่นกัน
+
+วิธีแบบ drop-in config (ไม่แก้ไฟล์หลัก):
 ```bash
 # 1) อ่านรายการปัจจุบัน แล้ว "ต่อท้าย" bpf -- ห้ามตัดตัวเดิมออก
 CUR=$(cat /sys/kernel/security/lsm)        # เช่น lockdown,capability,landlock,yama,apparmor,ima,evm
@@ -294,8 +307,9 @@ sudo cat lab-files/secret.txt   # root: ได้รับการยกเว�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux ce-desk 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), `CONFIG_BPF_LSM=y`, LSM=`lockdown,capability,landlock,yama,apparmor,ima,evm` (**ไม่มี bpf**), clang 21, Go 1.26, cilium/ebpf v0.16.0
-> เพราะเครื่องนี้ไม่ได้เปิด BPF LSM จึง **ยังไม่ได้ทดสอบการ block จริง (enforce) ของโค้ดเวอร์ชันนี้** -- ทดสอบแล้วเฉพาะ: build, การโหลด/attach ทั้งสองโหมด และ logic การ match ผ่าน audit mode
+> **Environment**: Ubuntu 26.04.1 LTS (`Linux ce-desk 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), `CONFIG_BPF_LSM=y`, clang 21, Go 1.26, cilium/ebpf v0.16.0
+> - หัวข้อ 4.1–4.2 capture **ก่อน** เปิด BPF LSM (LSM=`lockdown,capability,landlock,yama,apparmor,ima,evm`)
+> - หัวข้อ 4.3 capture **หลัง** เพิ่ม `lsm=...,bpf` ใน GRUB และรีบูต (LSM=`lockdown,capability,landlock,yama,apparmor,bpf,ima,evm`) — การบล็อกจริงของโค้ดเวอร์ชันนี้ทดสอบครบแล้ว
 
 ### 4.1 Audit mode: `sudo ./bin/lsm_file_guard -protect lab-files/app.key` แล้วรันคำสั่งในขั้นตอนที่ 4
 (ตัดบรรทัดของ process อื่นในเครื่องออก: `go` build ของงานอื่นเปิด `/usr/share/go-1.26/src/runtime/secret.go`, `secret_asm.go`, `secret_amd64.s` และถูกรายงานเป็น `name` match ด้วย -- อีกหนึ่ง false positive จริง)
@@ -354,27 +368,73 @@ exit=0
 ```
 ยืนยันหัวข้อ 1.4: verifier ยอมรับ program (รวม `bpf_d_path`), attach สำเร็จ แต่ไม่มีการ block และไม่มี alert
 
-### 4.3 ผลจากโค้ด **เวอร์ชันก่อนหน้า** บนเครื่องที่เปิด BPF LSM แล้ว (อ้างอิงเท่านั้น)
-> ผลนี้มาจากเวอร์ชันเดิมของแล็บ (ก่อนแปลงเป็น CO-RE และก่อนเพิ่ม inode/audit) บน Ubuntu 24.04 LTS `6.8.0-142-generic aarch64`, LSM=`lockdown,capability,landlock,yama,apparmor,bpf` จึงมีรูปแบบคอลัมน์ต่างจากปัจจุบัน และ **ไม่ได้ capture ใหม่** เก็บไว้เพื่อแสดงพฤติกรรม enforce ของ `lsm/file_open` เท่านั้น
+### 4.3 Enforce mode บนเคอร์เนลที่ **เปิด** BPF LSM แล้ว: `sudo ./bin/lsm_file_guard -protect lab-files/app.key`
+ไม่ต้องระบุ `-mode` เพราะ `-mode=auto` ตรวจพบ `bpf` ใน LSM list และเลือก ENFORCE เอง (ไม่มีบรรทัด WARNING เหมือนข้อ 4.1–4.2) หน้าต่าง guard:
 ```text
-2026/10/18 13:50:40 [INFO] Active Linux Security Modules: lockdown,capability,landlock,yama,apparmor,bpf
-2026/10/18 13:50:40 [POLICY] Enforce Mode: BLOCK NON-ROOT (root UID 0 allowed)
-2026/10/18 13:50:40 [INFO] Successfully attached BPF LSM hook to 'file_open'!
-2026/10/18 13:50:40 [INFO] Watching for unauthorized attempts to access 'secret*' files...
-SECURITY_ACTION    PID     UID    COMM             FILENAME             RESULT
--------------------------------------------------------------------------------------
-[BLOCKED -EPERM]   9982    501    cat              secret.txt           EPERM (Blocked)
-
---- ผลลัพธ์ฝั่งผู้ใช้งาน (User Terminal Output) ---
-$ sudo -u phoori cat /tmp/secret.txt (Non-Root User)
-cat: /tmp/secret.txt: Operation not permitted
-
-$ sudo cat /tmp/secret.txt (Root UID 0)
-TOP_SECRET_CREDENTIAL=admin123
-
-$ sudo -u phoori cat /tmp/secret.txt (After detaching BPF LSM)
-TOP_SECRET_CREDENTIAL=admin123
+2026/10/28 22:52:17 [INFO] Active Linux Security Modules: lockdown,capability,landlock,yama,apparmor,bpf,ima,evm
+2026/10/28 22:52:17 [POLICY] Enforce Mode: BLOCK NON-ROOT (root UID 0 allowed)
+2026/10/28 22:52:17 [POLICY] Protecting inode dev=8:0 ino=7340967 (lab-files/app.key)
+2026/10/28 22:52:17 [INFO] Attached BPF LSM hook 'lsm/file_open' (ENFORCE: matching opens return -EPERM)
+2026/10/28 22:52:17 [INFO] Watching for access to 'secret*' files and protected inodes...
+SECURITY_ACTION      PID     UID    COMM       MATCH  PATH -> RESULT
+----------------------------------------------------------------------------------------------------
+[BLOCKED -EPERM]     4792    1000   cat        name   /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/secret.txt -> EPERM (Blocked)
+[BLOCKED -EPERM]     4794    1000   cat        name   /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/secret.txt -> EPERM (Blocked)
+[BLOCKED -EPERM]     4795    1000   cat        inode  /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/app.key -> EPERM (Blocked)
+[BLOCKED -EPERM]     4796    1000   cat        inode  /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/backup.txt -> EPERM (Blocked)
+[BLOCKED -EPERM]     4797    1000   python3    name   /usr/lib/python3.14/__pycache__/secrets.cpython-314.pyc -> EPERM (Blocked)
+[BLOCKED -EPERM]     4797    1000   python3    name   /usr/lib/python3.14/secrets.py -> EPERM (Blocked)
+2026/10/28 22:52:32 [INFO] Termination signal received. Detaching hook and exiting...
+2026/10/28 22:52:32 [INFO] Ringbuf reader closed. Goodbye.
 ```
+หน้าต่าง user ทั่วไป (UID 1000) รันคำสั่งในขั้นตอนที่ 4 ระหว่างที่ guard ทำงาน:
+```text
+$ sudo bpftool link show
+4: tracing  prog 41
+	prog_type lsm  attach_type lsm_mac
+	target_obj_id 1  target_btf_id 98575
+5: tracing  prog 87
+	prog_type lsm  attach_type lsm_mac
+	target_obj_id 1  target_btf_id 98575
+$ cat lab-files/secret.txt
+cat: lab-files/secret.txt: Operation not permitted
+exit=1
+$ cat lab-files/notes.txt
+top secret
+exit=0
+$ cat lab-files/shortcut
+cat: lab-files/shortcut: Operation not permitted
+exit=1
+$ cat lab-files/app.key
+cat: lab-files/app.key: Operation not permitted
+exit=1
+$ cat lab-files/backup.txt
+cat: lab-files/backup.txt: Operation not permitted
+exit=1
+$ python3 -c "import secrets"
+PermissionError: [Errno 1] Operation not permitted: '/usr/lib/python3.14/secrets.py'
+exit=1
+$ sudo cat lab-files/secret.txt   # root (UID 0)
+top secret
+exit=0
+$ cat lab-files/secret.txt        # หลังกด Ctrl+C ให้ guard detach แล้ว
+top secret
+exit=0
+```
+วิเคราะห์ผล:
+| คำสั่ง | ผลจริง | ความหมาย |
+| :--- | :--- | :--- |
+| `cat secret.txt` | **`Operation not permitted`** (`name`) | `lsm/file_open` คืน `-EPERM` → `open()` ล้มเหลวด้วย errno `EPERM` แบบ synchronous ก่อนอ่านข้อมูลได้แม้แต่ไบต์เดียว |
+| `cat notes.txt` (hardlink) | **อ่านได้** | **bypass กฎชื่อสำเร็จจริงในโหมด enforce** — ยืนยันข้อจำกัดในหัวข้อ 1.5 ว่ากฎชื่อป้องกันไม่ได้ |
+| `cat shortcut` (symlink) | `Operation not permitted` | symlink ถูก resolve ก่อนถึง `file_open` dentry ปลายทางชื่อ `secret.txt` จึงถูกบล็อก |
+| `cat app.key` / `cat backup.txt` | `Operation not permitted` (`inode`) | กฎ inode บล็อกได้ทุกชื่อของไฟล์เดียวกัน รวมถึง hardlink — นี่คือเหตุผลที่ควรใช้ inode แทนชื่อ |
+| `python3 -c "import secrets"` | **`PermissionError`** | **false positive กลายเป็น DoS จริง**: user ทั่วไป import โมดูลมาตรฐานของ Python ไม่ได้ (Python ลองเปิด `.pyc` ก่อน แล้ว fallback ไป `.py` จึงเห็น 2 alert จาก PID เดียวกัน) |
+| `sudo cat secret.txt` | อ่านได้ | root ได้รับการยกเว้นตาม policy 0 (Block Non-Root) จึงไม่มี alert |
+| `cat` หลัง detach | อ่านได้ | เมื่อ link ถูกปิด นโยบายหายทันที ไม่มีสถานะค้างในเคอร์เนล |
+
+**สังเกต `bpftool link show`**: มี link ชนิด `lsm_mac` **สองตัว** — `prog 87` คือ `lsm/file_open` ของแล็บนี้ ส่วน `prog 41` คือโปรแกรม `restrict_filesystems` ของ **systemd (PID 1)** ที่โหลดเองอัตโนมัติตอนบูตทันทีที่เคอร์เนลเปิด BPF LSM (ตรวจด้วย `sudo bpftool prog show id 41`) แสดงให้เห็นว่า:
+1. BPF LSM program หลายตัวผูกกับเคอร์เนลพร้อมกันได้ (คนละ hook หรือ hook เดียวกันก็ได้) และถ้าตัวใดตัวหนึ่งปฏิเสธ การเข้าถึงจะถูกปฏิเสธ (deny wins) ร่วมกับ LSM อื่นอย่าง AppArmor
+2. การเปิด BPF LSM ไม่ได้มีผลแค่กับแล็บของเรา แต่ทำให้ระบบอื่น (systemd) เริ่มใช้กลไกนี้ด้วย — ควรทดสอบผลกระทบใน VM ก่อนเปิดบนเครื่องจริง
 
 ---
 
@@ -384,8 +444,8 @@ TOP_SECRET_CREDENTIAL=admin123
 | :--- | :--- | :---: |
 | **BPF LSM Support** | ตรวจ `CONFIG_BPF_LSM=y` และ `bpf` ใน `/sys/kernel/security/lsm` แยกเป็นรายการ | [x] ผ่าน |
 | **BTF / CO-RE Header** | ใช้ `vmlinux.h` จริง + `BPF_CORE_READ` ทุกการอ่าน kernel struct (ไม่มี struct ประกาศเอง) | [x] ผ่าน |
-| **Inline Blocking Logic** | คืนค่า `-EPERM` ชัดเจน (EPERM = 1) | [x] build/load ผ่าน, enforce ต้องทดสอบบนเครื่องที่เปิด bpf LSM |
-| **Name + Inode Matching** | prefix `secret*` และ hash map `(s_dev, i_ino)` จาก `-protect` | [x] ผ่าน (ทดสอบผ่าน audit mode) |
+| **Inline Blocking Logic** | คืนค่า `-EPERM` ชัดเจน (EPERM = 1) | [x] ผ่าน (enforce ทดสอบจริงบน Linux 7.0 ที่เปิด bpf LSM, หัวข้อ 4.3) |
+| **Name + Inode Matching** | prefix `secret*` และ hash map `(s_dev, i_ino)` จาก `-protect` | [x] ผ่าน (ทั้ง audit และ enforce) |
 | **Full Path Logging** | `bpf_d_path()` ใน `lsm/file_open` และ `fentry/security_file_open` | [x] ผ่าน |
 | **Audit Fallback** | `-mode=auto` สลับเป็น fentry เมื่อไม่มี bpf LSM | [x] ผ่าน |
 | **Policy Configuration** | มี `policy_map` ให้สลับโหมด Enforce All กับ Block Non-Root ได้ | [x] ผ่าน |
