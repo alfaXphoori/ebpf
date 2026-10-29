@@ -1,0 +1,41 @@
+# Week 26 / Policy 03: outbound TCP connect monitoring (observe only)
+#
+# kprobe on tcp_connect(struct sock *sk) + tcp_close(struct sock *sk), filtered
+# to the lab-only port 18026 on loopback so the event stream stays readable.
+# Compare with week 14 (cgroup/connect4 hook) and week 15 (reverse-shell guard).
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "w26-tcp-connect"
+spec:
+  kprobes:
+  - call: "tcp_connect"
+    syscall: false
+    args:
+    - index: 0
+      type: "sock"                  # Tetragon decodes saddr/daddr/sport/dport/family
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "DAddr"
+        values:
+        - "127.0.0.0/8"
+      - index: 0
+        operator: "DPort"
+        values:
+        - "18026"
+  - call: "tcp_close"
+    syscall: false
+    args:
+    - index: 0
+      type: "sock"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "DAddr"
+        values:
+        - "127.0.0.0/8"
+      - index: 0
+        operator: "DPort"
+        values:
+        - "18026"

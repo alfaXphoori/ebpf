@@ -1,0 +1,35 @@
+Backport of upstream cilium/ebpf commit cc4947e88a916cf69b368982cfd524451f50eccd
+("asm: conditionally set ins.Offset when marshaling Movs", not yet in a release
+as of v0.22.0). Without it, Instruction.Marshal zeroes the `off` field of every
+plain MOV, which turns LLVM's addr_space_cast (0xbf, off=1, imm=1) into an
+invalid MOV and the verifier rejects any arena program with
+"BPF_MOV uses reserved fields".
+
+Applied at build time through `go build -overlay` by the Makefile; the module
+cache is never modified. Remove this patch once go.mod moves to a release that
+contains the fix.
+
+--- a/asm/instruction.go
++++ b/asm/instruction.go
+@@ -189,10 +189,18 @@
+ 			ins.OpCode = ins.OpCode.SetALUOp(Mov)
+ 			newOffset = 32
+ 		}
+-		if newOffset != 0 && ins.Offset != 0 {
+-			return 0, fmt.Errorf("extended ALU opcodes should have an .Offset of 0: %s", ins)
++		if newOffset != 0 {
++			if ins.Offset != 0 {
++				return 0, fmt.Errorf("extended ALU opcodes should have an .Offset of 0: %s", ins)
++			}
++
++			// Don't unconditionally set offset to 0 for plain Mov to avoid
++			// silently corrupting `bpf_addr_space_cast` (opcode 0xbf|ALU64|X +
++			// Offset=1 + imm=1) into an invalid `MOV r_dst = r_src, off=0,
++			// imm=1` that the verifier rejects with "BPF_MOV uses reserved
++			// fields".
++			ins.Offset = newOffset
+ 		}
+-		ins.Offset = newOffset
+ 	} else if atomic := ins.OpCode.AtomicOp(); atomic != InvalidAtomic {
+ 		ins.OpCode = ins.OpCode &^ atomicMask
+ 		ins.Constant = int64(atomic >> 8)

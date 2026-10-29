@@ -54,6 +54,11 @@
 10. [บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)](#บทที่-10-เทคโนโลยี-ebpf-ยุคใหม่ระดับแนวหน้า-เฟส-10)
     - 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Low-Overhead Tracing
     - 10.2 BPF Iterators (`iter/task`) การท่องโครงสร้างเคอร์เนลโดยตรง
+11. [บทที่ 11: ขยายขีดความสามารถเคอร์เนลด้วย eBPF ยุคใหม่ (เฟส 11)](#บทที่-11-ขยายขีดความสามารถเคอร์เนลด้วย-ebpf-ยุคใหม่-เฟส-11)
+    - 11.1 kfuncs: เรียกฟังก์ชันเคอร์เนลจากโปรแกรม BPF
+    - 11.2 BPF Arena: หน่วยความจำร่วมขนาดใหญ่ระหว่าง BPF และ User Space
+    - 11.3 struct_ops และ sched_ext: เขียน CPU Scheduler ด้วย BPF
+    - 11.4 ระบบนิเวศ eBPF ในงาน Production: Tetragon และ Cilium
 
 ---
 
@@ -1319,13 +1324,18 @@ func TestDropBlockedIP(t *testing.T) {
 3. **ตรวจ Side effect**: อ่านค่า Map หลังรัน (Counter เพิ่มถูกต้องหรือไม่) และตรวจ `DataOut` เมื่อโปรแกรมแก้ไข Header (เช่น DNAT ต้องคำนวณ Checksum ใหม่ให้ถูก)
 4. **อ่าน Verifier Log เมื่อโหลดไม่ผ่าน**: Error ที่ได้จาก `loadBpfObjects` เป็น `*ebpf.VerifierError` ให้พิมพ์ด้วย `%+v` จะได้ Log ทุกบรรทัด บรรทัดท้ายสุดคือสาเหตุ (เช่น `invalid access to packet, off=34 size=2, R1(id=0,off=34,r=34)` หมายถึงลืมตรวจ Bounds ก่อนอ่าน 2 ไบต์ที่ offset 34)
 
-**ข้อสังเกตจากการทดลองจริงบน Linux 7.0 (Week 11–12):**
+**ข้อสังเกตจากการทดลองจริงบน Linux 7.0 (Week 06 และ Week 12):**
 - Verifier รุ่นใหม่ฉลาดขึ้น: การ Dereference ค่าที่ได้จาก `bpf_map_lookup_elem` บน **ARRAY Map ด้วย Key คงที่** โดยไม่ตรวจ NULL ผ่าน Verifier ได้ (เพราะพิสูจน์ได้ว่า Index อยู่ในช่วง) ตัวอย่าง "ลืมตรวจ NULL" จึงต้องใช้ HASH Map
 - ข้อความ Error ของ Bounds Check อาจไม่ตรงกับที่คาด เช่น Clang แยกการอ่าน `h_proto` 2 ไบต์เป็น 1 ไบต์ ทำให้ได้ `off=12 size=1`
 - Atomic แบบคืนค่า (`__sync_fetch_and_add` ที่ใช้ค่าที่ได้กลับ, `__sync_val_compare_and_swap`) ต้องคอมไพล์ด้วย `-mcpu=v3` (ใส่ `-cflags "-mcpu=v3"` ใน `go:generate` ของ bpf2go) และเคอร์เนล 5.12+
 - ค่าใน Config Map (ARRAY) เริ่มต้นเป็นศูนย์ทุกช่อง โค้ดต้องตีความ 0 เป็น "ใช้ค่า Default" มิฉะนั้น Limit = 0 จะดรอปทุกแพ็กเก็ต (bug จริงที่พบใน Week 12)
 - `RunOptions.CPU` ใช้ไม่ได้กับโปรแกรม XDP
 - **Auto-ban จาก IP ต้นทางเป็นช่องทาง DoS**: ผู้โจมตีปลอม Source IP ของผู้ใช้จริงเพื่อให้ระบบแบนผู้ใช้จริงได้
+
+**แล็บประจำหัวข้อนี้: Week 06** (`verifier_fail/` สำหรับอ่าน Verifier Log จริง และ `maps_testrun/` เทียบพฤติกรรม Map ด้วย test_run) ข้อสังเกตจากการทดลองบน Linux 7.0:
+- โปรแกรม Tracepoint รัน test_run ไม่ได้ (`kernel doesn't support running TracePoint: not supported`) และ XDP ต้องได้ข้อมูลอย่างน้อย 14 ไบต์ (Ethernet Header) มิฉะนั้นได้ `EINVAL`
+- HASH / PERCPU_HASH ที่เต็มจะปฏิเสธ Key ใหม่ด้วย `-E2BIG` (-7) ส่วน LRU_HASH จะไล่ Key เก่าออกแล้วเก็บ Key ใหม่แทน
+- `bpftool prog dump xlated -d` บน bpftool ใหม่แสดงรายการ "Live regs" ช่วยให้เห็นว่า Clang อ่าน `h_proto` ของ `ethhdr` (packed) เป็น 2 ครั้งครั้งละ 1 ไบต์
 
 **ข้อจำกัด**: `BPF_PROG_TEST_RUN` ไม่ได้จำลองทุกอย่างของเส้นทางจริง เช่น `XDP_REDIRECT` ไปยัง AF_XDP socket, ค่า `ingress_ifindex` จริง หรือพฤติกรรมของ Driver ในโหมด Native จึงยังต้องมีการทดสอบจริงบน veth/netns ควบคู่กัน
 
@@ -1471,11 +1481,76 @@ Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) �
 
 ---
 
+# บทที่ 11: ขยายขีดความสามารถเคอร์เนลด้วย eBPF ยุคใหม่ (เฟส 11)
+
+บทก่อนหน้านี้ใช้ eBPF เพื่อ "สังเกต" และ "กรอง" เหตุการณ์ในเคอร์เนล เฟสสุดท้ายนี้ไปไกลกว่านั้น: ให้โปรแกรม BPF **เรียกฟังก์ชันภายในเคอร์เนลโดยตรง** (kfuncs), **แชร์หน่วยความจำขนาดใหญ่กับ User Space** (Arena), **แทนที่ส่วนประกอบหลักของเคอร์เนล** อย่าง CPU Scheduler (struct_ops / sched_ext) และปิดท้ายด้วยการดูว่าเครื่องมือระดับ Production อย่าง Tetragon และ Cilium ประกอบทุกกลไกที่เรียนมาเข้าด้วยกันอย่างไร
+
+### 11.1 kfuncs: เรียกฟังก์ชันเคอร์เนลจากโปรแกรม BPF (Week 24)
+
+| | BPF Helpers (`bpf_map_lookup_elem` ฯลฯ) | kfuncs (`bpf_task_from_pid` ฯลฯ) |
+| :--- | :--- | :--- |
+| การประกาศ | มีหมายเลขตายตัวใน UAPI (`enum bpf_func_id`) | ฟังก์ชันเคอร์เนลธรรมดาที่ติด BTF Tag `bpf_kfunc` ประกาศในโปรแกรมด้วย `extern ... __ksym` |
+| ความเสถียร | ABI เสถียร | **ไม่มี ABI ที่เสถียร** เปลี่ยน/ลบได้ระหว่างเวอร์ชัน |
+| การตรวจสอบ | Verifier รู้ Signature ล่วงหน้า | Verifier อ่าน Signature จาก BTF และบังคับกฎตาม Flag (`KF_ACQUIRE`, `KF_RELEASE`, `KF_RCU`, `KF_RET_NULL`) |
+
+- **ค้นหา kfuncs บนเครื่อง**: บน Linux 7.0 พบ 272 ตัวจาก BTF `DECL_TAG 'bpf_kfunc'` (ใช้ `bpftool btf dump file /sys/kernel/btf/vmlinux` แล้วกรอง `DECL_TAG`) — การ `format c | grep bpf_kfunc` หาไม่เจอ และ Flag `KF_*` ไม่ได้อยู่ใน BTF ต้องดูจากซอร์สเคอร์เนล
+- **Acquire / Release**: `bpf_task_from_pid()` คืน Reference ที่อาจเป็น NULL ต้องตรวจ NULL แล้ว `bpf_task_release()` ทุกเส้นทาง Verifier บังคับกฎนี้ด้วย Reference Tracking ตัวอย่าง Error จริง:
+  - ลืม Release → `Unreleased reference id=2 alloc_insn=2`
+  - ไม่ตรวจ NULL → `invalid mem access 'trusted_ptr_or_null_'`
+  - ใช้หลัง Release → pointer กลายเป็น `'scalar'`
+  - เรียก kfunc จาก Program Type ที่ไม่ได้ลงทะเบียน (เช่น socket filter) → `calling kernel function ... is not allowed`
+  - ใช้ RCU pointer นอก `bpf_rcu_read_lock()` → `R2 must be a rcu pointer`
+- **kfunc แบบ Optional**: ประกาศเป็น `__weak` แล้วตรวจด้วย `bpf_ksym_exists()` ก่อนเรียก โปรแกรมจะโหลดได้แม้เคอร์เนลไม่มี kfunc นั้น
+- แล็บใช้ `SEC("syscall")` ซึ่งรันผ่าน `BPF_PROG_TEST_RUN` ได้ จึงทดสอบ kfuncs ด้วย Unit Test ได้ทั้งหมด
+
+### 11.2 BPF Arena: หน่วยความจำร่วมขนาดใหญ่ระหว่าง BPF และ User Space (Week 24)
+
+- `BPF_MAP_TYPE_ARENA` (เคอร์เนล 6.9+) คือพื้นที่หน่วยความจำแบบ Sparse ที่ทั้งโปรแกรม BPF และ User Space `mmap` เห็นที่อยู่เดียวกัน สูงสุด 2^20 หน้า (4 GiB) ขอเกินได้ `E2BIG`
+- โปรแกรม BPF จองหน้าด้วย kfunc `bpf_arena_alloc_pages()` และใช้ Pointer ใน Address Space พิเศษ (`__arena` = `address_space(1)`) คอมไพเลอร์แปลงด้วยคำสั่ง `addr_space_cast` ทำให้สร้างโครงสร้างข้อมูลแบบ Pointer-based (Linked List, Tree) ได้โดยไม่ต้องผ่าน Map Lookup
+- User Space (Go) อ่านโครงสร้างเดียวกันได้ตรงๆ ผ่าน `Map.Memory()` ต้อง mmap **ก่อน** โหลดโปรแกรม มิฉะนั้นได้ `arena's user address must be set via map_extra or mmap()`
+- การเข้าถึงหน้าที่ยังไม่ได้จองจากฝั่ง BPF จะอ่านได้ 0 และการเขียนถูกทิ้งเงียบๆ (ไม่ Crash) ส่วนฝั่ง User Space การแตะหน้าจะทำให้เคอร์เนลจองหน้าให้
+- **หมายเหตุเครื่องมือ**: `cilium/ebpf` v0.22.0 ยังมี bug ที่ลบค่า Offset ของ `addr_space_cast` ทำให้ Verifier ปฏิเสธ (`BPF_MOV uses reserved fields`) upstream แก้แล้วแต่ยังไม่ออก Release แล็บ Week 24 จึงลง Patch ผ่าน `make`
+
+### 11.3 struct_ops และ sched_ext: เขียน CPU Scheduler ด้วย BPF (Week 25)
+
+- **struct_ops** ให้โปรแกรม BPF "เป็น" ตาราง Function Pointer ของเคอร์เนล (เช่น `tcp_congestion_ops`, `sched_ext_ops`) ประกาศด้วย `SEC(".struct_ops.link")` และ Attach ด้วย `link.AttachStructOps` (cilium/ebpf v0.22; bpf2go ต้องใช้ `-no-global-types` เพราะ Function Pointer ใน `sched_ext_ops`)
+- **sched_ext** (`CONFIG_SCHED_CLASS_EXT=y`) เพิ่ม Scheduling Class ใหม่ `ext_sched_class` ซึ่งอยู่ **ต่ำกว่า** `fair` (CFS/EEVDF) Callback หลัก: `select_cpu` → `enqueue` → `dispatch` → `running` / `stopping` ใช้ **DSQ (Dispatch Queue)** เป็นคิวกลาง kfuncs บน Linux 7.0 ใช้ชื่อใหม่ `scx_bpf_dsq_insert`, `scx_bpf_dsq_insert_vtime`, `scx_bpf_dsq_move_to_local` (ชื่อเก่า `scx_bpf_dispatch` / `scx_bpf_consume` ไม่มีแล้ว)
+- **ความปลอดภัยเป็นหัวใจ**:
+  - `SCX_OPS_SWITCH_PARTIAL`: Scheduler ของเราคุมเฉพาะ Task ที่ตั้ง Policy เป็น `SCHED_EXT` เอง Task อื่นของระบบยังใช้ Scheduler ปกติ
+  - **Watchdog**: ถ้า Task ที่เป็น Runnable ไม่ได้รันเกิน `timeout_ms` เคอร์เนลจะดีด Scheduler ออกอัตโนมัติ (`ERROR_STALL`) และย้าย Task กลับไป Scheduler ปกติ วัดได้จริงว่าดีดออกหลังเลยเวลาเล็กน้อย (2.028 s สำหรับ 2000 ms)
+  - `scx_bpf_error()` ดีดออกพร้อมข้อความ (`ERROR_BPF`) และตรวจสถานะได้ที่ `/sys/kernel/sched_ext/state`
+- ผลวัดจริง (1 CPU, Task ยุ่ง 4 ตัว): Scheduler แบบ FIFO แบ่งเวลาเท่ากัน (~1.5 s ต่อตัว) ส่วนแบบ vtime ตามน้ำหนัก nice ให้ nice 0 ~2.7 s และ nice 10 ~0.32 s
+- struct_ops ไม่รองรับ `BPF_PROG_TEST_RUN` (`operation not supported`) การทดสอบต้อง Attach จริงกับ Workload ทดสอบ
+- อ่านต่อ: Scheduler ระดับ Production ในโครงการ sched-ext/scx เช่น `scx_rusty`, `scx_lavd`, `scx_bpfland`
+
+### 11.4 ระบบนิเวศ eBPF ในงาน Production: Tetragon และ Cilium (Week 26)
+
+**Tetragon** (แล็บใช้ v1.7.1 ใน Docker แบบ Privileged) เปลี่ยนสิ่งที่เราเขียนเองใน Week 09–16 ให้กลายเป็น **TracingPolicy แบบ YAML**:
+
+| Policy ในแล็บ | กลไกเบื้องหลัง | เทียบกับสัปดาห์ |
+| :--- | :--- | :--- |
+| Process exec/exit | Base Sensor + LSM `bprm_check_security` | Week 09, 15 |
+| File open ใน `lab-files/` | kprobe/LSM + `matchArgs` กรองในเคอร์เนล | Week 10 |
+| `tcp_connect` / `tcp_close` | kprobe + กรองพอร์ต | Week 14 |
+| Enforce: `Sigkill` | ส่ง SIGKILL จากในเคอร์เนลทันทีที่ตรงเงื่อนไข (`cat` ได้ exit 137) | Week 10, 15 |
+| Enforce: `Override` | เปลี่ยนค่าคืนเป็น `-EPERM` ผ่าน LSM Hook (`open()` ล้มเหลว แต่โพรเซสยังอยู่) | Week 10 |
+
+- Tetragon **กรองอีเวนต์ในเคอร์เนล** ผ่านสายของโปรแกรมที่เรียกต่อกันด้วย Tail Call (โหลด Policy 3 ตัวเห็นโปรแกรม BPF 32 ตัว) จึงส่งขึ้น User Space เฉพาะอีเวนต์ที่ตรง Policy
+- `Override` ทำได้ 3 ทาง: ค่าคืนของ LSM Hook, โปรแกรม `fmod_ret` บนฟังก์ชัน `security_*`, หรือ `bpf_override_return` บน Syscall (ต้อง `CONFIG_BPF_KPROBE_OVERRIDE=y` และฟังก์ชันต้องอยู่ใน Error-injection Allowlist ซึ่งบนเครื่องทดลองมี 1066 ตัวและไม่มี `security_*`) การ Override บน kprobe ล้มเหลวเมื่อใช้ `kprobe_multi` ต้องรีสตาร์ทด้วย `--disable-kprobe-multi`
+- ความเสี่ยงที่ต้องยอมรับ: Agent รันแบบ Privileged เข้าถึงทุกอย่างในเครื่อง และ Policy แบบ kprobe ผูกกับชื่อ Symbol ของเคอร์เนลซึ่งเปลี่ยนได้ระหว่างเวอร์ชัน
+
+**Cilium** (แล็บใช้ v1.20.4 บน kind แบบไม่มี kube-proxy) คือการประกอบกลไกเครือข่ายทั้งหมดของหลักสูตร:
+- Service Load Balancing ด้วย cgroup Hook `connect` / `getpeername` (กลไกเดียวกับ Week 14) จึงเชื่อมต่อไปยัง Pod IP โดยตรงตั้งแต่ `connect()` และไม่มีกฎ iptables `KUBE-SVC` เลย (ตรวจแล้วได้ 0 กฎ)
+- Datapath ผูกผ่าน TCX (Week 08) และ XDP (Week 07) สำหรับ North-South Load Balancing
+- **Hubble** แสดง Flow ระดับ L3/L4/L7 และเหตุผลการดรอป เช่น `Policy denied DROPPED` (แนวคิดเดียวกับ Dropwatch ใน Week 13)
+
+---
+
 ### บทสรุปและแนวทางการศึกษาต่อยอด (Next Steps)
-การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง หลังจากศึกษาเนื้อหาทั้ง 10 บทแล้ว ให้ทำแล็บรายสัปดาห์ใน `phase01` ถึง `phase10` พร้อมแบบฝึกหัดท้ายบท 3 ระดับของแต่ละสัปดาห์ และฝึกนิสัยของวิศวกร eBPF ระดับโปรดักชัน 4 ข้อที่หลักสูตรนี้เน้นย้ำ:
+การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง หลังจากศึกษาเนื้อหาทั้ง 11 บทแล้ว ให้ทำแล็บรายสัปดาห์ใน `phase01` ถึง `phase11` (26 สัปดาห์) พร้อมแบบฝึกหัดท้ายบท 3 ระดับของแต่ละสัปดาห์ และฝึกนิสัยของวิศวกร eBPF ระดับโปรดักชัน 4 ข้อที่หลักสูตรนี้เน้นย้ำ:
 1. **ใช้ CO-RE (`vmlinux.h` + `BPF_CORE_READ`) เสมอ** ห้ามเขียน Struct ของเคอร์เนลเอง
 2. **เขียน Unit Test ด้วย `BPF_PROG_TEST_RUN`** (`make test`) และทดสอบ End-to-end บน netns/veth/cgroup ที่แยกจากระบบจริง
 3. **วัดก่อนอ้าง**: ทุกตัวเลขประสิทธิภาพต้องมาพร้อมวิธีวัด สภาพแวดล้อม และข้อจำกัด
 4. **ระบุ Threat Model และข้อจำกัด** ของเครื่องมือความปลอดภัยทุกครั้ง และทดสอบให้ครอบคลุมทุก CPU
 
-หัวข้อแนะนำสำหรับศึกษาต่อ: kfuncs, BPF Arena, `struct_ops` / sched_ext, BPF Token, netkit, Tail Calls, `bpf_loop` / Open-coded Iterators, `bpf_timer`, USDT และเครื่องมือในระบบนิเวศ เช่น Cilium, Tetragon, Falco
+หัวข้อแนะนำสำหรับศึกษาต่อ: BPF Token, netkit, Tail Calls, `bpf_loop` / Open-coded Iterators, `bpf_timer` / `bpf_wq`, USDT, `kprobe.multi`, Program Signing, eBPF ด้วยภาษา Rust (Aya) และ Falco

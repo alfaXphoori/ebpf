@@ -2,7 +2,7 @@
 // +build ignore
 
 /*
- * Week 11 hands-on: programs that are INTENTIONALLY rejected by the eBPF verifier.
+ * Week 06 hands-on: programs that are INTENTIONALLY rejected by the eBPF verifier.
  *
  * clang compiles every program in this file without a single warning -
  * the bugs are only detected when the kernel verifier simulates the

@@ -1,0 +1,19 @@
+# Week 26 (optional): identity-based L3/L4 policy enforced by Cilium's eBPF datapath.
+# Only pods labelled role=frontend may reach app=web on TCP/80 inside namespace w26.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: web-allow-only-frontend
+  namespace: w26
+spec:
+  endpointSelector:
+    matchLabels:
+      app: web
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        role: frontend
+    toPorts:
+    - ports:
+      - port: "80"
+        protocol: TCP

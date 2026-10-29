@@ -1,0 +1,12 @@
+# Week 26 (optional): 2-node kind cluster for Cilium. No kindnet CNI and no kube-proxy,
+# so Cilium provides both pod networking and the eBPF kube-proxy replacement.
+# Used with kind v0.33.0:  kind create cluster --config cilium/kind-w26.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: w26-cilium
+nodes:
+- role: control-plane
+- role: worker
+networking:
+  disableDefaultCNI: true      # no kindnet: Cilium becomes the CNI
+  kubeProxyMode: none          # no kube-proxy: Cilium replaces it with eBPF

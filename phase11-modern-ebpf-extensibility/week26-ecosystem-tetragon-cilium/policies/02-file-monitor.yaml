@@ -1,0 +1,27 @@
+# Week 26 / Policy 02: file access monitoring of the lab directory (observe only)
+#
+# kprobe on security_file_open(struct file *file): the LSM entry point that runs
+# for every successful path lookup in open(2)/openat(2)/openat2(2). Compare with
+# week 10 (BPF LSM file_open) and week 22 (fentry on the same kind of function).
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "w26-file-monitor"
+spec:
+  kprobes:
+  - call: "security_file_open"
+    syscall: false                  # a kernel function, not a syscall entry
+    return: true                    # also report the return value (0 = allowed)
+    args:
+    - index: 0
+      type: "file"                  # struct file * -> full path via d_path()
+    returnArg:
+      index: 0
+      type: "int"
+    selectors:
+    - matchArgs:
+      - index: 0
+        operator: "Postfix"
+        values:
+        - "week26-ecosystem-tetragon-cilium/lab-files/notes.txt"
+        - "week26-ecosystem-tetragon-cilium/lab-files/secret.txt"

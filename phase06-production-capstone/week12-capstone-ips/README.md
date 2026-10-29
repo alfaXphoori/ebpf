@@ -137,7 +137,7 @@ static __always_inline __u64 get_conf(__u32 idx)
     if (ip_hdr_len < sizeof(struct iphdr)) return XDP_PASS;
     if ((void *)iph + ip_hdr_len > data_end) return XDP_PASS;
 ```
-- **บรรทัด 144–170**: ตรวจสอบขอบเขต Ethernet / IPv4 Header และความยาว Variable Header Length (`ihl * 4`) ตามที่ Verifier บังคับ (ทบทวน Week 11)
+- **บรรทัด 144–170**: ตรวจสอบขอบเขต Ethernet / IPv4 Header และความยาว Variable Header Length (`ihl * 4`) ตามที่ Verifier บังคับ (ทบทวนการอ่าน Verifier Log ใน Week 06)
 
 ```c
     struct block_entry *b_entry = bpf_map_lookup_elem(&blacklist_map, &src_ip);
