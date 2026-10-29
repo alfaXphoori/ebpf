@@ -148,11 +148,10 @@
 │   ├── week24-kfuncs-arena/               # kfuncs (acquire/release) และ BPF Arena (shared memory กับ Go)
 │   ├── week25-struct-ops-sched-ext/       # struct_ops + sched_ext: CPU Scheduler เขียนด้วย BPF
 │   └── week26-ecosystem-tetragon-cilium/  # Tetragon TracingPolicy (observe/enforce) และ Cilium บน kind
-├── .github/workflows/ci.yml               # CI: build ทุกแล็บ + รัน BPF_PROG_TEST_RUN tests บน GitHub Actions
 ├── LICENSES/                              # ตัวบทสัญญาอนุญาต GPL-2.0 และ MIT
 ├── .gitignore                             # การยกเว้นไฟล์ Binary, Object, และ Cache
 ├── LICENSE                                # สรุปสัญญาอนุญาตแยกตามส่วนประกอบ (GPL-2.0 / MIT)
-├── Makefile                               # Build / Test ทุกแล็บในคำสั่งเดียว (make, make test, make week07)
+├── Makefile                               # Build / Test ทุกแล็บในคำสั่งเดียว (make, make test, make check, make week07)
 └── README.md                              # เอกสารแนะนำโครงการนี้
 ```
 
@@ -211,12 +210,13 @@ sudo ./scripts/setup_env.sh
 ```bash
 make              # สร้าง vmlinux.h (ถ้ายังไม่มี) แล้ว go generate + go build ทุกแล็บ
 make test         # รัน Unit Tests ด้วย BPF_PROG_TEST_RUN (ต้องใช้ sudo) ในแล็บที่มีชุดทดสอบ
+make check        # build + test + ตรวจ syntax สคริปต์ทั้งหมด: รันบนเครื่องก่อน push ทุกครั้ง (repo นี้ไม่ใช้ GitHub CI)
 make week07       # build เฉพาะสัปดาห์ที่ 7
 make week07-test  # test เฉพาะสัปดาห์ที่ 7
 make clean        # ลบไฟล์ที่ generate และไบนารีทั้งหมด
 ```
 
-> Unit Tests ใช้ `BPF_PROG_TEST_RUN` ป้อนแพ็กเก็ตที่สร้างขึ้นเองเข้าโปรแกรม eBPF โดยตรงแล้วตรวจผลลัพธ์ (เช่น `XDP_DROP` / `XDP_PASS`) โดยไม่ต้องผูกโปรแกรมเข้ากับการ์ดเครือข่ายจริง จึงรันใน CI ได้ และใช้เป็นเครื่องมือตรวจงานนักศึกษาอัตโนมัติได้ด้วย ทุกครั้งที่ push ขึ้น `main` GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) จะ build ทุกแล็บและรันชุดทดสอบบน GitHub-hosted Runner (Ubuntu 24.04) เป็นการตรวจความเข้ากันได้ข้ามเวอร์ชันเคอร์เนลของ CO-RE เพิ่มเติม ส่วนการทดสอบหลักให้รัน `make test` บนเครื่อง Linux 7.0
+> Unit Tests ใช้ `BPF_PROG_TEST_RUN` ป้อนแพ็กเก็ตที่สร้างขึ้นเองเข้าโปรแกรม eBPF โดยตรงแล้วตรวจผลลัพธ์ (เช่น `XDP_DROP` / `XDP_PASS`) โดยไม่ต้องผูกโปรแกรมเข้ากับการ์ดเครือข่ายจริง จึงรันใน CI ได้ และใช้เป็นเครื่องมือตรวจงานนักศึกษาอัตโนมัติได้ด้วย repo นี้ไม่ใช้ GitHub Actions ให้รัน `make check` บนเครื่อง Linux 7.0 ก่อน push ทุกครั้ง (build ทุกแล็บ + รันชุดทดสอบ + ตรวจ syntax สคริปต์) ส่วนความเข้ากันได้ของ CO-RE กับเคอร์เนล 6.8 ให้ตรวจเพิ่มบน Ubuntu 24.04 VM
 
 ---
 

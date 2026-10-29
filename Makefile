@@ -4,6 +4,7 @@
 #
 #   make              # = make all: go generate + go build for every lab
 #   make test         # run BPF_PROG_TEST_RUN unit tests (labs that define a test target; needs sudo)
+#   make check        # build + test + syntax-check scripts: run locally before every push (no GitHub CI)
 #   make clean        # remove bin/ and bpf2go generated files in every lab
 #   make list         # list all lab directories
 #   make vmlinux      # (re)generate ./vmlinux.h from the running kernel's BTF
@@ -13,7 +14,7 @@
 
 LABS := $(sort $(patsubst %/Makefile,%,$(wildcard phase*/week*/Makefile)))
 
-.PHONY: all test clean list vmlinux $(LABS)
+.PHONY: all test check clean list vmlinux $(LABS)
 
 all: vmlinux.h
 	@set -e; for d in $(LABS); do \
@@ -29,6 +30,12 @@ test: vmlinux.h
 			$(MAKE) --no-print-directory -C $$d test; \
 		fi; \
 	done
+
+# Everything the old GitHub Actions job ran, on the local Linux 7.0 machine
+check: all test
+	bash -n scripts/setup_env.sh phase01-network-foundation/*/*.sh
+	python3 -m py_compile phase01-network-foundation/week01-packet-netns/raw_sniffer.py phase02-first-step-ebpf/week04-bcc-python/tcp_v4_latency.py
+	@echo "===> check passed"
 
 clean:
 	@for d in $(LABS); do $(MAKE) --no-print-directory -C $$d clean; done

@@ -97,7 +97,7 @@ struct kfree_skb_args {            /* hand-rolled: ผูกกับ layout ข
 ```
 
 > [!NOTE]
-> นี่คือการ **จำลอง** layout ของ 6.8 ด้วย BTF ที่ดัดแปลง ไม่ใช่การรันบนเคอร์เนล 6.8 จริง ผลยืนยันว่ากลไก relocation ทำงานถูกต้อง แต่ควรทดสอบบน Ubuntu 24.04 จริงอีกครั้ง (เช่นผ่าน CI) ก่อนนำไปใช้งาน
+> นี่คือการ **จำลอง** layout ของ 6.8 ด้วย BTF ที่ดัดแปลง ไม่ใช่การรันบนเคอร์เนล 6.8 จริง ผลยืนยันว่ากลไก relocation ทำงานถูกต้อง แต่ควรทดสอบบน Ubuntu 24.04 จริงอีกครั้ง (เช่นบน VM) ก่อนนำไปใช้งาน
 
 ### 1.5 PID/COMM ใน dropwatch "ไม่ใช่เจ้าของแพ็กเก็ตเสมอไป"
 
@@ -376,7 +376,7 @@ Per-reason totals from BPF hash map drop_reason_stats:
 | Overhead ภายใต้ drop storm | ในช่วง DDoS อาจมีหลักแสน event/วินาที ring buffer เต็ม (event หาย) และกิน CPU | aggregate ในเคอร์เนล, กรอง reason ในเคอร์เนล, sampling |
 | ตัวกรอง `-ip-only`/`-comm` อยู่ใน User Space | ทุก event ยังถูกส่งข้าม ring buffer | ย้ายตัวกรองไปไว้ในโปรแกรม eBPF (แบบฝึกหัด) |
 | ต้องใช้สิทธิ์ root | `/proc/kallsyms` จะคืน address เป็น 0 ถ้าไม่ใช่ root และโหลด BPF ไม่ได้ | รันด้วย `sudo` หรือ capability `CAP_BPF`+`CAP_PERFMON`+`CAP_SYSLOG` |
-| การยืนยัน 6.8 ในแล็บนี้เป็นการจำลองด้วย BTF | ยังไม่ได้รันบน 6.8 จริง | ทดสอบบน Ubuntu 24.04 VM หรือ CI |
+| การยืนยัน 6.8 ในแล็บนี้เป็นการจำลองด้วย BTF | ยังไม่ได้รันบน 6.8 จริง | ทดสอบบน Ubuntu 24.04 VM |
 
 ในมุม **Threat Model**: dropwatch เป็นเครื่องมือ observability ไม่ใช่กลไกป้องกัน ผู้ที่มี root สามารถ detach โปรแกรมหรือ flood drop event เพื่อกลบสัญญาณได้ ข้อมูลจึงเหมาะกับการ debug และ monitoring มากกว่าการเป็นหลักฐานด้านความปลอดภัย
 
