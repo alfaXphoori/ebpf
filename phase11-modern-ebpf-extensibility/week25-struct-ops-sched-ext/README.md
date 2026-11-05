@@ -60,8 +60,10 @@ flowchart TD
     STATS -. "อ่านค่า" .-> U4
     EJ -. "exit_info" .-> U5
 
-    KERNEL ~~~ SAFETY
-    SAFETY ~~~ TEST
+    STATS ~~~ F1
+    STATS ~~~ F2
+    FB ~~~ T1
+    FB ~~~ T2
 
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
