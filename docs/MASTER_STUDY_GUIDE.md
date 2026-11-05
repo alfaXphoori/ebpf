@@ -68,6 +68,48 @@
 
 ---
 
+### 🗺️ แผนภาพภาพรวมบทที่ 1 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph BYTES["1.1–1.4 แกะแพ็กเก็ตระดับไบต์"]
+        B1["Ethernet 14 ไบต์<br/>dst MAC, src MAC, EtherType"] --> B2["IPv4 Header<br/>IHL × 4 = ความยาว Header"]
+        B2 --> B3{"protocol?"}
+        B3 -- "6" --> B4["TCP 20+ ไบต์<br/>ports, seq, flags"]
+        B3 -- "17" --> B5["UDP 8 ไบต์"]
+        B4 --> B6["Network Byte Order → Host<br/>ntohs / ntohl"]
+        B5 --> B6
+    end
+
+    subgraph PATH["1.5 เส้นทาง Ingress: From Wire to Socket"]
+        N1(["สัญญาณบนสาย"]) --> N2["NIC: ตรวจ FCS<br/>DMA → RX Ring"]
+        N2 --> N3["Hard IRQ<br/>napi_schedule()"]
+        N3 --> N4["SoftIRQ NET_RX<br/>napi_poll() แบบ Batch"]
+        N4 --> H1["HOOK 1: XDP<br/>ก่อนจอง sk_buff"]
+        H1 --> N5["Allocate sk_buff"]
+        N5 --> H2["HOOK 2: TC Ingress<br/>cls_bpf"]
+        H2 --> N6["Netfilter / Conntrack<br/>→ Routing → INPUT"]
+        N6 --> N7["tcp_v4_rcv() / udp_rcv()"]
+        N7 --> N8["sk_receive_queue"]
+        N8 --> N9(["แอปเรียก read()"])
+    end
+
+    B6 -. "ความรู้นี้ใช้ตอนเขียน Parser ใน" .-> H1
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class N1,N2,B1,B2,B4,B5 net
+    class N3,N4,N5,N6,N7,N8 kern
+    class H1,H2 map
+    class N9 user
+```
+
+**อ่านแผนภาพ:** ครึ่งบนคือการอ่าน Header ทีละชั้น (Ethernet → IPv4 → TCP/UDP) พร้อมแปลง Byte Order ครึ่งล่างคือเส้นทางของแพ็กเก็ตขาเข้า ตั้งแต่ NIC ผ่าน IRQ/SoftIRQ ไปจนถึง Socket จุดสีเหลืองคือ Hook ที่ eBPF จะเข้าไปเกาะในบทที่ 4 (XDP อยู่ก่อนการจอง `sk_buff` จึงเร็วที่สุด) — แล็บประจำบท: **Week 01–02** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
+
 ### 1.1 โครงสร้างระดับ Byte ของ Ethernet Frame (Layer 2)
 
 เมื่อสัญญาณไฟฟ้าหรือคลื่นแสงถูกแปลงเป็นข้อมูลดิจิทัลที่ Physical Layer (L1) ข้อมูลจะถูกจัดกลุ่มเข้าสู่ Layer 2 ในรูปแบบของ **Ethernet II Frame** ซึ่งมีขนาด Header คงที่อยู่ที่ 14 ไบต์ (ไม่รวม Preamble 7 ไบต์, Start Frame Delimiter 1 ไบต์ และ Frame Check Sequence 4 ไบต์ที่มักถูกฮาร์ดแวร์ NIC ตัดทิ้งก่อนส่งให้เคอร์เนล)
@@ -403,6 +445,54 @@ eBPF (Extended Berkeley Packet Filter) ได้เปลี่ยนเคอ�
 
 ---
 
+### 🗺️ แผนภาพภาพรวมบทที่ 2 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["2.2 Build Pipeline"]
+        C1["my_prog.bpf.c"] --> C2["clang -target bpf -O2 -g"]
+        C2 --> C3[("ELF .o<br/>.text bytecode · .maps · .BTF")]
+    end
+
+    subgraph LOAD["User Space Loader: cilium/ebpf หรือ libbpf"]
+        L1["อ่าน ELF + BTF relocation"] --> L2["bpf(BPF_PROG_LOAD)"]
+    end
+
+    subgraph KERNEL["Kernel"]
+        V1{"2.3 Verifier ขั้น 1<br/>CFG: ไม่มีลูปไม่รู้จบ<br/>ไม่มีโค้ดเข้าไม่ถึง?"}
+        V1 -- "ผ่าน" --> V2{"Verifier ขั้น 2<br/>Abstract execution<br/>R0–R10, pointer bounds?"}
+        V1 -- "ไม่ผ่าน" --> REJ["ปฏิเสธ + Verifier Log<br/>EACCES / EINVAL"]
+        V2 -- "ไม่ผ่าน" --> REJ
+        V2 -- "ผ่าน" --> J["2.4 JIT → x86_64 / ARM64<br/>RO+X memory, bpf_jit_harden"]
+        J --> VM["2.1 eBPF VM<br/>11 registers, stack 512 B"]
+        VM --> HK["Hook: XDP, TC, kprobe,<br/>tracepoint, LSM"]
+    end
+
+    subgraph TOOLS["เครื่องมือในเฟส 02"]
+        T1["bpftrace one-liners<br/>Week 03"]
+        T2["BCC + Python<br/>คอมไพล์ตอน runtime · Week 04"]
+        T3["bpftool prog/map<br/>dump xlated / jited"]
+    end
+
+    C3 --> L1
+    L2 --> V1
+    T1 -. "ใช้ pipeline เดียวกัน" .-> V1
+    T2 -. "ใช้ pipeline เดียวกัน" .-> V1
+    T3 -. "ตรวจผลลัพธ์" .-> J
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class V1,V2,J,VM,HK,REJ kern
+    class L1,L2,T1,T2,T3 user
+    class C3 map
+```
+
+**อ่านแผนภาพ:** ทุกโปรแกรม eBPF ไม่ว่าจะมาจาก bpftrace, BCC หรือ C + Go ต้องผ่านเส้นทางเดียวกัน คือคอมไพล์เป็น ELF → Loader เรียก `bpf(BPF_PROG_LOAD)` → Verifier ตรวจ 2 ขั้น → JIT แปลงเป็น Machine Code → เกาะ Hook ถ้าไม่ผ่าน Verifier จะได้ Log อธิบายสาเหตุแทนการทำให้เคอร์เนลล่ม — แล็บประจำบท: **Week 03–04** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
+
 ### 2.1 สถาปัตยกรรม eBPF Virtual Machine
 
 eBPF VM เป็นเครื่องจักรเสมือนแบบ Register-Based 64 บิตที่ฝังตัวอยู่ภายในเคอร์เนล ประกอบด้วย:
@@ -537,6 +627,49 @@ sudo sysctl -w net.core.bpf_jit_harden=2
 # บทที่ 3: การเขียน eBPF ยุคใหม่แบบ CO-RE และการใช้ Maps (เฟส 03)
 
 การเปลี่ยนผ่านจาก eBPF ยุคเก่า (BCC) เข้าสู่ยุคสมัยใหม่ (Modern eBPF with CO-RE) ถือเป็นการปฏิวัติครั้งสำคัญของระบบสถาปัตยกรรมเคอร์เนล Linux
+
+---
+
+### 🗺️ แผนภาพภาพรวมบทที่ 3 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph CORE["3.1–3.2 CO-RE: Compile Once – Run Everywhere"]
+        K1["/sys/kernel/btf/vmlinux"] --> K2["bpftool btf dump → vmlinux.h"]
+        K2 --> K3["prog.bpf.c ใช้ BPF_CORE_READ"]
+        K3 --> K4["clang → .o พร้อม CO-RE relocation"]
+        K4 --> K5["Loader เทียบ BTF ของเครื่องปลายทาง<br/>ปรับ offset ของ field อัตโนมัติ"]
+        K5 --> K6["รันได้หลายเวอร์ชันเคอร์เนล<br/>ไม่ต้องมี linux-headers"]
+    end
+
+    subgraph MAPS["3.3 เลือก Map ให้เหมาะกับงาน"]
+        Q{"ลักษณะข้อมูล?"}
+        Q -- "Key-Value ทั่วไป" --> M1[("HASH")]
+        Q -- "หน่วยความจำจำกัด<br/>ไล่ entry เก่าทิ้งได้" --> M2[("LRU_HASH")]
+        Q -- "Counter ความถี่สูง" --> M3[("PERCPU_ARRAY")]
+        Q -- "สตรีม Event" --> M4[("RINGBUF")]
+    end
+
+    subgraph RACE["3.4 แก้ Race Condition ข้าม CPU"]
+        R0["หลาย CPU เขียน key เดียวกัน<br/>อ่าน-บวก-เขียน ทับกัน"] --> R1{"วิธีแก้"}
+        R1 --> R2["__sync_fetch_and_add<br/>atomic"]
+        R1 --> R3["Per-CPU map<br/>User Space รวมผลเอง"]
+    end
+
+    K6 --> Q
+    M1 --> R0
+    M3 --> R3
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class K1,K5 kern
+    class K2,K3,K4,K6 user
+    class M1,M2,M3,M4 map
+```
+
+**อ่านแผนภาพ:** เริ่มจากสร้าง `vmlinux.h` จาก BTF ของเคอร์เนล ให้โปรแกรมเดียวรันได้หลายเวอร์ชันเคอร์เนลผ่าน CO-RE relocation จากนั้นเลือกชนิด Map ตามลักษณะข้อมูล และเมื่อหลาย CPU เขียน Map พร้อมกันต้องใช้ atomic หรือ Per-CPU map เพื่อไม่ให้ค่าหาย — แล็บประจำบท: **Week 05–06** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
 
 ---
 
@@ -684,6 +817,49 @@ if (count) {
 # บทที่ 4: เจาะลึกการเขียน XDP และการทำ Bounds Checking (เฟส 04)
 
 XDP (eXpress Data Path) คือ Hook Point ของ eBPF ที่ทำงานได้เร็วที่สุดในโลกบน Linux Kernel เนื่องจากมันทำงานทันทีที่ฮาร์ดแวร์ NIC ส่งมอบหน่วยความจำ โดยที่เคอร์เนลยังไม่ได้จองโครงสร้าง `sk_buff`
+
+---
+
+### 🗺️ แผนภาพภาพรวมบทที่ 4 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    P(["แพ็กเก็ตเข้า NIC"]) --> X["4.1 XDP program<br/>ctx: struct xdp_md<br/>data, data_end"]
+
+    subgraph BOUNDS["4.3 Bounds Check ทีละชั้น ทุกครั้งก่อนอ่าน"]
+        X --> E{"data + sizeof ethhdr<br/>เกิน data_end?"}
+        E -- "เกิน" --> AB["XDP_PASS / DROP<br/>ไม่อ่านต่อ"]
+        E -- "ไม่เกิน" --> I{"ip + 20 ไบต์ และ IHL × 4<br/>เกิน data_end?"}
+        I -- "เกิน" --> AB
+        I -- "ไม่เกิน" --> POL["ตัดสิน Policy ทันที<br/>เช่น lookup blocklist"]
+    end
+
+    subgraph ACT["4.2 XDP Actions"]
+        POL --> A1["XDP_DROP 1<br/>Anti-DDoS"]
+        POL --> A2["XDP_PASS 2<br/>เข้า Stack ปกติ"]
+        POL --> A3["XDP_TX 3<br/>สะท้อนออก NIC เดิม · LB"]
+        POL --> A4["XDP_REDIRECT 4<br/>NIC อื่น, cpumap, AF_XDP"]
+        POL --> A5["XDP_ABORTED 0<br/>error → trace_xdp_exception"]
+    end
+
+    subgraph TC["4.4 TC / TCX: struct __sk_buff"]
+        A2 --> T1["TC Ingress<br/>เช่น Reverse SNAT ขากลับ"]
+        T1 --> ST["Linux Network Stack"]
+        ST --> T2["TC Egress<br/>แก้ Header, mark"]
+        T2 --> CS["bpf_l3_csum_replace<br/>bpf_l4_csum_replace + BPF_F_PSEUDO_HDR"]
+        CS --> OUT(["ออกทาง NIC"])
+    end
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class P,OUT,ST net
+    class X,E,I,POL,AB kern
+    class A1,A2,A3,A4,A5,T1,T2,CS map
+```
+
+**อ่านแผนภาพ:** XDP ทำงานบน `struct xdp_md` ก่อนการจอง `sk_buff` ทุกครั้งที่จะอ่าน Header ชั้นถัดไปต้องเทียบกับ `data_end` ก่อน ไม่อย่างนั้น Verifier จะปฏิเสธ แล้วตัดสิน Policy ทันทีที่ข้อมูลพอ (บทเรียนจาก Lab Notes 4.5) จากนั้นคืนค่า Action 1 ใน 5 แบบ ส่วน TC ใช้กับงานที่ XDP ทำไม่ได้ เช่น ขาออก (Egress) และการแก้ Header ที่ต้องคำนวณ Checksum ใหม่ — แล็บประจำบท: **Week 07–08** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
 
 ---
 
@@ -883,6 +1059,50 @@ bpf_l4_csum_replace(skb, tcp_offset + offsetof(struct tcphdr, check), old_ip, ne
 
 ---
 
+### 🗺️ แผนภาพภาพรวมบทที่ 5 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph SRC["แหล่ง Event"]
+        S1["Tracepoint / kprobe<br/>เช่น sys_enter_openat, exec"]
+        S2["5.3 Uprobe บน libssl.so<br/>SSL_write: อ่าน buf ก่อนเข้ารหัส"]
+    end
+
+    subgraph RB["5.1–5.2 BPF Ring Buffer: MPSC"]
+        R1["bpf_ringbuf_reserve()"] --> R2{"reserve สำเร็จ?"}
+        R2 -- "NULL: buffer เต็ม" --> R0["return 0<br/>event นี้หาย"]
+        R2 -- "ได้ pointer" --> R3["เติมข้อมูลลง slot โดยตรง<br/>zero-copy"]
+        R3 --> R4{"ต้องการส่งไหม?"}
+        R4 -- "ใช่" --> R5["bpf_ringbuf_submit()"]
+        R4 -- "ไม่" --> R6["bpf_ringbuf_discard()"]
+        R5 --> BUF[("RINGBUF ก้อนเดียว<br/>ทุก CPU แชร์ · global order")]
+    end
+
+    subgraph LSM["5.4 BPF LSM: บล็อกที่จุดเกิดเหตุ"]
+        L0(["syscall เช่น open()"]) --> L1["LSM hook<br/>เช่น lsm/file_open"]
+        L1 --> L2{"ตรง Policy?"}
+        L2 -- "ใช่" --> L3["return -EPERM<br/>syscall ล้มเหลว"]
+        L2 -- "ไม่" --> L4["return 0 อนุญาต"]
+        L1 --> R1
+    end
+
+    S1 --> R1
+    S2 --> R1
+    BUF --> U["User Space: ringbuf reader<br/>อ่าน event ตามลำดับเวลา"]
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class S1,S2,R1,R3,R5,R6,R0,L1,L3,L4 kern
+    class BUF map
+    class U user
+```
+
+**อ่านแผนภาพ:** Event จาก Tracepoint, Uprobe (เช่น ดักอ่าน Plaintext ใน `SSL_write`) หรือ LSM hook ถูกส่งผ่าน Ring Buffer ตามกฎ 3 ขั้น reserve → เติมข้อมูล → submit/discard Ring Buffer เป็นก้อนเดียวที่ทุก CPU แชร์ จึงรักษาลำดับเวลาได้ ส่วน BPF LSM ต่างจาก Tracing ตรงที่คืน `-EPERM` เพื่อบล็อกการกระทำได้จริง — แล็บประจำบท: **Week 09–10** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
+
 ### 5.1 สถาปัตยกรรม Memory-mapped BPF Ring Buffer
 
 ในอดีต `BPF_MAP_TYPE_PERF_EVENT_ARRAY` มีข้อเสียสำคัญคือ:
@@ -1050,6 +1270,51 @@ char _license[] SEC("license") = "GPL";
 # บทที่ 6: โค้ดฝั่ง User Space ด้วยภาษา Go (`cilium/ebpf`) & Cheat Sheet (เฟส 06)
 
 ในการสร้างระบบ eBPF สำหรับใช้งานจริงบน Production ไลบรารี `github.com/cilium/ebpf` ของทีม Cilium ได้รับการยอมรับสูงสุดในชุมชน Cloud Native เนื่องจากทำงานด้วย **Pure Go (ไม่ต้องพึ่งพา CGO หรือคอมไพเลอร์ C ในขั้นตอน Runtime)**
+
+---
+
+### 🗺️ แผนภาพภาพรวมบทที่ 6 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph GEN["6.1 bpf2go: สร้างโค้ดล่วงหน้า"]
+        G1["go:generate bpf2go ... prog.c"] --> G2["bpf_bpfel.o + bpf_bpfel.go<br/>bpfObjects ที่ type-safe"]
+        G2 --> G3["go build → binary เดียว<br/>ฝัง ELF ไว้ข้างใน · ไม่ต้องใช้ CGO"]
+    end
+
+    subgraph RUN["6.2 พิมพ์เขียว Go Control Plane"]
+        U1["rlimit.RemoveMemlock()"] --> U2["loadBpfObjects()"]
+        U2 --> U3{"Verifier ผ่าน?"}
+        U3 -- "ไม่" --> U4["*ebpf.VerifierError<br/>พิมพ์ด้วย %+v · บรรทัดท้ายคือสาเหตุ"]
+        U3 -- "ผ่าน" --> U5["link.AttachXDP / Tracepoint / ..."]
+        U5 --> U6["อ่าน Map / ringbuf.Reader"]
+        U6 --> U7["Prometheus /metrics<br/>หรือ log / dashboard"]
+        U7 --> U8["Ctrl+C → defer Close()<br/>detach ทุก link"]
+    end
+
+    subgraph TEST["6.4 ทดสอบด้วย BPF_PROG_TEST_RUN"]
+        T1["สร้างแพ็กเก็ตจำลอง<br/>ปกติ, ตรง Policy, ผิดรูป"] --> T2["prog.Run / Test / Benchmark"]
+        T2 --> T3["ตรวจ retval, DataOut<br/>และค่าใน Map หลังรัน"]
+    end
+
+    subgraph CHEAT["6.3 Cheat Sheet ตรวจระบบจริง"]
+        C1["bpftool prog / map / net"]
+        C2["ip link xdp · tc filter"]
+    end
+
+    G3 --> U1
+    U2 --> T2
+    U5 -. "ตรวจว่า attach จริง" .-> C1
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class G1,G2,G3,U1,U2,U5,U6,U7,U8,T1,T2,T3,C1,C2 user
+    class U3,U4 kern
+```
+
+**อ่านแผนภาพ:** `bpf2go` แปลงโค้ด C เป็น Go package ตั้งแต่ตอน build ทำให้ได้ binary เดียวที่ไม่ต้องใช้คอมไพเลอร์ตอนรัน ฝั่ง Go ทำตามลำดับ RemoveMemlock → load → attach → อ่าน Map/Ring Buffer → ส่งออก metrics → ปิดทุกอย่างตอนจบ ระหว่างพัฒนาใช้ `BPF_PROG_TEST_RUN` ทดสอบโปรแกรมโดยไม่ต้องผูกกับ Interface จริง และใช้ `bpftool` ตรวจของจริงบนเครื่อง — แล็บประจำบท: **Week 11–12** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
 
 ---
 
@@ -1345,6 +1610,56 @@ func TestDropBlockedIP(t *testing.T) {
 
 ในระบบปฏิบัติการลินุกซ์ระดับโปรดักชัน ภัยคุกคามและการสูญหายของข้อมูลมักเกิดขึ้นลึกเกินกว่าที่เครื่องมือ User Space ทั่วไปจะตรวจจับได้ เฟสนี้นำเทคนิค eBPF ขั้นสูงมาใช้สร้างเครื่องมือสืบสวนและเฝ้าระวัง พร้อมกับเรียนรู้ **ข้อจำกัดและช่องทางหลบเลี่ยง (Evasion)** ของเครื่องมือเหล่านั้นอย่างตรงไปตรงมา เพราะเครื่องมือความปลอดภัยที่ไม่รู้จุดอ่อนของตัวเองอันตรายกว่าไม่มีเครื่องมือ
 
+### 🗺️ แผนภาพภาพรวมบทที่ 7 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    RULE["7.0 กฎเหล็ก: ใช้ vmlinux.h + BPF_CORE_READ<br/>ห้ามประกาศ struct ของเคอร์เนลเอง"]
+
+    subgraph DROP["7.1 Dropwatch: ทำไมแพ็กเก็ตหาย"]
+        D1["kfree_skb_reason()"] --> D2["tracepoint skb:kfree_skb"]
+        D2 --> D3["reason → ชื่อจาก BTF<br/>location → symbol+offset จาก kallsyms"]
+    end
+
+    subgraph EGRESS["7.2 Zero-Trust Egress: cgroup/connect4"]
+        E1["process ใน cgroup ของแล็บ<br/>เรียก connect()"] --> E2{"IP/port อยู่ใน blocklist?"}
+        E2 -- "ใช่" --> E3["return 0 → EPERM<br/>ไม่มี SYN ออกไป"]
+        E2 -- "ไม่" --> E4["return 1 อนุญาต"]
+    end
+
+    subgraph RSHELL["7.3 Reverse Shell Guard"]
+        S1["sched_process_exec"] --> S2["อ่าน fd 0/1/2 และ real_parent->comm<br/>ผ่าน CO-RE"]
+        S2 --> S3{"stdio เป็น socket หรือ<br/>parent เป็น daemon?"}
+        S3 -- "ใช่" --> S4["Alert ระดับ CRITICAL"]
+    end
+
+    subgraph AUDIT["7.4 eBPF Integrity Auditor"]
+        A1["fentry/__sys_bpf<br/>fallback: raw_syscalls/sys_enter"] --> A2["อ่าน cmd + attr"]
+        A2 --> A3["ประเมินความเสี่ยง<br/>+ startup scan หลัง attach"]
+    end
+
+    RULE --> D2
+    RULE --> S2
+    RULE --> A2
+    D3 --> EV[("RINGBUF → Go agent")]
+    E3 --> EV
+    S4 --> EV
+    A3 --> EV
+    EV --> LIM["ทุกเครื่องมือระบุ Evasion ที่ยังหลบได้<br/>เช่น UDP sendto, IPv6, PTY shell, root kill agent"]
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class D1,D2,D3,E2,E3,E4,S1,S2,S3,S4,A1,A2,A3 kern
+    class EV map
+    class E1,LIM user
+```
+
+**อ่านแผนภาพ:** ทุกเครื่องมือในบทนี้อ่าน struct ของเคอร์เนลผ่าน CO-RE ตามกฎข้อ 7.0 แต่ละตัวตอบคำถามความปลอดภัยคนละข้อ ได้แก่ แพ็กเก็ตหายเพราะอะไร, process นี้ควรเชื่อมต่อออกไปได้ไหม, exec นี้เป็น Reverse Shell หรือไม่ และมีใครโหลดโปรแกรม BPF แปลกปลอมหรือไม่ ทุกตัวส่ง event ให้ Go agent และระบุช่องทางหลบเลี่ยงที่ยังเหลือไว้ตรง ๆ — แล็บประจำบท: **Week 13–16** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
+
 ### 7.0 กฎเหล็กของ Tracing แบบ CO-RE: ห้ามเขียน Struct ของเคอร์เนลเอง
 
 แล็บเวอร์ชันแรกของเฟสนี้เคยประกาศ Struct ของ Tracepoint เองด้วยมือ (เช่น `struct trace_kfree_skb_args`) ผลที่พบจากการทดลองจริงคือ:
@@ -1402,6 +1717,51 @@ int trace_drop(struct trace_event_raw_kfree_skb *ctx)
 
 # บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 08)
 
+### 🗺️ แผนภาพภาพรวมบทที่ 8 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph BIO["8.1 Block I/O Latency"]
+        B1["tp_btf/block_rq_issue"] --> B2[("start_times<br/>key = pointer ของ struct request")]
+        B2 --> B3["tp_btf/block_rq_complete<br/>delta = now − start"]
+        B3 --> B4["log2 bucket แบบ branch-free<br/>แยกตาม disk และ READ/WRITE"]
+        B4 --> B5[("histogram<br/>__sync_fetch_and_add")]
+    end
+
+    subgraph CPU["8.2 On-CPU Profiler"]
+        C1["perf_event_open SW_CPU_CLOCK<br/>99 Hz ทีละ CPU"] --> C2["SEC perf_event"]
+        C2 --> C3["bpf_get_stackid() kernel + user<br/>flags 0 · นับ -EEXIST"]
+        C3 --> C4[("stack_traces + stack_counts")]
+        C4 --> C5["kallsyms + ELF symbols<br/>→ folded stack → Flame Graph"]
+    end
+
+    subgraph MEM["8.3 Page Faults และ OOM"]
+        M1["exceptions:page_fault_user<br/>เลือก struct ด้วย CO-RE"] --> M2[("นับ fault ต่อ comm")]
+        M3["oom:mark_victim<br/>bpf_core_field_exists"] --> M4[("RINGBUF alert<br/>ข้อมูลเหยื่ออ่านจาก event")]
+    end
+
+    B5 --> UX["Go: แสดง histogram, Top N, alert"]
+    C5 --> UX
+    M2 --> UX
+    M4 --> UX
+
+    W1(["โหลดทดสอบ: gnudd O_DIRECT, bin/busy,<br/>systemd-run MemoryMax=50M"]) -.-> B1
+    W1 -.-> C1
+    W1 -.-> M3
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class B1,B3,B4,C2,C3,M1,M3 kern
+    class B2,B5,C4,M2,M4 map
+    class C1,C5,UX user
+```
+
+**อ่านแผนภาพ:** บทนี้วัดทรัพยากร 3 ด้าน ได้แก่ ดิสก์ (จับคู่ issue/complete ด้วย pointer ของ request แล้วใส่ histogram แบบ log2), CPU (sample ตามเวลาที่ 99 Hz เก็บ stack แล้วสร้าง Flame Graph) และหน่วยความจำ (นับ page fault และจับ OOM ทันที) ทุกตัวใช้ Map สรุปผลในเคอร์เนล ฝั่ง Go แค่อ่านไปแสดง — แล็บประจำบท: **Week 17–19** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
+
 ### 8.1 การวัด Storage Block I/O Latency ด้วย Log2 Histograms
 - ใช้ `tp_btf/block_rq_issue` และ `tp_btf/block_rq_complete` (BTF-enabled Tracepoint ได้ `struct request *` ตรง ๆ) และ Attach ด้วย `link.AttachTracing`
 - **Key ของ Map ที่ถูกต้องคือ Pointer ของ `struct request`** ไม่ใช่ (dev, sector) เพราะ Flush Request ไม่มี Sector จริง และ Partial Completion จะทำให้คู่ Issue/Complete จับคู่ผิด
@@ -1429,6 +1789,44 @@ int trace_drop(struct trace_event_raw_kfree_skb *ctx)
 
 # บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 09)
 
+### 🗺️ แผนภาพภาพรวมบทที่ 9 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph SOCK["9.1 sockops + sk_msg: Local TCP Bypass"]
+        S1["connect / accept ใน cgroup"] --> S2["sockops: ESTABLISHED_CB<br/>active + passive"]
+        S2 --> S3[("SOCKHASH<br/>key = 4-tuple")]
+        S4["แอปเรียก sendmsg()"] --> S5["sk_msg: สร้าง key กลับด้าน<br/>ระวัง byte order ของ port"]
+        S5 --> S6{"bpf_msg_redirect_hash<br/>หา socket คู่สนทนาเจอ?"}
+        S6 -- "เจอ" --> S7["ส่งเข้า receive queue ของ peer<br/>ข้าม TCP/IP stack ของ loopback"]
+        S6 -- "ไม่เจอ" --> S8["Fallback: TCP/IP stack ปกติ"]
+        S3 -.-> S6
+    end
+
+    subgraph XSK["9.2 AF_XDP: Kernel Bypass ถึง User Space"]
+        X1["User Space: จอง UMEM<br/>mmap FILL / RX / TX / COMPLETION"] --> X2["bind (ifindex, queue_id)<br/>ใส่ fd ลง XSKMAP"]
+        P(["แพ็กเก็ตเข้า NIC"]) --> X3["XDP: bpf_redirect_map<br/>xsks_map, rx_queue_index, XDP_PASS"]
+        X3 --> X4{"มี socket ใน queue นี้?"}
+        X4 -- "มี" --> X5["frame ลง UMEM → RX ring<br/>แอปอ่านเอง"]
+        X4 -- "ไม่มี" --> X6["XDP_PASS → stack ปกติ"]
+        X5 --> X7["คืน frame ทาง FILL ring"]
+        X2 -.-> X4
+    end
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class S2,S5,S6,X3,X4 kern
+    class S3 map
+    class S1,S4,X1,X2,X5,X7 user
+    class S7,S8,X6,P net
+```
+
+**อ่านแผนภาพ:** ทั้งสองเทคนิคมีเป้าหมายเดียวกัน คือข้ามงานที่ไม่จำเป็นใน Network Stack sockops จดจำ socket ไว้ใน SOCKHASH แล้ว sk_msg ใช้ส่งข้อมูลตรงถึง socket ปลายทางบนเครื่องเดียวกัน (handshake ยังผ่าน stack ปกติ) ส่วน AF_XDP ส่ง frame จาก XDP ลง UMEM ของแอปโดยตรง ถ้าไม่มี socket รออยู่ก็ fallback กลับไปทาง stack ปกติ — แล็บประจำบท: **Week 20–21** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
+
 ### 9.1 TCP Sockops และ `sk_msg` Socket Redirect
 - โปรแกรม `sockops` จับ `BPF_SOCK_OPS_{ACTIVE,PASSIVE}_ESTABLISHED_CB` แล้วบันทึก Socket ลง `BPF_MAP_TYPE_SOCKHASH` ด้วย Key เป็น 4-tuple
 - โปรแกรม `sk_msg` ทำงานตอน `sendmsg()` สร้าง Key แบบ "กลับด้าน" เพื่อหา Socket ของคู่สนทนา แล้วเรียก `bpf_msg_redirect_hash(..., BPF_F_INGRESS)`
@@ -1452,6 +1850,42 @@ int trace_drop(struct trace_event_raw_kfree_skb *ctx)
 ---
 
 # บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)
+
+### 🗺️ แผนภาพภาพรวมบทที่ 10 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph TRAMP["10.1 BPF Trampoline: fentry / fexit"]
+        F0["ฟังก์ชันเคอร์เนลมี ftrace NOP 5 ไบต์"] --> F1["attach: เขียนทับเป็น call<br/>ไป Trampoline ที่ JIT สร้าง"]
+        F1 --> F2["fentry: อ่าน args ตาม BTF<br/>ไม่ต้องใช้ PT_REGS_PARM"]
+        F2 --> F3["ฟังก์ชันจริงทำงาน"]
+        F3 --> F4["fexit: อ่าน args + ret<br/>ชนิดของ ret ต้องตรง BTF"]
+        F4 --> F5["เทียบต้นทุน: fentry ถูกกว่า kprobe<br/>fexit ถูกกว่า kretprobe ชัดเจน"]
+    end
+
+    subgraph ITER["10.2 BPF Iterators: iter/task"]
+        I1["User Space: BPF_ITER_CREATE"] --> I2["read() fd ของ iterator"]
+        I2 --> I3["เคอร์เนลเรียกโปรแกรม 1 ครั้งต่อ task"]
+        I3 --> I4{"seq_num == 0?"}
+        I4 -- "ใช่" --> I5["พิมพ์ Header"]
+        I4 -- "ไม่" --> I6{"pid == tgid และ<br/>ไม่ใช่ PF_KTHREAD?"}
+        I5 --> I6
+        I6 -- "ใช่" --> I7["BPF_SEQ_PRINTF → seq_file"]
+        I6 -- "ไม่" --> I8["ข้าม thread นี้"]
+        I7 --> I9["ได้ข้อความทั้งหมดใน read() เดียว<br/>เร็วกว่าวน /proc หลายเท่า"]
+    end
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class F0,F1,F2,F3,F4,I3,I4,I5,I6,I7,I8 kern
+    class F5,I1,I2,I9 user
+```
+
+**อ่านแผนภาพ:** fentry/fexit ใช้ Trampoline ที่ JIT สร้างขึ้นแทน breakpoint จึงอ่านอาร์กิวเมนต์และค่าที่คืนได้ตรงตาม BTF และมี overhead ต่ำกว่า kprobe ส่วน BPF Iterator ให้เคอร์เนลวนผ่านทุก task แล้วเขียนผลลง `seq_file` ให้ User Space อ่านได้ในครั้งเดียว (ต้องกรอง `pid == tgid` เพราะ `iter/task` วนทุก thread) — แล็บประจำบท: **Week 22–23** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
 
 ### 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Low-Overhead Tracing
 Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) หรือผ่าน ftrace เมื่อจุดที่ Probe เป็นต้นฟังก์ชัน (บนเคอร์เนลทดลอง 7.0 Kprobe ที่ต้นฟังก์ชันแสดงสถานะ `[FTRACE]`) แล้วจึงเรียกโปรแกรม BPF ผ่านชั้น `pt_regs` ส่วน Kretprobe ต้องแทรก Trampoline ที่ Return Address ของทุกการเรียก ซึ่งมีต้นทุนสูง
@@ -1484,6 +1918,55 @@ Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) �
 # บทที่ 11: ขยายขีดความสามารถเคอร์เนลด้วย eBPF ยุคใหม่ (เฟส 11)
 
 บทก่อนหน้านี้ใช้ eBPF เพื่อ "สังเกต" และ "กรอง" เหตุการณ์ในเคอร์เนล เฟสสุดท้ายนี้ไปไกลกว่านั้น: ให้โปรแกรม BPF **เรียกฟังก์ชันภายในเคอร์เนลโดยตรง** (kfuncs), **แชร์หน่วยความจำขนาดใหญ่กับ User Space** (Arena), **แทนที่ส่วนประกอบหลักของเคอร์เนล** อย่าง CPU Scheduler (struct_ops / sched_ext) และปิดท้ายด้วยการดูว่าเครื่องมือระดับ Production อย่าง Tetragon และ Cilium ประกอบทุกกลไกที่เรียนมาเข้าด้วยกันอย่างไร
+
+### 🗺️ แผนภาพภาพรวมบทที่ 11 (Chapter Overview)
+
+```mermaid
+flowchart TD
+    subgraph KF["11.1 kfuncs"]
+        K1["extern ... __ksym<br/>Verifier อ่าน signature จาก BTF"] --> K2["bpf_task_from_pid()<br/>KF_ACQUIRE · อาจเป็น NULL"]
+        K2 --> K3{"ตรวจ NULL แล้ว<br/>release ทุกเส้นทาง?"}
+        K3 -- "ใช่" --> K4["bpf_task_release()<br/>โหลดผ่าน"]
+        K3 -- "ไม่" --> K5["Verifier ปฏิเสธ<br/>reference leak"]
+    end
+
+    subgraph AR["11.2 BPF Arena"]
+        A1["Go: Map.Memory() mmap<br/>ก่อนโหลดโปรแกรม"] --> A2["BPF: bpf_arena_alloc_pages()<br/>pointer __arena"]
+        A2 --> A3["linked list / tree ในหน่วยความจำร่วม"]
+        A3 --> A4["Go อ่าน pointer เดียวกันได้ตรง ๆ"]
+    end
+
+    subgraph SX["11.3 struct_ops + sched_ext"]
+        X1["SEC .struct_ops.link<br/>link.AttachStructOps"] --> X2["select_cpu → enqueue"]
+        X2 --> X3[("DSQ")]
+        X3 --> X4["dispatch → running / stopping"]
+        X4 --> X5{"stall หรือ scx_bpf_error?"}
+        X5 -- "ใช่" --> X6["เคอร์เนล eject scheduler<br/>task กลับ fair class"]
+    end
+
+    subgraph ECO["11.4 Production Ecosystem"]
+        E1["Tetragon TracingPolicy<br/>kprobe / LSM + matchArgs"] --> E2{"action"}
+        E2 --> E3["Monitor: ส่ง event"]
+        E2 --> E4["Sigkill / Override -EPERM"]
+        E5["Cilium: CNI + kube-proxy-free<br/>CiliumNetworkPolicy + Hubble"]
+    end
+
+    K4 --> E1
+    A4 --> E1
+    X6 --> E5
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class K1,K2,K3,K4,K5,A2,A3,X2,X4,X5,X6 kern
+    class X3 map
+    class A1,A4,X1,E1,E2,E3,E4,E5 user
+```
+
+**อ่านแผนภาพ:** บทสุดท้ายขยายสิ่งที่ eBPF ทำได้จาก 'สังเกต' ไปสู่ 'ขยายเคอร์เนล' ได้แก่ kfuncs เรียกฟังก์ชันภายในเคอร์เนลภายใต้กฎ acquire/release ที่ Verifier บังคับ, Arena แชร์โครงสร้างข้อมูลแบบ pointer กับ User Space และ sched_ext เขียน CPU Scheduler ทั้งตัวโดยมี watchdog คอย eject เมื่อผิดพลาด ปิดท้ายด้วย Tetragon และ Cilium ซึ่งรวมกลไกทั้งหมดในหลักสูตรมาใช้ใน Production — แล็บประจำบท: **Week 24–26** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+
+---
 
 ### 11.1 kfuncs: เรียกฟังก์ชันเคอร์เนลจากโปรแกรม BPF (Week 24)
 

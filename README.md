@@ -7,7 +7,7 @@
 
 ## 📚 แหล่งเรียนรู้หลักและสคริปต์สภาพแวดล้อม (Core References)
 
-- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
+- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII + แผนภาพภาพรวม Mermaid ทุกบท โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
 - ⚙️ **สคริปต์ติดตั้งสภาพแวดล้อมอัตโนมัติ**: [`scripts/setup_env.sh`](scripts/setup_env.sh) — Provisioning Ubuntu 26.04 LTS (Kernel 7.0+, แพลตฟอร์มหลัก) / 24.04 LTS (Kernel 6.8, Best-effort), ตรวจสอบ BTF, สร้าง `vmlinux.h` และตั้งค่า BPF LSM
 
 ---
