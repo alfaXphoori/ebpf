@@ -5,56 +5,67 @@
 
 ## สารบัญเนื้อหา (Table of Contents)
 
-1. [บทที่ 1: ผ่าโครงสร้าง Packet และการเดินทางใน Linux Kernel (เฟส 01)](#บทที่-1-ผ่าโครงสร้าง-packet-และการเดินทางใน-linux-kernel-เฟส-1)
+1. [บทที่ 1: ผ่าโครงสร้าง Packet และการเดินทางใน Linux Kernel (เฟส 01)](#บทที่-1-ผ่าโครงสร้าง-packet-และการเดินทางใน-linux-kernel-เฟส-01)
+   - [🗺️ แผนภาพภาพรวมบทที่ 1 (Chapter Overview)](#overview-1)
    - 1.1 โครงสร้างระดับ Byte ของ Ethernet Frame (Layer 2)
    - 1.2 โครงสร้าง IPv4 Header (Layer 3) และการคำนวณ IHL
    - 1.3 โครงสร้าง TCP และ UDP Headers (Layer 4)
    - 1.4 Big-Endian (Network Byte Order) vs Little-Endian (Host Byte Order)
    - 1.5 เส้นทางชีวิตของ Packet ใน Linux Network Stack แบบครบวงจร (From Wire to Socket)
-2. [บทที่ 2: กลไกภายในของ eBPF และด่านตรวจ Verifier (เฟส 02)](#บทที่-2-กลไกภายในของ-ebpf-และด่านตรวจ-verifier-เฟส-2)
+2. [บทที่ 2: กลไกภายในของ eBPF และด่านตรวจ Verifier (เฟส 02)](#บทที่-2-กลไกภายในของ-ebpf-และด่านตรวจ-verifier-เฟส-02)
+   - [🗺️ แผนภาพภาพรวมบทที่ 2 (Chapter Overview)](#overview-2)
    - 2.1 สถาปัตยกรรม eBPF Virtual Machine (Registers R0–R10 และ 512B Stack)
    - 2.2 วงจรการคอมไพล์และโหลดโปรแกรม: จาก C สู่ Clang, ELF และ BPF Syscall
    - 2.3 ด่านตรวจความปลอดภัย eBPF Verifier (Control Flow Graph & Static Analysis)
    - 2.4 กลไก JIT (Just-In-Time) Compiler และ BPF Hardening
-3. [บทที่ 3: การเขียน eBPF ยุคใหม่แบบ CO-RE และการใช้ Maps (เฟส 03)](#บทที่-3-การเขียน-ebpf-ยุคใหม่แบบ-co-re-และการใช้-maps-เฟส-3)
+3. [บทที่ 3: การเขียน eBPF ยุคใหม่แบบ CO-RE และการใช้ Maps (เฟส 03)](#บทที่-3-การเขียน-ebpf-ยุคใหม่แบบ-co-re-และการใช้-maps-เฟส-03)
+   - [🗺️ แผนภาพภาพรวมบทที่ 3 (Chapter Overview)](#overview-3)
    - 3.1 จุดจบของยุค BCC สู่ความเป็นมาตรฐานของ Modern CO-RE (Compile Once – Run Everywhere)
    - 3.2 เจาะลึก BTF (BPF Type Format) และ `vmlinux.h`
    - 3.3 การประกาศและเลือกใช้งาน eBPF Maps (Hash, LRU Hash, Per-CPU Array, Ring Buffer)
    - 3.4 ภาวะแย่งชิงข้อมูล (Race Conditions) และการแก้ปัญหาด้วย Atomic Operations / Per-CPU
-4. [บทที่ 4: เจาะลึกการเขียน XDP และการทำ Bounds Checking (เฟส 04)](#บทที่-4-เจาะลึกการเขียน-xdp-และการทำ-bounds-checking-เฟส-4)
+4. [บทที่ 4: เจาะลึกการเขียน XDP และการทำ Bounds Checking (เฟส 04)](#บทที่-4-เจาะลึกการเขียน-xdp-และการทำ-bounds-checking-เฟส-04)
+   - [🗺️ แผนภาพภาพรวมบทที่ 4 (Chapter Overview)](#overview-4)
    - 4.1 สถาปัตยกรรม XDP และบริบท `struct xdp_md`
    - 4.2 ผลลัพธ์ทั้ง 5 ของ XDP (XDP Actions: DROP, PASS, TX, REDIRECT, ABORTED)
    - 4.3 กฎเหล็ก Pointer Arithmetic & Verifier Bounds Checking ทีละเลเยอร์
    - 4.4 Traffic Control (TC) vs XDP และการทำ Packet Mangling พร้อมคำนวณ Checksum
    - 4.5 บันทึกจากการทดลองจริง (Lab Notes จาก Week 07–08)
-5. [บทที่ 5: การสตรีมข้อมูลด้วย Ring Buffer และการบล็อกด้วย BPF LSM (เฟส 05)](#บทที่-5-การสตรีมข้อมูลด้วย-ring-buffer-และการบล็อกด้วย-bpf-lsm-เฟส-5)
+5. [บทที่ 5: การสตรีมข้อมูลด้วย Ring Buffer และการบล็อกด้วย BPF LSM (เฟส 05)](#บทที่-5-การสตรีมข้อมูลด้วย-ring-buffer-และการบล็อกด้วย-bpf-lsm-เฟส-05)
+   - [🗺️ แผนภาพภาพรวมบทที่ 5 (Chapter Overview)](#overview-5)
    - 5.1 สถาปัตยกรรม Memory-mapped BPF Ring Buffer (MPSC Lockless Architecture)
    - 5.2 วงจรชีวิตของข้อมูล: `bpf_ringbuf_reserve`, `submit` และ `discard`
    - 5.3 การดักฟังสัญญะระดับ User Space ด้วย Uprobes / Uretprobes (TLS Inspection)
    - 5.4 การรักษาความปลอดภัยเชิงรุกด้วย BPF LSM (Linux Security Modules)
    - 5.5 บันทึกจากการทดลองจริง (Lab Notes จาก Week 09–10)
-6. [บทที่ 6: โค้ดฝั่ง User Space ด้วยภาษา Go (`cilium/ebpf`) & Cheat Sheet (เฟส 06)](#บทที่-6-โค้ดฝั่ง-user-space-ด้วยภาษา-go-ciliumebpf--cheat-sheet-เฟส-6)
+6. [บทที่ 6: โค้ดฝั่ง User Space ด้วยภาษา Go (`cilium/ebpf`) & Cheat Sheet (เฟส 06)](#บทที่-6-โค้ดฝั่ง-user-space-ด้วยภาษา-go-ciliumebpf--cheat-sheet-เฟส-06)
+   - [🗺️ แผนภาพภาพรวมบทที่ 6 (Chapter Overview)](#overview-6)
    - 6.1 สถาปัตยกรรม Pure Go eBPF Loader และการใช้งาน `bpf2go`
    - 6.2 พิมพ์เขียว Go Control Plane: การปลดล็อค Memlock, การโหลด, การผูก Hooks และการอ่าน Ring Buffer
    - 6.3 Complete Cheat Sheet: `bpftool`, `ip link`, `tc` และ 20 BPF Helper Functions สำคัญ
    - 6.4 การทดสอบโปรแกรม eBPF อัตโนมัติด้วย `BPF_PROG_TEST_RUN` และการอ่าน Verifier Log
-7. [บทที่ 7: ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ Fleet (เฟส 07)](#บทที่-7-ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ-fleet-เฟส-7)
+7. [บทที่ 7: ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ Fleet (เฟส 07)](#บทที่-7-ความปลอดภัยและการตรวจจับภัยคุกคามเคอร์เนลระดับ-fleet-เฟส-07)
+   - [🗺️ แผนภาพภาพรวมบทที่ 7 (Chapter Overview)](#overview-7)
    - 7.0 กฎเหล็กของ Tracing แบบ CO-RE: ห้ามเขียน Struct ของเคอร์เนลเอง
    - 7.1 วินิจฉัย Packet Drops ด้วย `tracepoint:skb:kfree_skb`
    - 7.2 Socket Egress Control ด้วย `cgroup/connect4`
    - 7.3 การตรวจจับ Reverse Shell ผ่าน `task_struct`
    - 7.4 eBPF Integrity Auditor: เฝ้าระวังการใช้ `bpf()` Syscall
-8. [บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 08)](#บทที่-8-การวัดประสิทธิภาพระบบ-การแกะรอย-stack-และการวิเคราะห์ฮาร์ดแวร์-เฟส-8)
+8. [บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 08)](#บทที่-8-การวัดประสิทธิภาพระบบ-การแกะรอย-stack-และการวิเคราะห์ฮาร์ดแวร์-เฟส-08)
+   - [🗺️ แผนภาพภาพรวมบทที่ 8 (Chapter Overview)](#overview-8)
    - 8.1 การวัด Storage Block I/O Latency ด้วย Log2 Histograms
    - 8.2 On-CPU Profiler ด้วย `perf_event` Sampling และการถอดรหัส Stack
    - 8.3 การเฝ้าระวัง Page Faults และ OOM Killer
-9. [บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 09)](#บทที่-9-การเร่งความเร็ว-socket-และสถาปัตยกรรม-kernel-bypass-เฟส-9)
+9. [บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 09)](#บทที่-9-การเร่งความเร็ว-socket-และสถาปัตยกรรม-kernel-bypass-เฟส-09)
+   - [🗺️ แผนภาพภาพรวมบทที่ 9 (Chapter Overview)](#overview-9)
    - 9.1 TCP Sockops และ `sk_msg` Socket Redirect
    - 9.2 AF_XDP: ส่งแพ็กเก็ตจาก XDP ตรงสู่ User Space
 10. [บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)](#บทที่-10-เทคโนโลยี-ebpf-ยุคใหม่ระดับแนวหน้า-เฟส-10)
+    - [🗺️ แผนภาพภาพรวมบทที่ 10 (Chapter Overview)](#overview-10)
     - 10.1 Modern BPF Trampoline (`fentry` / `fexit`) Low-Overhead Tracing
     - 10.2 BPF Iterators (`iter/task`) การท่องโครงสร้างเคอร์เนลโดยตรง
 11. [บทที่ 11: ขยายขีดความสามารถเคอร์เนลด้วย eBPF ยุคใหม่ (เฟส 11)](#บทที่-11-ขยายขีดความสามารถเคอร์เนลด้วย-ebpf-ยุคใหม่-เฟส-11)
+    - [🗺️ แผนภาพภาพรวมบทที่ 11 (Chapter Overview)](#overview-11)
     - 11.1 kfuncs: เรียกฟังก์ชันเคอร์เนลจากโปรแกรม BPF
     - 11.2 BPF Arena: หน่วยความจำร่วมขนาดใหญ่ระหว่าง BPF และ User Space
     - 11.3 struct_ops และ sched_ext: เขียน CPU Scheduler ด้วย BPF
@@ -67,6 +78,8 @@
 การเขียน eBPF เพื่อควบคุมระบบเครือข่ายระดับเคอร์เนล จำเป็นต้องเข้าใจว่าแพ็กเก็ตข้อมูลไม่ใช่ "Object" ในภาษาโปรแกรมระดับสูง แต่เป็นเพียง **ลำดับของไบต์ดิบ (Stream of Raw Bytes)** ที่ถูกส่งผ่านสายเคเบิลหรือคลื่นวิทยุเข้ามายังการ์ดเครือข่าย (NIC) หากเราไม่เข้าใจโครงสร้างหน่วยความจำระดับบิตและไบต์ การเขียน eBPF จะเกิดข้อผิดพลาดที่ eBPF Verifier ไม่อนุญาตให้รันอย่างแน่นอน
 
 ---
+
+<a id="overview-1"></a>
 
 ### 🗺️ แผนภาพภาพรวมบทที่ 1 (Chapter Overview)
 
@@ -445,6 +458,8 @@ eBPF (Extended Berkeley Packet Filter) ได้เปลี่ยนเคอ�
 
 ---
 
+<a id="overview-2"></a>
+
 ### 🗺️ แผนภาพภาพรวมบทที่ 2 (Chapter Overview)
 
 ```mermaid
@@ -629,6 +644,8 @@ sudo sysctl -w net.core.bpf_jit_harden=2
 การเปลี่ยนผ่านจาก eBPF ยุคเก่า (BCC) เข้าสู่ยุคสมัยใหม่ (Modern eBPF with CO-RE) ถือเป็นการปฏิวัติครั้งสำคัญของระบบสถาปัตยกรรมเคอร์เนล Linux
 
 ---
+
+<a id="overview-3"></a>
 
 ### 🗺️ แผนภาพภาพรวมบทที่ 3 (Chapter Overview)
 
@@ -819,6 +836,8 @@ if (count) {
 XDP (eXpress Data Path) คือ Hook Point ของ eBPF ที่ทำงานได้เร็วที่สุดในโลกบน Linux Kernel เนื่องจากมันทำงานทันทีที่ฮาร์ดแวร์ NIC ส่งมอบหน่วยความจำ โดยที่เคอร์เนลยังไม่ได้จองโครงสร้าง `sk_buff`
 
 ---
+
+<a id="overview-4"></a>
 
 ### 🗺️ แผนภาพภาพรวมบทที่ 4 (Chapter Overview)
 
@@ -1059,6 +1078,8 @@ bpf_l4_csum_replace(skb, tcp_offset + offsetof(struct tcphdr, check), old_ip, ne
 
 ---
 
+<a id="overview-5"></a>
+
 ### 🗺️ แผนภาพภาพรวมบทที่ 5 (Chapter Overview)
 
 ```mermaid
@@ -1272,6 +1293,8 @@ char _license[] SEC("license") = "GPL";
 ในการสร้างระบบ eBPF สำหรับใช้งานจริงบน Production ไลบรารี `github.com/cilium/ebpf` ของทีม Cilium ได้รับการยอมรับสูงสุดในชุมชน Cloud Native เนื่องจากทำงานด้วย **Pure Go (ไม่ต้องพึ่งพา CGO หรือคอมไพเลอร์ C ในขั้นตอน Runtime)**
 
 ---
+
+<a id="overview-6"></a>
 
 ### 🗺️ แผนภาพภาพรวมบทที่ 6 (Chapter Overview)
 
@@ -1610,6 +1633,8 @@ func TestDropBlockedIP(t *testing.T) {
 
 ในระบบปฏิบัติการลินุกซ์ระดับโปรดักชัน ภัยคุกคามและการสูญหายของข้อมูลมักเกิดขึ้นลึกเกินกว่าที่เครื่องมือ User Space ทั่วไปจะตรวจจับได้ เฟสนี้นำเทคนิค eBPF ขั้นสูงมาใช้สร้างเครื่องมือสืบสวนและเฝ้าระวัง พร้อมกับเรียนรู้ **ข้อจำกัดและช่องทางหลบเลี่ยง (Evasion)** ของเครื่องมือเหล่านั้นอย่างตรงไปตรงมา เพราะเครื่องมือความปลอดภัยที่ไม่รู้จุดอ่อนของตัวเองอันตรายกว่าไม่มีเครื่องมือ
 
+<a id="overview-7"></a>
+
 ### 🗺️ แผนภาพภาพรวมบทที่ 7 (Chapter Overview)
 
 ```mermaid
@@ -1717,6 +1742,8 @@ int trace_drop(struct trace_event_raw_kfree_skb *ctx)
 
 # บทที่ 8: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (เฟส 08)
 
+<a id="overview-8"></a>
+
 ### 🗺️ แผนภาพภาพรวมบทที่ 8 (Chapter Overview)
 
 ```mermaid
@@ -1789,6 +1816,8 @@ flowchart TD
 
 # บทที่ 9: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (เฟส 09)
 
+<a id="overview-9"></a>
+
 ### 🗺️ แผนภาพภาพรวมบทที่ 9 (Chapter Overview)
 
 ```mermaid
@@ -1850,6 +1879,8 @@ flowchart TD
 ---
 
 # บทที่ 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (เฟส 10)
+
+<a id="overview-10"></a>
 
 ### 🗺️ แผนภาพภาพรวมบทที่ 10 (Chapter Overview)
 
@@ -1918,6 +1949,8 @@ Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) �
 # บทที่ 11: ขยายขีดความสามารถเคอร์เนลด้วย eBPF ยุคใหม่ (เฟส 11)
 
 บทก่อนหน้านี้ใช้ eBPF เพื่อ "สังเกต" และ "กรอง" เหตุการณ์ในเคอร์เนล เฟสสุดท้ายนี้ไปไกลกว่านั้น: ให้โปรแกรม BPF **เรียกฟังก์ชันภายในเคอร์เนลโดยตรง** (kfuncs), **แชร์หน่วยความจำขนาดใหญ่กับ User Space** (Arena), **แทนที่ส่วนประกอบหลักของเคอร์เนล** อย่าง CPU Scheduler (struct_ops / sched_ext) และปิดท้ายด้วยการดูว่าเครื่องมือระดับ Production อย่าง Tetragon และ Cilium ประกอบทุกกลไกที่เรียนมาเข้าด้วยกันอย่างไร
+
+<a id="overview-11"></a>
 
 ### 🗺️ แผนภาพภาพรวมบทที่ 11 (Chapter Overview)
 
