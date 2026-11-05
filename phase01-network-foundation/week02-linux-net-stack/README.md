@@ -7,6 +7,54 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph SETUP["① Setup topology: sudo ./bridge_router_lab.sh setup"]
+        S1["clean_lab()"] --> S2["ip netns add w02-sw<br/>สร้าง br0 = 10.20.0.1/24"]
+        S2 --> S3["วนลูป 3 รอบ: ip netns add w02-ns1..3"]
+        S3 --> S4["veth-nsN ↔ veth-brN<br/>veth-brN master br0"]
+        S4 --> S5["IP 10.20.0.11 / .12 / .13<br/>default via 10.20.0.1, offload off"]
+        S5 --> S6["sysctl ip_forward=1<br/>เฉพาะใน w02-sw"]
+    end
+
+    subgraph PATH["② Packet path ในเคอร์เนล: test"]
+        P1(["ping จาก w02-ns1<br/>→ 10.20.0.12"]) --> P2["veth-ns1 → veth-br1"]
+        P2 --> P3["NET_RX SoftIRQ<br/>สร้าง struct sk_buff"]
+        P3 --> P4["br_handle_frame()<br/>เรียนรู้ MAC ลง FDB"]
+        P4 --> P5["switch ไป veth-br2 → veth-ns2"]
+        P5 --> P6["ip_rcv() → icmp ใน w02-ns2<br/>ส่ง Echo Reply กลับ"]
+    end
+
+    subgraph DIAG["③ Diagnose: status / trace"]
+        D1["bridge fdb show br br0"]
+        D2["/proc/net/softnet_stat<br/>processed, dropped, time_squeeze"]
+        D3["/proc/softirqs<br/>NET_RX, NET_TX"]
+        D4["strace -e socket,sendto,recvmsg<br/>ping"]
+        D5["perf stat -e net:net_dev_queue,<br/>net:netif_receive_skb ..."]
+    end
+
+    S6 --> P1
+    P4 -. "ดูตาราง MAC" .-> D1
+    P3 -. "ตัวนับต่อ CPU" .-> D2
+    P3 -. "ตัวนับ SoftIRQ" .-> D3
+    P1 -. "syscall" .-> D4
+    P6 -. "tracepoint net:*" .-> D5
+    D5 --> CL["sudo ./bridge_router_lab.sh clean<br/>ip netns del ทุก namespace"]
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class S1,S2,S3,S4,S5,S6,CL,D1,D2,D3,D4,D5 user
+    class P1,P2,P5 net
+    class P3,P4,P6 kern
+```
+
+**อ่านแผนภาพ:** `bridge_router_lab.sh setup` สร้าง namespace `w02-sw` ที่มี Linux Bridge `br0` เป็นสวิตช์กลาง แล้วต่อ `w02-ns1..3` เข้ามาด้วย veth pair (ไม่แตะ host namespace เลย) → เมื่อ `test` ยิง ping ข้าม namespace แพ็กเก็ตจะผ่าน SoftIRQ สร้าง `sk_buff` แล้ว `br_handle_frame()` ค้น/เรียนรู้ FDB เพื่อ switch ไปยังพอร์ตปลายทาง → คำสั่ง `status`/`trace` ใช้ `bridge fdb`, `/proc/net/softnet_stat`, `/proc/softirqs`, `strace` และ `perf stat` สังเกตแต่ละจุดของเส้นทางนี้ ก่อน `clean` ลบทุก namespace ทิ้ง
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 วงจรชีวิตของแพ็กเก็ต (Packet Lifecycle) ใน Linux Kernel Stack

@@ -14,6 +14,64 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["scx_w25.c + scx_mini.h<br/>SEC .struct_ops.link → w25_ops"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/scx-w25"]
+    end
+
+    subgraph USER["② User Space: main.go + sched.go"]
+        U1["loadScheduler(): ตั้ง .rodata<br/>vtime_mode, fail_mode, timeout_ms"] --> U2["LoadAndAssign()<br/>→ link.AttachStructOps(W25Ops)"]
+        U2 --> U3["startWorkload(): ext-run<br/>sched_setattr policy SCHED_EXT = 7"]
+        U3 --> U4["ticker: readStats() + printState()<br/>/sys/kernel/sched_ext/state"]
+        U4 --> U4
+        U4 -. "ถูก eject" .-> U5["exitInfo(): kind เช่น<br/>ERROR_STALL / ERROR_BPF"]
+    end
+
+    subgraph KERNEL["③ Kernel: sched_ext callbacks ของ w25_ops"]
+        W(["task SCHED_EXT ตื่น / runnable"]) --> SC["w25_select_cpu()<br/>scx_bpf_select_cpu_dfl()"]
+        SC -- "CPU ว่าง" --> LD[("SCX_DSQ_LOCAL<br/>ของ CPU นั้น")]
+        SC -- "ไม่ว่าง" --> EQ["w25_enqueue()<br/>fifo: scx_bpf_dsq_insert<br/>vtime: scx_bpf_dsq_insert_vtime"]
+        EQ --> SD[("SHARED_DSQ id 0<br/>สร้างใน w25_init()")]
+        SD --> DP["w25_dispatch()<br/>scx_bpf_dsq_move_to_local()"]
+        DP --> LD
+        LD --> RN["w25_running()<br/>task ขึ้น CPU"]
+        RN --> ST["w25_stopping()<br/>vtime += ใช้ไป × 100 / weight"]
+        ST -. "runnable อีกครั้ง" .-> W
+        SC & EQ & DP & RN --> STATS[("stats<br/>PERCPU_ARRAY 4 ช่อง")]
+    end
+
+    subgraph SAFETY["④ Safety net"]
+        F1["-fail stall: dispatch ไม่ดึงงาน<br/>→ watchdog timeout_ms"] --> EJ["eject scheduler<br/>w25_exit() → exit_info"]
+        F2["-fail error: scx_bpf_error()<br/>หลัง running 1000 ครั้ง"] --> EJ
+        EJ --> FB["task กลับไป fair class"]
+    end
+
+    subgraph TEST["⑤ ทดสอบ: make test / demo"]
+        T1["TestSchedulerDispatchesExtTasks<br/>TestWatchdogEjectsStalledScheduler<br/>TestScxBpfErrorEjects, TestStructOpsHasNoTestRun"]
+        T2["make demo-nice → nice_demo.sh<br/>เทียบ cpu_ms ของ nice 0 กับ 10"]
+    end
+
+    BIN --> U1
+    U2 -. "register" .-> SC
+    STATS -. "อ่านค่า" .-> U4
+    EJ -. "exit_info" .-> U5
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    class SC,EQ,DP,RN,ST,F1,F2,EJ,FB kern
+    class U1,U2,U3,U4,U5 user
+    class LD,SD,STATS map
+```
+
+**อ่านแผนภาพ:** Go ตั้งค่าคงที่ใน `.rodata` แล้วโหลด struct_ops map `w25_ops` และ register ด้วย `link.AttachStructOps()` → เนื่องจากใช้ `SCX_OPS_SWITCH_PARTIAL` จึงคุมเฉพาะ task ที่ `ext-run` ตั้ง policy เป็น `SCHED_EXT` → เมื่อ task ตื่น `w25_select_cpu` จะส่งตรงเข้า local DSQ ถ้าเจอ CPU ว่าง มิฉะนั้น `w25_enqueue` ใส่ `SHARED_DSQ` (แบบ FIFO หรือเรียงตาม vtime) แล้ว `w25_dispatch` ดึงงานเข้า local DSQ เพื่อขึ้น CPU → ทุก callback นับสถิติลง per-CPU map ให้ Go พิมพ์ผล → หาก scheduler stall หรือเรียก `scx_bpf_error()` เคอร์เนลจะ eject และคืน task ให้ fair class อัตโนมัติ
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 struct_ops: ให้ BPF implement "ops table" ของเคอร์เนล

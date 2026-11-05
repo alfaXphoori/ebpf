@@ -7,6 +7,55 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph SETUP["① Setup netns: sudo ./lab_netns.sh setup"]
+        S1["clean_lab()<br/>ลบ namespace/veth ค้างเก่า"] --> S2["ip netns add w01-ns1, w01-ns2"]
+        S2 --> S3["ip link add w01-veth1 type veth<br/>peer name w01-veth2"]
+        S3 --> S4["ย้าย veth เข้า netns<br/>10.10.1.1/24 และ 10.10.1.2/24"]
+        S4 --> S5["ethtool -K rx/tx/tso/gso/gro off"]
+    end
+
+    subgraph PATH["② Packet path: test / capture"]
+        P1(["ping 10.10.1.2<br/>จาก w01-ns1"]) --> V1["w01-veth1<br/>ใน w01-ns1"]
+        V1 -- "veth pair" --> V2["w01-veth2<br/>ใน w01-ns2"]
+    end
+
+    subgraph SNIFF["③ Sniffer: raw_sniffer.py ใน w01-ns2"]
+        R1["socket(AF_PACKET, SOCK_RAW,<br/>ntohs 0x0003 ETH_P_ALL)"] --> R2["bind(w01-veth2)"]
+        R2 --> R3["recvfrom(65535)"]
+        R3 --> R4["parse_ethernet()<br/>struct.unpack !6s6sH"]
+        R4 -- "0x0806" --> R5["parse_arp()"]
+        R4 -- "0x0800" --> R6["parse_ipv4()<br/>IHL = (byte0 AND 0x0F) x 4"]
+        R6 -- "proto 1" --> R7["parse_icmp()"]
+        R6 -- "proto 6" --> R8["parse_tcp()<br/>flags bitmask"]
+        R6 -- "proto 17" --> R9["parse_udp()"]
+        R5 --> R10["อัปเดต STATS → พิมพ์ผล"]
+        R7 --> R10
+        R8 --> R10
+        R9 --> R10
+        R10 -- "ครบจำนวน count หรือ Ctrl+C" --> R11["print_stats_summary()"]
+        R10 --> R3
+    end
+
+    S5 --> P1
+    V2 -. "สำเนา frame ทุกตัว" .-> R3
+    R11 --> CL["sudo ./lab_netns.sh clean"]
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class S1,S2,S3,S4,S5,CL user
+    class P1,V1,V2 net
+    class R1,R2,R3,R4,R5,R6,R7,R8,R9,R10,R11 user
+```
+
+**อ่านแผนภาพ:** `lab_netns.sh setup` สร้าง namespace `w01-ns1`/`w01-ns2` เชื่อมด้วย veth pair (`10.10.1.1` ↔ `10.10.1.2`) และปิด offload → ทราฟฟิกจาก `w01-ns1` วิ่งผ่าน veth ไปถึง `w01-veth2` → `raw_sniffer.py` ที่รันใน `w01-ns2` เปิด `AF_PACKET` raw socket รับทุก frame แล้วแกะ header ทีละชั้น (Ethernet → ARP/IPv4 → ICMP/TCP/UDP) ด้วย `struct.unpack` และ bitwise mask นับสถิติลง `STATS` จนครบจำนวนหรือกด Ctrl+C แล้วจึง `clean` ทิ้ง
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 Linux Network Namespaces คืออะไร?

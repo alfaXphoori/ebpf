@@ -7,6 +7,68 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["dropwatch.c + ../../vmlinux.h<br/>SEC tracepoint/skb/kfree_skb"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/dropwatch"]
+    end
+
+    subgraph TRIG["② สร้างการดรอป: Terminal 2"]
+        T1(["nc -z 127.0.0.1 9999<br/>nc -u 127.0.0.1 9998<br/>python3 connect ::1 9997"])
+    end
+
+    subgraph KERNEL["③ Kernel Space"]
+        DROP["tcp_v4_rcv / __udp4_lib_rcv / tcp_v6_rcv<br/>→ kfree_skb_reason()"] --> TP["tracepoint skb:kfree_skb"]
+        TP --> H["trace_kfree_skb()"]
+        H --> D1{"reason น้อยกว่า 2?<br/>NOT_DROPPED_YET / CONSUMED"}
+        D1 -- "ใช่" --> SKIP["return 0 ไม่นับ"]
+        D1 -- "ไม่" --> CNT["นับต่อ reason"]
+        CNT --> EVT["bpf_ringbuf_reserve → drop_event<br/>pid, reason, location, protocol, comm"]
+        EVT --> CORE{"bpf_core_field_exists rx_sk?<br/>Linux 7.0 มี / 6.8 ไม่มี"}
+        CORE --> SUB["bpf_ringbuf_submit"]
+    end
+
+    subgraph MAPS["BPF Maps"]
+        ST[("drop_reason_stats HASH<br/>reason → count")]
+        RB[("drop_events RINGBUF 4 MB")]
+    end
+
+    subgraph USER["④ User Space: main.go"]
+        U1["loadEnumNames จาก kernel BTF<br/>enum skb_drop_reason → ชื่อ"] --> U2["loadKallsyms จาก /proc/kallsyms"]
+        U2 --> U3["link.Tracepoint skb kfree_skb<br/>ringbuf.NewReader"]
+        U3 --> U4["rd.Read ทีละ event"]
+        U4 --> F{"ผ่านตัวกรอง -ip-only / -comm?"}
+        F -- "ผ่าน" --> OUT["พิมพ์ PID COMM PROTO DROP REASON RX_SK<br/>resolveKsym location → ชื่อฟังก์ชัน"]
+        F -- "ไม่ผ่าน" --> U4
+        OUT --> U4
+        U4 -. "Ctrl+C" .-> SUM["Drop Summary<br/>Iterate drop_reason_stats"]
+    end
+
+    BIN --> U1
+    T1 --> DROP
+    U3 -. "attach" .-> TP
+    CNT -.-> ST
+    SUB -.-> RB
+    RB -.-> U4
+    ST -.-> SUM
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class DROP,TP,H,SKIP,CNT,EVT,SUB kern
+    class U1,U2,U3,U4,OUT,SUM user
+    class ST,RB map
+    class T1 net
+```
+
+**อ่านแผนภาพ:** เมื่อเคอร์เนลทิ้งแพ็กเก็ต (เช่น SYN/UDP ไปยังพอร์ตที่ไม่มีใครฟัง → `NO_SOCKET`) tracepoint `skb:kfree_skb` จะเรียก `trace_kfree_skb()` ซึ่งข้าม reason 0–1 ที่ไม่ใช่การดรอปจริง นับสถิติใน `drop_reason_stats` และส่ง `drop_event` ผ่าน Ring Buffer โดยใช้ CO-RE (`bpf_core_field_exists`) อ่าน `rx_sk` เฉพาะเคอร์เนลที่มีฟิลด์นี้ → ฝั่ง Go แปลงเลข reason เป็นชื่อจาก kernel BTF และแปลง `location` เป็นชื่อฟังก์ชันจาก `/proc/kallsyms` แล้วพิมพ์ทีละบรรทัด เมื่อกด Ctrl+C จะสรุปยอดรวมต่อ reason จาก map
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 วงจรชีวิตของ `sk_buff` และจุดที่แพ็กเก็ต "ตาย"

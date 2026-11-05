@@ -14,6 +14,64 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph CHECK["① ตรวจก่อนรัน: make test"]
+        V1["validate-policies.py<br/>YAML + กฎ path ต้องอยู่ใน lab-files/"] --> V2["bash -n run-tetragon.sh"]
+    end
+
+    subgraph USER["② User Space: run-tetragon.sh"]
+        U1["make up → cmd_prepare<br/>สร้าง lab-files: secret.txt, notes.txt, bin/w26-hello"] --> U2["docker run tetragon v1.7.1<br/>--privileged --pid=host"]
+        U2 --> U3["make apply-* → tetra tracingpolicy add"]
+        U3 --> U4["make events → tetra getevents -o compact<br/>capture-json + event-summary.jq"]
+        U3 --> U5["make progs → bpftool prog show"]
+        U4 --> U6["make down → docker rm<br/>ตรวจว่าไม่มี BPF program ค้าง"]
+    end
+
+    subgraph POL["③ TracingPolicy → BPF program ในเคอร์เนล"]
+        P1["01 lsmhooks bprm_check_security<br/>exec ของ w26-hello"]
+        P2["02 kprobe security_file_open<br/>notes.txt, secret.txt"]
+        P3["03 kprobe tcp_connect / tcp_close<br/>127.0.0.0/8 พอร์ต 18026"]
+        P4["04 security_file_open<br/>action Sigkill"]
+        P5["05 lsmhooks file_open<br/>action Override → EPERM"]
+        P6["06 kprobe security_file_open<br/>Override แบบ fmod_ret, make up-nomulti"]
+    end
+
+    subgraph KERNEL["④ Kernel Space"]
+        EV(["exec / open / connect ใน lab-files"]) --> HK["hook ที่ policy เลือก<br/>BPF LSM / kprobe"]
+        HK --> AC{"matchArgs / matchBinaries ตรง?"}
+        AC -- "monitor" --> OUT[("event → tetragon daemon")]
+        AC -- "enforce" --> DENY["Sigkill / -EPERM + Post"]
+        DENY --> OUT
+    end
+
+    subgraph CIL["⑤ ทางเลือก: Cilium บน kind"]
+        C1["kind create cluster<br/>cilium/kind-w26.yaml: ไม่มี CNI, ไม่มี kube-proxy"] --> C2["cilium install<br/>kubeProxyReplacement=true + Hubble"]
+        C2 --> C3["CiliumNetworkPolicy<br/>web-allow-only-frontend"]
+        C3 --> C4["hubble observe --verdict DROPPED<br/>bpftool นับโปรแกรม cil_ ที่ TCX"]
+    end
+
+    V2 --> U1
+    U3 -. "โหลด" .-> P1 & P2 & P3 & P4 & P5 & P6
+    P1 & P2 & P3 & P4 & P5 & P6 -. "attach" .-> HK
+    OUT -. "gRPC stream" .-> U4
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class HK,AC,DENY,P1,P2,P3,P4,P5,P6 kern
+    class V1,V2,U1,U2,U3,U4,U5,U6 user
+    class OUT map
+    class C1,C2,C3,C4 net
+```
+
+**อ่านแผนภาพ:** ก่อนแตะเคอร์เนล `make test` ตรวจว่าทุก policy จำกัดอยู่ใน `lab-files/` เท่านั้น → `make up` เตรียมไฟล์ทดลองและสตาร์ต Tetragon ใน privileged container → `make apply-*` ส่ง `TracingPolicy` YAML ให้ daemon แปลงเป็น BPF program ชนิด LSM หรือ kprobe ที่เราเคยเขียนเองในสัปดาห์ก่อน ๆ → เมื่อมีการ exec/open/connect ที่ตรงเงื่อนไข เคอร์เนลจะส่ง event (โหมด monitor) หรือบังคับใช้นโยบายด้วย `Sigkill`/`Override` (โหมด enforce) แล้วเราดูผลผ่าน `tetra getevents` และ `bpftool prog show` → ปิดท้ายด้วย `make down` ที่ตรวจว่าไม่มีโปรแกรมค้าง ส่วน Cilium เป็นเส้นทางทางเลือกบน kind เพื่อดู eBPF datapath, NetworkPolicy และ Hubble
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 จาก "โค้ดที่เราเขียนเอง" สู่ "นโยบายที่เครื่องมือโหลดให้"

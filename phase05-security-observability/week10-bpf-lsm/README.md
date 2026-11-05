@@ -4,6 +4,58 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["lsm_file_guard.c<br/>lsm/file_open + fentry/security_file_open"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/lsm_file_guard"]
+    end
+
+    subgraph USER["② User Space: main.go"]
+        U1["bpfLSMActive()<br/>อ่าน /sys/kernel/security/lsm"] --> U2{"-mode auto:<br/>มี bpf ใน LSM ?"}
+        U2 -- "มี" --> U3["enforceObjects<br/>link.AttachLSM → restrict_secret_files"]
+        U2 -- "ไม่มี" --> U4["auditObjects<br/>link.AttachTracing → audit_secret_files"]
+        U3 --> U5["PolicyMap.Put ตาม -block-all<br/>ProtectedInodes.Put ตาม -protect"]
+        U4 --> U5
+        U5 --> U6["ringbuf.NewReader(LsmEvents)<br/>พิมพ์ BLOCKED -EPERM หรือ AUDIT would-block"]
+    end
+
+    subgraph KERNEL["③ Kernel Space: check_file_open()"]
+        A(["user ปกติ: cat lab-files/secret.txt<br/>หรือ app.key, backup.txt"]) --> K0["open() → security_file_open"]
+        K0 --> K1{"match_file():<br/>inode อยู่ใน protected_inodes<br/>หรือชื่อขึ้นต้น secret ?"}
+        K1 -- "ไม่" --> OK["return 0 → เปิดไฟล์ได้"]
+        K1 -- "ใช่" --> K2{"uid = 0 และ<br/>policy_map = 0 ?"}
+        K2 -- "ใช่ (root ยกเว้น)" --> OK
+        K2 -- "ไม่" --> K3["bpf_ringbuf_reserve<br/>bpf_d_path() ใส่ full path"]
+        K3 --> K4{"โหมด ?"}
+        K4 -- "enforce: lsm/file_open" --> DENY["return -EPERM<br/>Operation not permitted"]
+        K4 -- "audit: fentry" --> OK
+        M1[("policy_map ARRAY<br/>protected_inodes HASH")]
+        M2[("lsm_events<br/>RINGBUF 1 MB")]
+    end
+
+    BIN --> U1
+    U3 -. "attach" .-> K0
+    U4 -. "attach" .-> K0
+    U5 -. "เขียน" .-> M1
+    K1 -. "lookup" .-> M1
+    K3 -. "submit" .-> M2
+    M2 -. "อ่าน" .-> U6
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    class K0,K1,K2,K3,K4,OK,DENY kern
+    class U1,U2,U3,U4,U5,U6 user
+    class M1,M2 map
+```
+
+**อ่านแผนภาพ:** `main.go` ตรวจ `/sys/kernel/security/lsm` แล้วเลือกโหมด — ถ้ามี `bpf` จะ attach `restrict_secret_files` ที่ `lsm/file_open` (enforce) มิฉะนั้นใช้ `audit_secret_files` ที่ `fentry/security_file_open` (บันทึกอย่างเดียว) และเติมนโยบายลง `policy_map`/`protected_inodes` → ทุกครั้งที่มีการเปิดไฟล์ `check_file_open()` จะตรวจทั้ง inode (จับ hardlink ได้) และชื่อไฟล์ `secret*` ยกเว้น root เมื่อไม่ได้ใช้ `-block-all` → เหตุการณ์ที่ match ถูกส่งผ่าน ring buffer `lsm_events` พร้อม path จาก `bpf_d_path()` โดยโหมด enforce จะคืน `-EPERM` บล็อกการเปิดไฟล์ทันที ส่วนโหมด audit ปล่อยให้เปิดได้แต่แจ้งเตือน `would-block`
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 สถาปัตยกรรม Linux Security Modules (LSM)

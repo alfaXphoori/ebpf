@@ -4,6 +4,48 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["counter.c<br/>SEC tracepoint/sched/sched_process_exec"] --> GEN["go generate → bpf2go<br/>clang -target bpf"]
+        GEN --> OBJ["bpf_bpfel.o + bpf_bpfel.go<br/>(bytecode + Go bindings)"]
+        OBJ --> BIN["go build → bin/exec-counter"]
+    end
+
+    subgraph USER["② User Space: main.go"]
+        U1["rlimit.RemoveMemlock()"] --> U2["loadBpfObjects()<br/>→ Verifier ตรวจโค้ด"]
+        U2 --> U3["link.Tracepoint(sched, sched_process_exec)"]
+        U3 --> U4["ticker ทุก 1 วินาที<br/>ExecCount.Lookup(key=0)"]
+        U4 --> U5["พิมพ์ Total + Rate execs/sec"]
+        U5 --> U4
+        U4 -. "Ctrl+C" .-> U6["พิมพ์ Final count<br/>defer Close() → detach"]
+    end
+
+    subgraph KERNEL["③ Kernel Space"]
+        EV(["ทุก execve() บนทุก CPU"]) --> TP["tracepoint<br/>sched:sched_process_exec"]
+        TP --> H["handle_exec()"]
+        H --> M[("exec_count<br/>ARRAY max_entries=1")]
+        H --> PR["bpf_printk → trace_pipe"]
+    end
+
+    BIN --> U1
+    U3 -. "attach" .-> TP
+    M -. "อ่านค่า" .-> U4
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    class TP,H,PR kern
+    class U1,U2,U3,U4,U5,U6 user
+    class M map
+```
+
+**อ่านแผนภาพ:** `counter.c` ถูกคอมไพล์เป็น bytecode + Go bindings ด้วย `bpf2go` → `main.go` โหลดโปรแกรมผ่าน Verifier และ attach เข้ากับ tracepoint `sched_process_exec` → ทุกครั้งที่มีการ `execve()` ฝั่งเคอร์เนลจะเพิ่มค่าใน map `exec_count` แบบ atomic → ฝั่ง Go poll ค่าจาก map ทุก 1 วินาทีเพื่อคำนวณอัตรา exec/sec
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 วิวัฒนาการจาก BCC สู่ Modern CO-RE (Compile Once – Run Everywhere)

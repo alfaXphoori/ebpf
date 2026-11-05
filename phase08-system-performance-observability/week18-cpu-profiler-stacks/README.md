@@ -14,6 +14,60 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["cpu_stacks.c<br/>SEC perf_event"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/cpu-profiler"]
+        WL["workload/busy.c"] --> WB["clang -fno-omit-frame-pointer<br/>→ bin/busy"]
+    end
+
+    subgraph USER["② User Space: main.go + usersyms.go"]
+        U1["loadKallsyms()<br/>rlimit.RemoveMemlock()"] --> U2["loadBpf() → RewriteConstants<br/>targ_pid, include_idle"]
+        U2 --> U3["attachPerfSampler()<br/>perf_event_open SW_CPU_CLOCK -F 99 Hz<br/>1 fd ต่อ CPU → AttachRawLink"]
+        U3 --> U4["ticker 2s: StackCounts.Iterate()<br/>syms.snapshot(pid)"]
+        U4 --> U4
+        U4 -. "Ctrl+C หรือ -d" .-> U5["sampler.Close()<br/>เรียง entries ตาม count + printStats()"]
+        U5 --> U6["lookupStack() → resolveKaddr()<br/>และ syms.resolve() จาก ELF"]
+        U6 --> U7["TOP ON-CPU CALL CHAINS<br/>writeFolded() → -folded out.txt"]
+    end
+
+    subgraph KERNEL["③ Kernel Space"]
+        CLK(["perf timer ครบรอบบนแต่ละ CPU"]) --> DS["do_sample()<br/>กรอง idle tid 0 และ targ_pid"]
+        DS --> GS["bpf_get_stackid()<br/>kernel + BPF_F_USER_STACK"]
+        GS --> STK[("stack_traces<br/>STACK_TRACE depth 127")]
+        GS --> CNT[("stack_counts<br/>HASH key = pid, kstack, ustack, comm")]
+        DS --> STA[("stats<br/>PERCPU_ARRAY samples, EEXIST, full")]
+    end
+
+    subgraph TEST["④ ทดสอบและสร้าง Flame Graph"]
+        T1["./bin/busy 10 ในพื้นหลัง"] --> T2["sudo ./bin/cpu-profiler<br/>-p PID -d 6s -folded out.txt"]
+        T3["python3 flamegraph.py out.txt → cpu.svg<br/>หรือ flamegraph.pl / speedscope"]
+    end
+
+    BIN --> U1
+    WB --> T1
+    T2 --> U1
+    U3 -. "attach ทุก CPU" .-> CLK
+    CNT -. "iterate" .-> U4
+    STK -. "lookup stack id" .-> U6
+    STA -. "รวมค่าทุก CPU" .-> U5
+    U7 --> T3
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    class CLK,DS,GS kern
+    class U1,U2,U3,U4,U5,U6,U7 user
+    class STK,CNT,STA map
+```
+
+**อ่านแผนภาพ:** `main.go` ฝังค่า `targ_pid`/`include_idle` ลงในโปรแกรมด้วย `RewriteConstants` แล้วเปิด `perf_event_open(PERF_COUNT_SW_CPU_CLOCK)` ที่ 99 Hz บนทุก CPU และแนบ `do_sample()` เข้ากับแต่ละ fd → ทุกครั้งที่นาฬิกาครบรอบ `do_sample()` เก็บ kernel stack และ user stack ลง `stack_traces` แล้วนับจำนวน sample ต่อ call chain ใน `stack_counts` (สรุปในเคอร์เนล ไม่ส่งทุก sample ขึ้น userspace) → เมื่อหยุด ฝั่ง Go อ่าน stack id มาแปลงเป็นชื่อฟังก์ชัน (kernel ผ่าน `/proc/kallsyms`, user ผ่าน `/proc/<pid>/maps` + ELF) พิมพ์ Top call chains และเขียนไฟล์ folded ที่นำไปวาด Flame Graph ด้วย `flamegraph.py` ได้ทันที
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 Sampling Profiler ทำงานอย่างไร

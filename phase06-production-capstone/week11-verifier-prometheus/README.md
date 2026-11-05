@@ -6,6 +6,61 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make generate / build / test"]
+        SRC["metrics_exporter.c<br/>SEC xdp → xdp_metrics_prog"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/metrics_exporter"]
+        GEN --> UT["metrics_test.go → go test -exec sudo<br/>XdpMetricsProg.Run + ตรวจค่าจาก Collector"]
+    end
+
+    subgraph NET["② ห้องทดลอง netns"]
+        CLI["w11cli: w11a 10.211.0.1<br/>ping, curl, nc -u"] --> SRV["w11srv: w11b 10.211.0.2"]
+    end
+
+    subgraph USER["③ User Space: main.go ใน w11srv"]
+        U1["-iface w11b -addr :2112"] --> U2["loadBpfObjects()<br/>link.AttachXDP(w11b)"]
+        U2 --> U3["newXDPCollector()<br/>prometheus.NewRegistry().MustRegister"]
+        U3 --> U4["http.Server :2112<br/>promhttp → /metrics"]
+        U4 --> U5["Collect(): Lookup ทีละ key<br/>รวมค่าทุก CPU"]
+        U5 --> U6["ebpf_xdp_packets_total<br/>ebpf_xdp_bytes_total"]
+    end
+
+    subgraph KERNEL["④ Kernel Space: XDP hook บน w11b"]
+        P(["แพ็กเก็ตเข้า"]) --> K1{"ETH_P_IP ?"}
+        K1 -- "ไม่ เช่น ARP, IPv6" --> K3["index OTHER"]
+        K1 -- "ใช่" --> K2{"iph protocol"}
+        K2 -- "TCP / UDP / ICMP" --> K4["index TCP / UDP / ICMP"]
+        K2 -- "อื่น ๆ" --> K3
+        K3 --> K5["packets += 1, bytes += len<br/>ไม่ต้องใช้ atomic"]
+        K4 --> K5
+        K5 --> PASS["XDP_PASS"]
+        M[("traffic_metrics<br/>PERCPU_ARRAY 4 ช่อง")]
+    end
+
+    BIN --> U1
+    SRV --> P
+    K5 -. "เขียนช่องของ CPU ตัวเอง" .-> M
+    M -. "อ่านทุก CPU" .-> U5
+    CLI -- "curl /metrics" --> U4
+    UT -. "ยิงแพ็กเก็ตสังเคราะห์" .-> K1
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class K1,K2,K3,K4,K5,PASS kern
+    class U1,U2,U3,U4,U5,U6,UT user
+    class M map
+    class CLI,SRV,P net
+```
+
+**อ่านแผนภาพ:** `xdp_metrics_prog` ถูก attach บน `w11b` ใน namespace `w11srv` และจัดทุกแพ็กเก็ตลง 4 ช่อง (tcp/udp/icmp/other) ของ `traffic_metrics` ซึ่งเป็น `PERCPU_ARRAY` — แต่ละ CPU เขียนช่องของตัวเองจึงไม่มี lock contention และไม่ต้องใช้ atomic → เมื่อ Prometheus หรือ `curl` เรียก `/metrics` ตัว `xdpCollector.Collect()` จะ `Lookup` ค่าจากทุก CPU มารวมกันแล้วส่งออกเป็น counter `ebpf_xdp_packets_total`/`ebpf_xdp_bytes_total` (label `protocol`, `interface`) และทุกแพ็กเก็ตได้ `XDP_PASS` เสมอ ส่วน `make test` ยิงแพ็กเก็ตสังเคราะห์ผ่าน `Program.Run()` แล้วตรวจค่าที่ออกจาก Collector จริง
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 ทบทวน: Verifier กับโปรแกรม XDP ของสัปดาห์นี้

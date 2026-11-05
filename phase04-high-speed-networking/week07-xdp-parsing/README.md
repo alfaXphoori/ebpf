@@ -4,6 +4,63 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all / make test"]
+        SRC["xdp_firewall.c<br/>SEC xdp → xdp_firewall_prog"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/xdp-firewall"]
+        GEN --> UT["main_test.go → go test -exec sudo<br/>prog.Run → BPF_PROG_TEST_RUN"]
+    end
+
+    subgraph NET["② ห้องทดลอง netns"]
+        CLI["w07-client: w07-c<br/>10.10.1.10 และ 10.10.1.11"] -- "ping -I" --> SRV["w07-server: w07-s<br/>10.10.1.20"]
+    end
+
+    subgraph USER["③ User Space: main.go"]
+        U1["-iface w07-s -block-ip 10.10.1.10"] --> U2["loadBpfObjects()<br/>link.AttachXDP(w07-s)"]
+        U2 --> U3["BlockedIps.Put(ipKey, bpfDropStats)"]
+        U3 --> U4["ticker 1 วินาที → renderDashboard()<br/>ProtoCounters รวมทุก CPU + BlockedIps.Iterate"]
+        U4 --> U4
+    end
+
+    subgraph KERNEL["④ Kernel Space: XDP hook ที่ driver ของ w07-s"]
+        P(["แพ็กเก็ตเข้า xdp_md"]) --> K1{"ethhdr ครบ และ<br/>h_proto = ETH_P_IP ?"}
+        K1 -- "ไม่" --> PASS["XDP_PASS"]
+        K1 -- "ใช่" --> K2["iphdr bounds check<br/>proto_counters ตาม iph protocol"]
+        K2 --> K3{"saddr อยู่ใน<br/>blocked_ips ?"}
+        K3 -- "ใช่" --> DROP["นับ dropped_packets/bytes<br/>→ XDP_DROP"]
+        K3 -- "ไม่" --> K4["ตรวจ bounds L4<br/>TCP / UDP / ICMP"]
+        K4 --> PASS
+        M1[("blocked_ips<br/>HASH key=saddr")]
+        M2[("proto_counters<br/>PERCPU_ARRAY 256")]
+    end
+
+    BIN --> U1
+    SRV --> P
+    U2 -. "attach" .-> P
+    U3 -. "เขียน" .-> M1
+    K3 -. "lookup" .-> M1
+    K2 -. "นับ" .-> M2
+    M1 -. "อ่าน" .-> U4
+    M2 -. "อ่าน" .-> U4
+    UT -. "ยิงแพ็กเก็ตสังเคราะห์ตรวจ verdict" .-> K1
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class K1,K2,K3,K4,PASS,DROP kern
+    class U1,U2,U3,U4,UT user
+    class M1,M2 map
+    class CLI,SRV,P net
+```
+
+**อ่านแผนภาพ:** `xdp_firewall.c` ถูกคอมไพล์ด้วย `bpf2go` แล้ว `main.go` attach โปรแกรม XDP เข้ากับ `w07-s` ใน namespace `w07-server` พร้อมเติม IP ที่ต้องการบล็อกลง map `blocked_ips` → ทุกแพ็กเก็ตจาก `w07-client` จะถูกตรวจ bounds ทีละชั้น (Ethernet → IPv4 → L4) นับโปรโตคอลใน `proto_counters` และถ้า `saddr` อยู่ใน blocklist จะถูก `XDP_DROP` ทันที (ping จาก 10.10.1.10 หาย, จาก 10.10.1.11 ผ่าน) → ฝั่ง Go อ่านทั้งสอง map มาแสดง dashboard ทุก 1 วินาที ส่วน `make test` ใช้ `BPF_PROG_TEST_RUN` ยิงแพ็กเก็ตสังเคราะห์เพื่อตรวจ verdict โดยไม่ต้องมีทราฟฟิกจริง
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 สถาปัตยกรรมของ XDP เทียบกับ Linux Network Stack เดิม

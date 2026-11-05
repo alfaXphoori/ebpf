@@ -7,6 +7,57 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Runtime compile: sudo python3 tcp_v4_latency.py"]
+        B1["EBPF_C_PROGRAM<br/>C ฝังอยู่ใน Python string"] --> B2["BPF(text=...)<br/>Clang/LLVM คอมไพล์ตอนรัน"]
+        B2 --> B3["Verifier → JIT<br/>auto-attach จากชื่อ kprobe__ / kretprobe__"]
+    end
+
+    subgraph KERNEL["② Kernel Space"]
+        EV(["แอปเรียก connect() IPv4"]) --> K1["kprobe__tcp_v4_connect()<br/>ts = bpf_ktime_get_ns()<br/>เก็บ pid, comm, daddr, dport"]
+        K1 --> M1[("start_ts<br/>BPF_HASH key = pid_tgid")]
+        K2["kretprobe__tcp_v4_connect()<br/>ret = PT_REGS_RC(ctx)"] --> M1
+        K2 -- "ret ไม่ใช่ 0 และไม่ใช่ -115" --> KD["start_ts.delete()<br/>ทิ้ง"]
+        K2 -- "สำเร็จ" --> K3["delta_us = (now - ts) / 1000<br/>อ่าน saddr, sport จาก struct sock"]
+        K3 --> M2[("events<br/>BPF_PERF_OUTPUT")]
+        K3 --> M3[("dist<br/>BPF_HISTOGRAM log2")]
+        K3 --> K4["start_ts.delete()"]
+    end
+
+    subgraph USER["③ User Space: Python"]
+        U1["b events open_perf_buffer(handle_event)"] --> U2["perf_buffer_poll(timeout=200)"]
+        U2 --> U3["ctypes.cast → Event<br/>พิมพ์ PID, COMM, SRC → DST, LATENCY us"]
+        U3 --> U2
+        U2 -. "Ctrl+C / SIGTERM" .-> U4["b dist print_log2_hist()<br/>Latency (us)"]
+    end
+
+    subgraph TEST["④ ทดสอบ"]
+        T1(["curl -s http://1.1.1.1<br/>curl -s https://github.com"])
+    end
+
+    B3 -. "attach" .-> K1
+    B3 -. "attach" .-> K2
+    K1 -. "tcp_v4_connect() return" .-> K2
+    B3 --> U1
+    T1 --> EV
+    M2 -. "perf event" .-> U2
+    M3 -. "อ่านตอนจบ" .-> U4
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    class B3,K1,K2,K3,K4,KD kern
+    class B1,B2,U1,U2,U3,U4,T1 user
+    class M1,M2,M3 map
+```
+
+**อ่านแผนภาพ:** สคริปต์ Python ส่งโค้ด C ที่ฝังอยู่ให้ BCC คอมไพล์ด้วย Clang/LLVM **ตอนรัน** (ต่างจาก CO-RE ใน Week 05) แล้ว attach อัตโนมัติจากชื่อฟังก์ชัน → `kprobe__tcp_v4_connect` บันทึก timestamp ลง hash map `start_ts` (key = `pid_tgid`) และ `kretprobe__tcp_v4_connect` จับคู่ด้วย key เดียวกันเพื่อคำนวณเวลาที่เคอร์เนลใช้ใน `tcp_v4_connect()` → ส่ง event ผ่าน `BPF_PERF_OUTPUT` ให้ Python พิมพ์ทีละบรรทัด และสะสม `dist` histogram ที่พิมพ์ออกมาเมื่อกด Ctrl+C
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 สถาปัตยกรรมของ BCC (BPF Compiler Collection)

@@ -12,6 +12,65 @@ eBPF เป็นดาบสองคม ความสามารถเด�
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all ของ week13, week14, week16"]
+        SRC["bpf_audit.c + ../../vmlinux.h<br/>fentry/__sys_bpf + tracepoint/raw_syscalls/sys_enter"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/bpf-audit"]
+    end
+
+    subgraph SIM["② โปรแกรมทดสอบ"]
+        PRE(["ก่อนเริ่ม: bpftool prog load<br/>week13 bpf_bpfel.o → /sys/fs/bpf/w16_preloaded"])
+        LIVE(["ขณะรัน: taskset -c CPU bpftool prog load<br/>week14 bpf_bpfel.o → /sys/fs/bpf/w16_cpuN"])
+    end
+
+    subgraph USER["③ User Space: main.go"]
+        U1["auditHardening<br/>unprivileged_bpf_disabled, bpf_jit_harden,<br/>bpf_jit_enable, BPF LSM"] --> U2["loadAndAttach -hook auto<br/>RewriteConstants bpf_syscall_nr = SYS_BPF"]
+        U2 --> D1{"AttachTracing fentry สำเร็จ?"}
+        D1 -- "ใช่" --> HF["ใช้ fentry/__sys_bpf"]
+        D1 -- "ไม่" --> HR["fallback: raw_syscalls sys_enter"]
+        HF --> U3["inventoryPrograms<br/>ProgramGetNextID → NewProgramFromID"]
+        HR --> U3
+        U3 --> U4["ringbuf.NewReader → rd.Read"]
+        U4 --> D3{"pid เป็นของ auditor เอง?"}
+        D3 -- "ใช่" --> U4
+        D3 -- "ไม่" --> R{"riskOf cmd"}
+        R --> OUT["ATTACH / PROG_LOAD / DETACH / NOTICE<br/>INFO แสดงเมื่อใส่ -all<br/>+ prog_type, prog_name"]
+    end
+
+    subgraph KERNEL["④ Kernel Space: ทุกการเรียก bpf()"]
+        SYS(["bpf cmd, attr, size"]) --> KF["audit_sys_bpf<br/>uattr.is_kernel?"]
+        SYS --> KR["audit_raw_sys_enter<br/>id == bpf_syscall_nr?"]
+        KF --> EM["emit_event<br/>BPF_PROG_LOAD → อ่าน prog_type, prog_name<br/>bpf_core_read หรือ bpf_core_read_user"]
+        KR --> EM
+    end
+
+    RB[("bpf_audit_events RINGBUF 4 MB")]
+
+    BIN --> U1
+    PRE -.-> U3
+    LIVE --> SYS
+    HF -. "attach" .-> KF
+    HR -. "attach" .-> KR
+    EM -.-> RB
+    RB -.-> U4
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class KF,KR,EM kern
+    class U1,U2,HF,HR,U3,U4,OUT user
+    class RB map
+    class PRE,LIVE,SYS net
+```
+
+**อ่านแผนภาพ:** `bpf-audit` เริ่มจากประเมิน sysctl/BPF LSM ของโฮสต์ จากนั้นโหลดเฉพาะ hook ที่ใช้ได้ (ลอง `fentry/__sys_bpf` ก่อน ถ้าไม่ได้จึงถอยไปใช้ `raw_syscalls/sys_enter` กรองด้วยหมายเลข syscall ที่เขียนลง `bpf_syscall_nr` ตอนโหลด) → สแกน inventory โปรแกรมที่โหลดอยู่แล้ว (เช่น `w16_preloaded` ที่ pin ไว้ก่อน) → ทุก `bpf()` ที่เกิดขึ้นหลังจากนั้นถูกส่งเป็น event ผ่าน Ring Buffer โดยถ้าเป็น `BPF_PROG_LOAD` จะอ่านชนิดและชื่อโปรแกรมจาก `attr` ด้วย CO-RE (แยกกรณี attr อยู่ใน kernel/user memory) → ฝั่ง Go ตัด event ของตัวเองออก จัดระดับความเสี่ยงด้วย `riskOf` และแสดงเฉพาะคำสั่งที่เปลี่ยนสถานะเคอร์เนล เว้นแต่ใส่ `-all`
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 `bpf()` คือประตูเดียวของ User Space สู่ระบบย่อย eBPF

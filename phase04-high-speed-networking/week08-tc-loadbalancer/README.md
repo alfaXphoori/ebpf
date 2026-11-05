@@ -7,6 +7,61 @@
 
 ---
 
+## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
+
+```mermaid
+flowchart TD
+    subgraph BUILD["① Build: make all / make test"]
+        SRC["xdp_lb.c + tc_egress.c"] --> GEN["go generate → bpf2go<br/>xdplb_* + tcegress_*"]
+        GEN --> BIN["go build → bin/xdp-tc-lb"]
+        GEN --> UT["main_test.go → go test -exec sudo<br/>prog.Run ตรวจ DNAT, checksum, reverse NAT"]
+    end
+
+    subgraph USER["② User Space: main.go ใน w08-lb"]
+        U1["-iface eth0 -xdp-mode generic<br/>-vip 10.10.1.100"] --> U2["LbConfig.Put + Backends.Put<br/>10.10.1.2 และ 10.10.1.3"]
+        U2 --> U3["AttachTCX ingress → tc_reverse_nat<br/>AttachXDP → xdp_load_balancer<br/>AttachTCX egress → tc_egress_prog"]
+        U3 --> U4["ticker 2 วินาที → renderDashboard()<br/>LbStats + EgressStats + countFlows"]
+        U4 --> U4
+    end
+
+    subgraph KERNEL["③ Kernel Space: eth0 ของ w08-lb"]
+        C(["w08-client 10.10.2.10<br/>curl http://10.10.1.100/"]) --> X1{"XDP: IPv4 TCP<br/>ไม่ fragment และ daddr = VIP ?"}
+        X1 -- "ไม่" --> XP["XDP_PASS → stack ปกติ"]
+        X1 -- "ใช่" --> X2["flow_hash() % 2 → backend<br/>บันทึก flows<br/>เขียน MAC + daddr + checksum"]
+        X2 --> XT["XDP_TX → w08-b0 หรือ w08-b1<br/>python3 http.server :80"]
+        XT --> R(["Backend ตอบกลับผ่าน gateway 10.10.1.1"])
+        R --> T1{"TC ingress: tc_reverse_nat<br/>เจอใน flows ?"}
+        T1 -- "ใช่" --> T2["saddr → VIP<br/>bpf_l3/l4_csum_replace<br/>นับ reverse_nat_packets"]
+        T1 -- "ไม่" --> TOK["TC_ACT_OK"]
+        T2 --> FW["ip_forward → ออก eth0"]
+        FW --> E1["TC egress: tc_egress_prog<br/>นับตาม dport, skb mark=0x42 priority=1<br/>→ TC_ACT_OK ถึง client"]
+        M1[("lb_config / backends<br/>ARRAY")]
+        M2[("flows<br/>LRU_HASH 65536")]
+        M3[("lb_stats ARRAY<br/>egress_stats HASH")]
+    end
+
+    BIN --> U1
+    U2 -. "เขียน config" .-> M1
+    X2 -. "lookup" .-> M1
+    X2 -. "insert" .-> M2
+    T1 -. "lookup" .-> M2
+    E1 -. "นับ" .-> M3
+    M3 -. "อ่าน" .-> U4
+
+    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    class X1,X2,XP,XT,T1,T2,TOK,FW,E1 kern
+    class U1,U2,U3,U4,UT user
+    class M1,M2,M3 map
+    class C,R net
+```
+
+**อ่านแผนภาพ:** `main.go` ใน namespace `w08-lb` เขียน VIP และ backend ลง map แล้ว attach 3 โปรแกรมบน `eth0` (XDP + TCX ingress + TCX egress) → คำขอ `curl` จาก `w08-client` ที่ส่งมายัง VIP `10.10.1.100` ถูก `xdp_load_balancer` เลือก backend ด้วย `flow_hash()`, บันทึก flow ลง `flows`, ทำ DNAT พร้อมแก้ checksum แล้ว `XDP_TX` ออกไปยัง `w08-b0`/`w08-b1` → คำตอบของ backend วิ่งกลับผ่าน LB ซึ่ง `tc_reverse_nat` เปลี่ยน source IP กลับเป็น VIP ตามข้อมูลใน `flows` → ขาออก `tc_egress_prog` นับสถิติตามพอร์ตและติด `skb->mark = 0x42` ส่วน `make test` ตรวจทุกเส้นทางด้วย `BPF_PROG_TEST_RUN`
+
+---
+
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
 
 ### 1.1 เปรียบเทียบเชิงลึก: XDP vs TC (Traffic Control)
