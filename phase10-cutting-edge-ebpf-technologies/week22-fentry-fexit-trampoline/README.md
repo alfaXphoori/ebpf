@@ -46,6 +46,8 @@ flowchart TD
     U2 -. "attach" .-> FX
     RB -. "event" .-> U4
 
+    KERNEL ~~~ TEST
+
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
     classDef map fill:#fff4d6,stroke:#b9770e,color:#000

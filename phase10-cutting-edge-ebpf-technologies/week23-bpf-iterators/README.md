@@ -48,6 +48,8 @@ flowchart TD
     U3 -. "read" .-> K0
     SEQ -. "ข้อความทั้งหมด" .-> U3
 
+    KERNEL ~~~ TEST
+
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
     classDef map fill:#fff4d6,stroke:#b9770e,color:#000

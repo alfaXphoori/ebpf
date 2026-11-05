@@ -73,49 +73,52 @@
 ```mermaid
 flowchart TD
     subgraph P1["เฟส 01: Network Foundation"]
+        direction LR
         W01["W01 Packet bytes + netns"] --> W02["W02 Bridge/Router + data path"]
     end
     subgraph P2["เฟส 02: First Step eBPF"]
+        direction LR
         W03["W03 bpftool + bpftrace"] --> W04["W04 BCC + Python"]
     end
     subgraph P3["เฟส 03: Modern eBPF Core"]
+        direction LR
         W05["W05 CO-RE + bpf2go"] --> W06["W06 Maps + Verifier + test_run"]
     end
     subgraph P4["เฟส 04: High-Speed Networking"]
+        direction LR
         W07["W07 XDP parsing"] --> W08["W08 XDP LB + TC egress"]
     end
     subgraph P5["เฟส 05: Security + Observability"]
+        direction LR
         W09["W09 Ring Buffer + uprobes"] --> W10["W10 BPF LSM"]
     end
     subgraph P6["เฟส 06: Production Capstone"]
+        direction LR
         W11["W11 Prometheus exporter"] --> W12["W12 Capstone IPS"]
     end
     subgraph P7["เฟส 07: Advanced Security"]
+        direction LR
         W13["W13 Dropwatch"] --> W14["W14 cgroup connect4"] --> W15["W15 Reverse shell guard"] --> W16["W16 eBPF integrity audit"]
     end
     subgraph P8["เฟส 08: System Performance"]
+        direction LR
         W17["W17 biolatency"] --> W18["W18 CPU profiler + stacks"] --> W19["W19 OOM watcher"]
     end
     subgraph P9["เฟส 09: Socket Acceleration"]
+        direction LR
         W20["W20 sockops + sk_msg"] --> W21["W21 AF_XDP"]
     end
     subgraph P10["เฟส 10: Cutting-Edge eBPF"]
+        direction LR
         W22["W22 fentry/fexit"] --> W23["W23 BPF iterators"]
     end
     subgraph P11["เฟส 11: Modern Extensibility"]
+        direction LR
         W24["W24 kfuncs + Arena"] --> W25["W25 struct_ops + sched_ext"] --> W26["W26 Tetragon + Cilium"]
     end
 
-    W02 --> W03
-    W04 --> W05
-    W06 --> W07
-    W08 --> W09
-    W10 --> W11
-    W12 --> W13
-    W16 --> W17
-    W19 --> W20
-    W21 --> W22
-    W23 --> W24
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6
+    P6 --> P7 --> P8 --> P9 --> P10 --> P11
 
     classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
     classDef core fill:#e2f0fd,stroke:#2471a3,color:#000
