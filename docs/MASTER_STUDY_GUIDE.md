@@ -102,7 +102,7 @@ flowchart TD
         N3 --> N4["SoftIRQ NET_RX<br/>napi_poll() แบบ Batch"]
         N4 --> H1["HOOK 1: XDP<br/>ก่อนจอง sk_buff"]
         H1 --> N5["Allocate sk_buff"]
-        N5 --> H2["HOOK 2: TC Ingress<br/>cls_bpf"]
+        N5 --> H2["HOOK 2: TC Ingress<br/>TCX หรือ cls_bpf"]
         H2 --> N6["Netfilter / Conntrack<br/>→ Routing → INPUT"]
         N6 --> N7["tcp_v4_rcv() / udp_rcv()"]
         N7 --> N8["sk_receive_queue"]
@@ -1087,7 +1087,7 @@ bpf_l4_csum_replace(skb, tcp_offset + offsetof(struct tcphdr, check), old_ip, ne
 ```mermaid
 flowchart TD
     subgraph SRC["แหล่ง Event"]
-        S1["Tracepoint / kprobe<br/>เช่น sys_enter_openat, exec"]
+        S1["Tracepoint / kprobe<br/>เช่น sched_process_exec, sys_enter_openat"]
         S2["5.3 Uprobe บน libssl.so<br/>SSL_write: อ่าน buf ก่อนเข้ารหัส"]
     end
 
@@ -1644,7 +1644,7 @@ flowchart TD
     RULE["7.0 กฎเหล็ก: ใช้ vmlinux.h + BPF_CORE_READ<br/>ห้ามประกาศ struct ของเคอร์เนลเอง"]
 
     subgraph DROP["7.1 Dropwatch: ทำไมแพ็กเก็ตหาย"]
-        D1["kfree_skb_reason()"] --> D2["tracepoint skb:kfree_skb"]
+        D1["kfree_skb_reason()"] --> D2["tracepoint/skb/kfree_skb"]
         D2 --> D3["reason → ชื่อจาก BTF<br/>location → symbol+offset จาก kallsyms"]
     end
 
@@ -1759,7 +1759,7 @@ flowchart TD
 
     subgraph CPU["8.2 On-CPU Profiler"]
         C1["perf_event_open SW_CPU_CLOCK<br/>99 Hz ทีละ CPU"] --> C2["SEC perf_event"]
-        C2 --> C3["bpf_get_stackid() kernel + user<br/>flags 0 · นับ -EEXIST"]
+        C2 --> C3["bpf_get_stackid() kernel: flags 0<br/>user: BPF_F_USER_STACK · นับ -EEXIST"]
         C3 --> C4[("stack_traces + stack_counts")]
         C4 --> C5["kallsyms + ELF symbols<br/>→ folded stack → Flame Graph"]
     end
@@ -1774,7 +1774,7 @@ flowchart TD
     M2 --> UX
     M4 --> UX
 
-    W1(["โหลดทดสอบ: gnudd O_DIRECT, bin/busy,<br/>systemd-run MemoryMax=50M"]) -.-> B1
+    W1(["โหลดทดสอบ: gnudd (GNU dd) O_DIRECT, bin/busy,<br/>systemd-run MemoryMax=50M"]) -.-> B1
     W1 -.-> C1
     W1 -.-> M3
 
@@ -1835,7 +1835,7 @@ flowchart TD
     end
 
     subgraph XSK["9.2 AF_XDP: Kernel Bypass ถึง User Space"]
-        X1["User Space: จอง UMEM<br/>mmap FILL / RX / TX / COMPLETION"] --> X2["bind (ifindex, queue_id)<br/>ใส่ fd ลง XSKMAP"]
+        X1["User Space: จอง UMEM<br/>mmap FILL / RX / COMPLETION<br/>แล็บรับอย่างเดียว ไม่ใช้ TX ring"] --> X2["bind (ifindex, queue_id)<br/>ใส่ fd ลง XSKMAP"]
         P(["แพ็กเก็ตเข้า NIC"]) --> X3["XDP: bpf_redirect_map<br/>xsks_map, rx_queue_index, XDP_PASS"]
         X3 --> X4{"มี socket ใน queue นี้?"}
         X4 -- "มี" --> X5["frame ลง UMEM → RX ring<br/>แอปอ่านเอง"]
@@ -1973,7 +1973,7 @@ flowchart TD
 
     subgraph SX["11.3 struct_ops + sched_ext"]
         X1["SEC .struct_ops.link<br/>link.AttachStructOps"] --> X2["select_cpu → enqueue"]
-        X2 --> X3[("DSQ")]
+        X2 --> X3["DSQ: dispatch queue<br/>คิวของ sched_ext ไม่ใช่ map"]
         X3 --> X4["dispatch → running / stopping"]
         X4 --> X5{"stall หรือ scx_bpf_error?"}
         X5 -- "ใช่" --> X6["เคอร์เนล eject scheduler<br/>task กลับ fair class"]
@@ -1994,8 +1994,7 @@ flowchart TD
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
     classDef map fill:#fff4d6,stroke:#b9770e,color:#000
     classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    class K1,K2,K3,K4,K5,A2,A3,X2,X4,X5,X6 kern
-    class X3 map
+    class K1,K2,K3,K4,K5,A2,A3,X2,X3,X4,X5,X6 kern
     class A1,A4,X1,E1,E2,E3,E4,E5 user
 ```
 

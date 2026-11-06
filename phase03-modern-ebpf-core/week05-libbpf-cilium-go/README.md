@@ -24,7 +24,7 @@ flowchart TD
     end
 
     subgraph KERNEL["③ Kernel Space"]
-        EV(["ทุก execve() บนทุก CPU"]) --> TP["tracepoint<br/>sched:sched_process_exec"]
+        EV(["ทุก execve() บนทุก CPU"]) --> TP["tracepoint/sched/<br/>sched_process_exec"]
         TP --> H["handle_exec()"]
         H --> M[("exec_count<br/>ARRAY max_entries=1")]
         H --> PR["bpf_printk → trace_pipe"]
@@ -41,6 +41,8 @@ flowchart TD
     class U1,U2,U3,U4,U5,U6 user
     class M map
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
 
 **อ่านแผนภาพ:** `counter.c` ถูกคอมไพล์เป็น bytecode + Go bindings ด้วย `bpf2go` → `main.go` โหลดโปรแกรมผ่าน Verifier และ attach เข้ากับ tracepoint `sched_process_exec` → ทุกครั้งที่มีการ `execve()` ฝั่งเคอร์เนลจะเพิ่มค่าใน map `exec_count` แบบ atomic → ฝั่ง Go poll ค่าจาก map ทุก 1 วินาทีเพื่อคำนวณอัตรา exec/sec
 

@@ -55,6 +55,8 @@ flowchart TD
     class M1,M2,M3 map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
+
 **อ่านแผนภาพ:** `bpftrace` แปลสคริปต์ `trace_exec_and_tcp.bt` เป็น eBPF bytecode ผ่าน LLVM แล้วโหลดผ่าน Verifier/JIT และ attach 6 probes → ในเคอร์เนล tracepoint `sched_process_exec` พิมพ์ทุกโปรเซสใหม่, `kprobe:tcp_sendmsg` เก็บขนาด payload ลง histogram `@tcp_send_bytes` และ `tcp_retransmit_skb` นับการส่งซ้ำ → `interval:s:10` พิมพ์รายงานสะสมทุก 10 วินาที และ `END` พิมพ์สรุปเมื่อกด Ctrl+C ระหว่างนั้นใช้ `bpftool prog/map` จาก Terminal อื่นส่องดู bytecode, JIT code และ maps ที่ bpftrace สร้างไว้ในเคอร์เนล
 
 ---

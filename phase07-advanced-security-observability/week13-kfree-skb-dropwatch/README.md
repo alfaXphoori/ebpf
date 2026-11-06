@@ -21,7 +21,7 @@ flowchart TD
     end
 
     subgraph KERNEL["③ Kernel Space"]
-        DROP["tcp_v4_rcv / __udp4_lib_rcv / tcp_v6_rcv<br/>→ kfree_skb_reason()"] --> TP["tracepoint skb:kfree_skb"]
+        DROP["tcp_v4_rcv / __udp4_lib_rcv / tcp_v6_rcv<br/>→ kfree_skb_reason()"] --> TP["tracepoint/skb/kfree_skb"]
         TP --> H["trace_kfree_skb()"]
         H --> D1{"reason น้อยกว่า 2?<br/>NOT_DROPPED_YET / CONSUMED"}
         D1 -- "ใช่" --> SKIP["return 0 ไม่นับ"]
@@ -29,9 +29,6 @@ flowchart TD
         CNT --> EVT["bpf_ringbuf_reserve → drop_event<br/>pid, reason, location, protocol, comm"]
         EVT --> CORE{"bpf_core_field_exists rx_sk?<br/>Linux 7.0 มี / 6.8 ไม่มี"}
         CORE --> SUB["bpf_ringbuf_submit"]
-    end
-
-    subgraph MAPS["BPF Maps"]
         ST[("drop_reason_stats HASH<br/>reason → count")]
         RB[("drop_events RINGBUF 4 MB")]
     end
@@ -64,6 +61,8 @@ flowchart TD
     class ST,RB map
     class T1 net
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** เมื่อเคอร์เนลทิ้งแพ็กเก็ต (เช่น SYN/UDP ไปยังพอร์ตที่ไม่มีใครฟัง → `NO_SOCKET`) tracepoint `skb:kfree_skb` จะเรียก `trace_kfree_skb()` ซึ่งข้าม reason 0–1 ที่ไม่ใช่การดรอปจริง นับสถิติใน `drop_reason_stats` และส่ง `drop_event` ผ่าน Ring Buffer โดยใช้ CO-RE (`bpf_core_field_exists`) อ่าน `rx_sk` เฉพาะเคอร์เนลที่มีฟิลด์นี้ → ฝั่ง Go แปลงเลข reason เป็นชื่อจาก kernel BTF และแปลง `location` เป็นชื่อฟังก์ชันจาก `/proc/kallsyms` แล้วพิมพ์ทีละบรรทัด เมื่อกด Ctrl+C จะสรุปยอดรวมต่อ reason จาก map
 

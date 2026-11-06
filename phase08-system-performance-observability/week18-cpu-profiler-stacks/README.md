@@ -64,6 +64,8 @@ flowchart TD
     class STK,CNT,STA map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map
+
 **อ่านแผนภาพ:** `main.go` ฝังค่า `targ_pid`/`include_idle` ลงในโปรแกรมด้วย `RewriteConstants` แล้วเปิด `perf_event_open(PERF_COUNT_SW_CPU_CLOCK)` ที่ 99 Hz บนทุก CPU และแนบ `do_sample()` เข้ากับแต่ละ fd → ทุกครั้งที่นาฬิกาครบรอบ `do_sample()` เก็บ kernel stack และ user stack ลง `stack_traces` แล้วนับจำนวน sample ต่อ call chain ใน `stack_counts` (สรุปในเคอร์เนล ไม่ส่งทุก sample ขึ้น userspace) → เมื่อหยุด ฝั่ง Go อ่าน stack id มาแปลงเป็นชื่อฟังก์ชัน (kernel ผ่าน `/proc/kallsyms`, user ผ่าน `/proc/<pid>/maps` + ELF) พิมพ์ Top call chains และเขียนไฟล์ folded ที่นำไปวาด Flame Graph ด้วย `flamegraph.py` ได้ทันที
 
 ---

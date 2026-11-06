@@ -36,7 +36,7 @@ flowchart TD
         K2 --> K4{"pid = tgid และ<br/>ไม่ใช่ PF_KTHREAD และมี mm ?"}
         K4 -- "ไม่" --> K5["ข้าม thread / kernel thread"]
         K4 -- "ใช่" --> K6["BPF_SEQ_PRINTF<br/>PID, UID, THREADS, VM_SIZE_KB, COMM"]
-        K3 --> SEQ[("seq_file เดียว")]
+        K3 --> SEQ["seq_file เดียว<br/>บัฟเฟอร์ข้อความ ไม่ใช่ map"]
         K6 --> SEQ
     end
 
@@ -52,11 +52,11 @@ flowchart TD
 
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class K1,K2,K3,K4,K5,K6 kern
+    class K1,K2,K3,K4,K5,K6,SEQ kern
     class U1,U2,U3,U5,P1 user
-    class SEQ map
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** `main.go` attach โปรแกรม `iter/task` ด้วย `link.AttachIter()` แล้วเปิด iterator เพื่ออ่านเหมือนไฟล์ → ทุกครั้งที่อ่าน เคอร์เนลจะเดิน `task_struct` ทั้งหมดและเรียก `dump_task()` ทีละ task ซึ่งกรองเหลือเฉพาะ thread group leader ของโปรเซส userspace แล้วเขียนเฉพาะฟิลด์ที่ต้องการลง seq_file เดียว → Go อ่านผลทั้งหมดผ่าน fd เดียว และจับเวลาเทียบกับ `procfsWalk()` ที่ต้องเปิด `/proc/<pid>/status` ทีละไฟล์ → `make test` ตรวจว่าแต่ละโปรเซสปรากฏเพียง 1 แถว
 

@@ -47,6 +47,8 @@ flowchart TD
     class M map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** `main.go` โหลดโปรแกรม CO-RE แล้ว attach สองแหล่งเหตุการณ์ — tracepoint ของ exec (`sched_process_exec` เป็นค่าเริ่มต้น หรือ `sys_enter_execve` ด้วย `-exec-hook=syscall`) และ uprobe บน `SSL_write`/`SSL_write_ex` ใน `libssl.so.3` → ทุกเหตุการณ์จองพื้นที่ใน ring buffer `events` ด้วย `bpf_ringbuf_reserve()` เติม pid/ppid/uid/comm และ payload (ชื่อไฟล์ที่ exec หรือ plaintext ก่อนถูกเข้ารหัส) แล้ว `bpf_ringbuf_submit()` → ฝั่ง Go อ่านด้วย `ringbuf.Reader` แยกพิมพ์ตาม `event_type` เป็น `[EXECVE]` หรือ `[TLS_PLAINTEXT]`
 
 ---

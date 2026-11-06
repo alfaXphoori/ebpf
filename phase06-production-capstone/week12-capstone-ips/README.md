@@ -30,10 +30,8 @@ flowchart TD
         D4 -- "ไม่" --> DROPR["XDP_DROP<br/>DROPPED_RATELIMIT"]
         BAN --> DROPR
         DROPR --> ALERT["bpf_ringbuf_reserve/submit<br/>ips_alert"]
-    end
-
-    subgraph MAPS["BPF Maps"]
         CFG[("config_map ARRAY")]
+        RTM[("rate_tracker LRU_HASH")]
         BL[("blacklist_map LRU_HASH")]
         RB[("ips_events RINGBUF 4 MB")]
         MET[("ips_metrics PERCPU_ARRAY")]
@@ -54,16 +52,17 @@ flowchart TD
     BIN --> U1
     IF --> P1
     U3 -. "attach" .-> P1
-    U2 -.-> CFG
-    CFG -.-> D3
-    BL -.-> D1
-    BAN -.-> BL
-    ALERT -.-> RB
-    RB -.-> U5
-    U4 -.-> BL
-    U6 -.-> BL
-    MET -.-> U6
-    T1 -.-> P1
+    U2 -. "เขียน limit" .-> CFG
+    CFG -. "อ่าน limit" .-> D3
+    BL -. "lookup" .-> D1
+    BAN -. "update" .-> BL
+    ALERT -. "submit" .-> RB
+    RB -. "Read" .-> U5
+    RT -. "นับต่อ IP" .-> RTM
+    U4 -. "ลบ IP ที่ครบ TTL" .-> BL
+    U6 -. "GET POST DELETE" .-> BL
+    MET -. "อ่านค่า" .-> U6
+    T1 -. "test_run" .-> P1
 
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
@@ -71,9 +70,11 @@ flowchart TD
     classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
     class P1,DROPB,PASS,RT,BAN,DROPR,ALERT kern
     class U1,U2,U3,U4,U5,U6,T1 user
-    class CFG,BL,RB,MET map
+    class CFG,RTM,BL,RB,MET map
     class ATK,IF net
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** `ips-agent` โหลด `xdp_smart_ips`, เขียน threshold ลง `config_map` แล้ว attach XDP ที่ `w12b` → ทุกแพ็กเก็ตจาก `w12atk` ถูกตรวจ blacklist ก่อน (ยังไม่หมด TTL = `XDP_DROP` ทันที) → ถ้าเป็น SYN หรือ ICMP Echo จะนับอัตราต่อ IP ใน `rate_tracker` ภายใน window 1 วินาที เกิน limit จะ drop และ (ถ้าเปิด autoban) แบน IP พร้อมส่ง alert ผ่าน Ring Buffer → ฝั่ง Go มี 3 goroutine ทำงานคู่กัน: อ่าน alert, ลบแบนที่ครบ TTL ทุก 2 วินาที และเปิด REST API + Prometheus `/metrics` ที่พอร์ต 2112 ส่วน `make test` ยิงแพ็กเก็ตจำลองเข้าโปรแกรมตรงๆ ด้วย `BPF_PROG_TEST_RUN`
 

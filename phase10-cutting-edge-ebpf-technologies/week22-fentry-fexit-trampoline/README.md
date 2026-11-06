@@ -57,6 +57,8 @@ flowchart TD
     class SM,RB map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
+
 **อ่านแผนภาพ:** `main.go` โหลดโปรแกรมสองตัวแล้ว attach ผ่าน `link.AttachTracing()` → เคอร์เนล patch จุดเริ่มของ `do_sys_openat2` ให้ `call` ไปยัง trampoline → `fentry` บันทึกเวลาเริ่มลง `start_map` ส่วน `fexit` อ่านทั้งอาร์กิวเมนต์ `filename` และค่า `ret` ในโปรแกรมเดียว คำนวณ latency แล้วส่ง event ผ่าน ring buffer ให้ Go พิมพ์ผล → ฝั่งทดสอบตรวจว่าค่า `ret` ถูกต้องทั้งกรณีสำเร็จและ `-ENOENT` และ `run_bench.sh` วัด overhead ของ probe ทั้ง 4 แบบบนฟังก์ชันเดียวกัน
 
 ---

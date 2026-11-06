@@ -60,6 +60,8 @@ flowchart TD
     class ST,HI,TO map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
+
 **อ่านแผนภาพ:** `main.go` โหลดโปรแกรม `tp_btf` สองตัวและ attach ผ่าน `link.AttachTracing()` → เมื่อ block layer ส่ง request ให้ไดรเวอร์ `trace_rq_issue()` บันทึก timestamp ลง `start_times` โดยใช้พอยน์เตอร์ `struct request *` เป็น key → เมื่อดิสก์ตอบกลับ `trace_rq_complete()` ดึงเวลาเริ่มออกมาคำนวณ latency (us) แปลงเป็น log2 slot แล้วเพิ่มค่าใน `io_latency_hist` (แยก dev/op) และ `io_totals` → ฝั่ง Go poll ค่าสรุปทุก 3 วินาที และเมื่อกด Ctrl+C จะ iterate histogram ทั้งหมดมาวาดเป็นกราฟดาว (`*`) ต่อดิสก์ต่อประเภทคำสั่ง โดยใช้ `gnudd`/`dd` แบบ O_DIRECT สร้าง I/O ที่รู้จำนวนแน่นอนเพื่อตรวจสอบผล
 
 ---

@@ -65,6 +65,8 @@ flowchart TD
     class AM map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** **Part 1 (kfuncs)** — Go เรียกโปรแกรม `SEC("syscall")` ด้วย `prog.Run()` → `query_task` ขอ reference ของ task ด้วย `bpf_task_from_pid()` อ่าน parent/affinity ภายใต้ RCU ผ่าน `bpf_cpumask_*` แล้วต้องคืน reference ทุกตัว ส่วนโปรแกรมใน `task_kfunc_broken.c` ที่ลืม release, ไม่เช็ก NULL, ใช้หลัง release หรือใช้ผิดชนิดโปรแกรม จะถูก verifier ปฏิเสธตอนโหลด → **Part 2 (Arena)** — Go สร้าง map `arena` และ `mmap` ก่อนโหลดโปรแกรม จากนั้น `arena_upsert` จองหน้าด้วย `bpf_arena_alloc_pages()` และสร้าง linked list ที่ pointer เป็น address ฝั่ง user space ทำให้ Go เดิน list จาก mmap ได้โดยตรงโดยไม่ต้อง lookup map
 
 ---

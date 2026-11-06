@@ -25,7 +25,7 @@ flowchart TD
     end
 
     subgraph KERNEL["② Kernel Space: Syscall Top Monitor"]
-        EV(["ทุก syscall ของทุกโปรเซส"]) --> TP["tracepoint<br/>raw_syscalls:sys_enter"]
+        EV(["ทุก syscall ของทุกโปรเซส"]) --> TP["tracepoint/raw_syscalls/<br/>sys_enter"]
         TP --> H["track_syscalls()<br/>pid = pid_tgid ขวา 32 บิต"]
         H -- "มี entry" --> H1["__sync_fetch_and_add(count)"]
         H -- "ยังไม่มี" --> H2["bpf_map_update_elem<br/>count=1, BPF_ANY"]
@@ -48,8 +48,9 @@ flowchart TD
     subgraph TESTRUN["⑤ BPF_PROG_TEST_RUN: make test"]
         T1["go test -exec sudo ./..."] --> T2["CountByKey.Run(RunOptions<br/>Data = fake packet, Repeat)"]
         T2 --> T3[("hash_map vs percpu_map<br/>vs lru_map")]
-        T3 --> T4["TestSameKeyCounts<br/>TestFullMapHashVsLRU"]
+        T3 --> T4["TestSameKeyCounts<br/>TestFullMapHashVsLRU<br/>TestTooShortPacketRejected"]
         T1 --> T5["TestSyscallStatsLoads<br/>Run บน tracepoint → ErrNotSupported"]
+        T1 --> T6["TestVerifierRejectsBrokenPrograms<br/>bounds, nullcheck ถูกปฏิเสธ · fixed ผ่าน"]
     end
 
     BIN --> U1
@@ -58,13 +59,18 @@ flowchart TD
     U1 -. "attach" .-> TP
     M -. "Iterate" .-> U3
 
+    U4 ~~~ T1
+    V4 ~~~ T1
+
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
     classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class TP,H,H1,H2,V2 kern
-    class SRC,GEN,BIN,U1,U2,U3,U4,V1,V3,V4,T1,T2,T4,T5 user
+    class TP,H,H1,H2,V1,V3 kern
+    class SRC,GEN,BIN,U1,U2,U3,U4,V2,V4,T1,T2,T4,T5,T6 user
     class M,T3 map
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
 
 **อ่านแผนภาพ:** `bpf2go` คอมไพล์โปรแกรมทั้ง 3 ชุด → **Monitor หลัก** attach `track_syscalls()` เข้ากับ `raw_syscalls:sys_enter` ซึ่งนับ syscall ต่อ PID ลง `syscall_map` (HASH, ถ้ายังไม่มี key ให้ `update_elem`, ถ้ามีแล้วเพิ่มแบบ atomic) แล้วฝั่ง Go `Iterate()` map ทุก 2 วินาทีเพื่อเรียง Top 10 → **`verifier-demo`** โหลดโปรแกรม XDP ที่ตั้งใจเขียนผิดให้ Verifier ปฏิเสธพร้อม log เทียบกับ `xdp_fixed` → **`make test`** ใช้ `BPF_PROG_TEST_RUN` ป้อน packet ปลอมให้ `count_by_key` เพื่อเทียบพฤติกรรม `HASH` / `PERCPU_HASH` / `LRU_HASH` โดยไม่ต้อง attach กับ interface จริง
 

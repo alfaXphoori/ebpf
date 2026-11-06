@@ -52,6 +52,8 @@ flowchart TD
     class M1,M2 map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** `main.go` ตรวจ `/sys/kernel/security/lsm` แล้วเลือกโหมด — ถ้ามี `bpf` จะ attach `restrict_secret_files` ที่ `lsm/file_open` (enforce) มิฉะนั้นใช้ `audit_secret_files` ที่ `fentry/security_file_open` (บันทึกอย่างเดียว) และเติมนโยบายลง `policy_map`/`protected_inodes` → ทุกครั้งที่มีการเปิดไฟล์ `check_file_open()` จะตรวจทั้ง inode (จับ hardlink ได้) และชื่อไฟล์ `secret*` ยกเว้น root เมื่อไม่ได้ใช้ `-block-all` → เหตุการณ์ที่ match ถูกส่งผ่าน ring buffer `lsm_events` พร้อม path จาก `bpf_d_path()` โดยโหมด enforce จะคืน `-EPERM` บล็อกการเปิดไฟล์ทันที ส่วนโหมด audit ปล่อยให้เปิดได้แต่แจ้งเตือน `would-block`
 
 ---

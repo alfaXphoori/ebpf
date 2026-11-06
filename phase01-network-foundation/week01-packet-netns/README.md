@@ -52,6 +52,8 @@ flowchart TD
     class R1,R2,R3,R4,R5,R6,R7,R8,R9,R10,R11 user
 ```
 
+> **สัญลักษณ์:** 🟦 User Space / เครื่องมือ · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต)
+
 **อ่านแผนภาพ:** `lab_netns.sh setup` สร้าง namespace `w01-ns1`/`w01-ns2` เชื่อมด้วย veth pair (`10.10.1.1` ↔ `10.10.1.2`) และปิด offload → ทราฟฟิกจาก `w01-ns1` วิ่งผ่าน veth ไปถึง `w01-veth2` → `raw_sniffer.py` ที่รันใน `w01-ns2` เปิด `AF_PACKET` raw socket รับทุก frame แล้วแกะ header ทีละชั้น (Ethernet → ARP/IPv4 → ICMP/TCP/UDP) ด้วย `struct.unpack` และ bitwise mask นับสถิติลง `STATS` จนครบจำนวนหรือกด Ctrl+C แล้วจึง `clean` ทิ้ง
 
 ---

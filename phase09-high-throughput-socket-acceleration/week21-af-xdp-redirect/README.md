@@ -21,13 +21,7 @@ flowchart TD
         GEN --> TST["go test -exec sudo<br/>TestVerdictsWithoutSocket, TestRedirectWithSocket"]
     end
 
-    subgraph LAB["④ Lab Network"]
-        TX["netns w21-tx<br/>w21-peer0 10.21.0.2"] -- "veth pair" --> RXIF["netns w21-rx<br/>w21-xsk0 10.21.0.1"]
-        T1["ping -c 3 10.21.0.1"] --> TX
-        T2["UDP → 10.21.0.1:9999<br/>/dev/udp และ python 20000 pkts"] --> TX
-    end
-
-    subgraph USER["② User Space: main.go + xsk.go"]
+    subgraph USER["③ User Space: main.go + xsk.go"]
         U1["loadBpfObjects()<br/>link.AttachXDP(w21-xsk0)"] --> U2["NewXSK(): socket AF_XDP<br/>mmap UMEM + XDP_UMEM_REG"]
         U2 --> U3["ตั้งขนาดและ mmap FILL, COMPLETION, RX ring<br/>bind queue 0 แบบ XDP_COPY"]
         U3 --> U4["XsksMap.Put(queue 0, xsk fd)"]
@@ -37,7 +31,7 @@ flowchart TD
         U4 --> U7["ticker 2s: XskStats + xsk.Stats()<br/>rx_dropped, ring_full, fill_empty"]
     end
 
-    subgraph KERNEL["③ Kernel Space: XDP บน w21-xsk0"]
+    subgraph KERNEL["④ Kernel Space: XDP บน w21-xsk0"]
         XP["xsk_redirect_prog()<br/>bounds check eth + iphdr"] --> D1{"IPv4 และ UDP?"}
         D1 -- "ไม่ใช่: ICMP, ARP, TCP" --> PASS["XDP_PASS → TCP/IP Stack ปกติ<br/>เคอร์เนลตอบ ping"]
         D1 -- "ใช่" --> D2{"bpf_redirect_map()<br/>xsks_map มี socket ของ rx_queue_index?"}
@@ -45,6 +39,12 @@ flowchart TD
         D2 -- "มี: Kernel Bypass" --> REDIR["XDP_REDIRECT<br/>copy เข้า frame ใน UMEM → RX ring"]
         XM[("xsks_map<br/>XSKMAP key = queue id")]
         XS[("xsk_stats<br/>ARRAY redirected, passed, no_xsk")]
+    end
+
+    subgraph LAB["② Lab Network"]
+        TX["netns w21-tx<br/>w21-peer0 10.21.0.2"] -- "veth pair" --> RXIF["netns w21-rx<br/>w21-xsk0 10.21.0.1"]
+        T1["ping -c 3 10.21.0.1"] --> TX
+        T2["UDP → 10.21.0.1:9999<br/>/dev/udp และ python 20000 pkts"] --> TX
     end
 
     BIN --> U1
@@ -67,6 +67,8 @@ flowchart TD
     class XM,XS map
     class TX,RXIF,T1,T2 net
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** แล็บสร้าง veth pair ระหว่าง netns `w21-tx` (10.21.0.2) และ `w21-rx` (10.21.0.1) → `af-xdp-pipeline` แนบ `xsk_redirect_prog()` ที่ `w21-xsk0` แล้วสร้าง AF_XDP socket เอง (UMEM + FILL/COMPLETION/RX ring ผ่าน `mmap()`, bind queue 0 แบบ `XDP_COPY`) และใส่ fd ลงใน `xsks_map` → ทุกแพ็กเก็ตที่เข้ามา XDP ตรวจ header: ถ้าไม่ใช่ IPv4/UDP (เช่น ping) หรือยังไม่มี socket บน queue นั้นจะ `XDP_PASS` เข้า **TCP/IP Stack ปกติ**; ถ้าเป็น UDP และมี socket จะ `XDP_REDIRECT` **ข้าม Stack ทั้งหมด** ไปลง frame ใน UMEM และวาง descriptor บน RX ring → goroutine ฝั่ง Go `Poll()`/`Receive()` อ่านแพ็กเก็ตตรงจาก UMEM แล้วคืน frame กลับไปที่ FILL ring เพื่อรับรอบถัดไป ผลคือ `nstat` ใน `w21-rx` จะไม่เห็น UDP เหล่านี้เลย
 

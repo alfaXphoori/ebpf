@@ -28,16 +28,13 @@ flowchart TD
     end
 
     subgraph KERNEL["③ Kernel Space: ทุก execve()"]
-        TP["tracepoint sched:sched_process_exec"] --> H["trace_exec_threat()"]
+        TP["tracepoint/sched/sched_process_exec"] --> H["trace_exec_threat()"]
         H --> K1["comm อยู่ใน watch_names?<br/>→ F_SHELL / F_NETTOOL"]
         K1 --> K2["fd_is_inet_socket fd 0,1,2<br/>task → files → fdtable → file → socket<br/>→ F_STDIN/STDOUT/STDERR_SOCK"]
         K2 --> D1{"flags == 0?"}
         D1 -- "ใช่" --> IGN["return 0 ไม่แจ้งเตือน"]
         D1 -- "ไม่" --> K3["BPF_CORE_READ task → real_parent<br/>pcomm อยู่ใน daemon_names?<br/>→ F_DAEMON_PARENT"]
         K3 --> K4["ringbuf_reserve threat_alert<br/>pid ppid uid flags comm pcomm filename"]
-    end
-
-    subgraph MAPS["BPF Maps"]
         WN[("watch_names HASH<br/>comm → 1 shell / 2 nettool")]
         DN[("daemon_names HASH")]
         RB[("threat_events RINGBUF 4 MB")]
@@ -70,11 +67,15 @@ flowchart TD
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
     classDef map fill:#fff4d6,stroke:#b9770e,color:#000
     classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    classDef trig fill:#eceff1,stroke:#546e7a,color:#000
     class TP,H,K1,K2,IGN,K3,K4 kern
     class U1,U2,U3,S1,S2,S3,S4,S5 user
     class WN,DN,RB map
-    class L,A1,A2 net
+    class L net
+    class A1,A2 trig
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ⬜ ตัวกระตุ้นสีเทา (คำสั่งหรือตัวเลือกที่ใช้ทดสอบ) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** `threat-guard` เติมรายชื่อ shell / network tool / daemon ลง map แล้วเกาะ tracepoint `sched_process_exec` → ทุกครั้งที่มี `execve()` โปรแกรม `trace_exec_threat()` ใช้ CO-RE เดินโครงสร้างเคอร์เนลเพื่อดูว่า comm เป็น shell หรือไม่ และ fd 0/1/2 เป็น AF_INET/AF_INET6 socket หรือไม่ (ลักษณะเฉพาะของ reverse shell ที่ไม่ขึ้นกับชื่อไฟล์) ถ้าไม่มีสัญญาณใดเลยจะจบทันที มิฉะนั้นอ่าน `real_parent` เพื่อตรวจว่าถูก spawn จาก daemon แล้วส่ง `threat_alert` ผ่าน Ring Buffer → ฝั่ง Go จัดระดับความรุนแรงจาก flags (`classify`) ตามลำดับในแผนภาพ ทั้งหมดทดลองกับ listener บน `127.0.0.1` เท่านั้น
 

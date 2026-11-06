@@ -39,9 +39,6 @@ flowchart TD
         D1 -- "ไม่" --> D2{"user_port อยู่ใน blocked_ports?"}
         D2 -- "ใช่" --> DENY
         D2 -- "ไม่" --> ALLOW
-    end
-
-    subgraph MAPS["BPF Maps"]
         MP[("blocked_ports HASH<br/>port → count")]
         MI[("blocked_ips HASH<br/>ip → count")]
         RB[("deny_events RINGBUF 64 KB")]
@@ -67,6 +64,8 @@ flowchart TD
     class MP,MI,RB map
     class C0,OKALL,SYS,BYP net
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** `sock-enforce` สร้าง cgroup v2 เฉพาะสำหรับทดสอบ (ไม่แตะ root cgroup) ใส่นโยบายห้ามพอร์ต 2323 และ IP 10.99.99.99 ลง map แล้ว attach `sock4_connect` เป็น `cgroup/connect4` → เฉพาะโปรเซสที่ถูกย้ายเข้า cgroup นี้เท่านั้นที่ถูกตรวจ ทุก `connect()` แบบ IPv4 จะเช็ก IP ก่อน แล้วจึงพอร์ต ถ้าตรงจะคืน 0 ทำให้แอปได้ `EPERM` ทันทีก่อนเคอร์เนลส่ง SYN พร้อมส่ง audit event ผ่าน Ring Buffer → ส่วน `client.py --bypass` แสดงช่องโหว่ของนโยบาย: UDP `sendto()` ที่ไม่ได้ `connect()` และ TCP6 แบบ v4-mapped ไม่ผ่าน hook `connect4` จึงเชื่อมต่อได้
 

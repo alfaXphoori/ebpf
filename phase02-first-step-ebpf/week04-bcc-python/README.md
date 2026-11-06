@@ -54,6 +54,8 @@ flowchart TD
     class M1,M2,M3 map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
+
 **อ่านแผนภาพ:** สคริปต์ Python ส่งโค้ด C ที่ฝังอยู่ให้ BCC คอมไพล์ด้วย Clang/LLVM **ตอนรัน** (ต่างจาก CO-RE ใน Week 05) แล้ว attach อัตโนมัติจากชื่อฟังก์ชัน → `kprobe__tcp_v4_connect` บันทึก timestamp ลง hash map `start_ts` (key = `pid_tgid`) และ `kretprobe__tcp_v4_connect` จับคู่ด้วย key เดียวกันเพื่อคำนวณเวลาที่เคอร์เนลใช้ใน `tcp_v4_connect()` → ส่ง event ผ่าน `BPF_PERF_OUTPUT` ให้ Python พิมพ์ทีละบรรทัด และสะสม `dist` histogram ที่พิมพ์ออกมาเมื่อกด Ctrl+C
 
 ---

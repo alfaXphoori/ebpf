@@ -45,9 +45,8 @@ flowchart TD
         SYS --> KR["audit_raw_sys_enter<br/>id == bpf_syscall_nr?"]
         KF --> EM["emit_event<br/>BPF_PROG_LOAD → อ่าน prog_type, prog_name<br/>bpf_core_read หรือ bpf_core_read_user"]
         KR --> EM
+        RB[("bpf_audit_events RINGBUF 4 MB")]
     end
-
-    RB[("bpf_audit_events RINGBUF 4 MB")]
 
     BIN --> U1
     PRE -.-> U3
@@ -60,12 +59,14 @@ flowchart TD
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
     classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    classDef trig fill:#eceff1,stroke:#546e7a,color:#000
     class KF,KR,EM kern
     class U1,U2,HF,HR,U3,U4,OUT user
     class RB map
-    class PRE,LIVE,SYS net
+    class PRE,LIVE trig
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬜ ตัวกระตุ้นสีเทา (คำสั่งหรือตัวเลือกที่ใช้ทดสอบ) · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** `bpf-audit` เริ่มจากประเมิน sysctl/BPF LSM ของโฮสต์ จากนั้นโหลดเฉพาะ hook ที่ใช้ได้ (ลอง `fentry/__sys_bpf` ก่อน ถ้าไม่ได้จึงถอยไปใช้ `raw_syscalls/sys_enter` กรองด้วยหมายเลข syscall ที่เขียนลง `bpf_syscall_nr` ตอนโหลด) → สแกน inventory โปรแกรมที่โหลดอยู่แล้ว (เช่น `w16_preloaded` ที่ pin ไว้ก่อน) → ทุก `bpf()` ที่เกิดขึ้นหลังจากนั้นถูกส่งเป็น event ผ่าน Ring Buffer โดยถ้าเป็น `BPF_PROG_LOAD` จะอ่านชนิดและชื่อโปรแกรมจาก `attr` ด้วย CO-RE (แยกกรณี attr อยู่ใน kernel/user memory) → ฝั่ง Go ตัด event ของตัวเองออก จัดระดับความเสี่ยงด้วย `riskOf` และแสดงเฉพาะคำสั่งที่เปลี่ยนสถานะเคอร์เนล เว้นแต่ใส่ `-all`
 

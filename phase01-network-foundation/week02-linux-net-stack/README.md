@@ -51,6 +51,8 @@ flowchart TD
     class P3,P4,P6 kern
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต)
+
 **อ่านแผนภาพ:** `bridge_router_lab.sh setup` สร้าง namespace `w02-sw` ที่มี Linux Bridge `br0` เป็นสวิตช์กลาง แล้วต่อ `w02-ns1..3` เข้ามาด้วย veth pair (ไม่แตะ host namespace เลย) → เมื่อ `test` ยิง ping ข้าม namespace แพ็กเก็ตจะผ่าน SoftIRQ สร้าง `sk_buff` แล้ว `br_handle_frame()` ค้น/เรียนรู้ FDB เพื่อ switch ไปยังพอร์ตปลายทาง → คำสั่ง `status`/`trace` ใช้ `bridge fdb`, `/proc/net/softnet_stat`, `/proc/softirqs`, `strace` และ `perf stat` สังเกตแต่ละจุดของเส้นทางนี้ ก่อน `clean` ลบทุก namespace ทิ้ง
 
 ---

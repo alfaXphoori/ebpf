@@ -57,6 +57,8 @@ flowchart TD
     class CLI,SRV,P net
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** `xdp_metrics_prog` ถูก attach บน `w11b` ใน namespace `w11srv` และจัดทุกแพ็กเก็ตลง 4 ช่อง (tcp/udp/icmp/other) ของ `traffic_metrics` ซึ่งเป็น `PERCPU_ARRAY` — แต่ละ CPU เขียนช่องของตัวเองจึงไม่มี lock contention และไม่ต้องใช้ atomic → เมื่อ Prometheus หรือ `curl` เรียก `/metrics` ตัว `xdpCollector.Collect()` จะ `Lookup` ค่าจากทุก CPU มารวมกันแล้วส่งออกเป็น counter `ebpf_xdp_packets_total`/`ebpf_xdp_bytes_total` (label `protocol`, `interface`) และทุกแพ็กเก็ตได้ `XDP_PASS` เสมอ ส่วน `make test` ยิงแพ็กเก็ตสังเคราะห์ผ่าน `Program.Run()` แล้วตรวจค่าที่ออกจาก Collector จริง
 
 ---

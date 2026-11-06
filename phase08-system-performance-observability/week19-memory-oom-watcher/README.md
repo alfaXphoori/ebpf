@@ -59,6 +59,8 @@ flowchart TD
     class PFC,RB map
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
+
 **อ่านแผนภาพ:** โปรแกรมมี 2 เส้นทางคู่ขนาน — (1) **Page Fault:** ทุกครั้งที่โปรเซสเกิด user page fault `on_user_page_fault()` อ่าน `error_code` ผ่าน CO-RE type flavors แล้วนับลง `page_fault_counts` ตามชื่อโปรเซส ฝั่ง Go poll ทุก 3 วินาทีเพื่อพิมพ์ Top 5; (2) **OOM:** เมื่อ cgroup ที่ถูกจำกัดด้วย `MemoryMax=50M` ใช้แรมเกิน OOM killer จะเลือกเหยื่อ → `on_oom_mark_victim()` รวบรวม PID/UID/RSS/`oom_score_adj` (เฉพาะฟิลด์ที่เคอร์เนลมี ตรวจด้วย `bpf_core_field_exists()`) และชื่อ cgroup แล้วส่งขึ้น `oom_events` ring buffer → goroutine ฝั่ง Go อ่านทันทีและพิมพ์รายงานนิติวิทยาศาสตร์ ซึ่งนำไปเทียบกับ `journalctl -k` ได้
 
 ---

@@ -57,6 +57,8 @@ flowchart TD
     class CLI,SRV,P net
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** `xdp_firewall.c` ถูกคอมไพล์ด้วย `bpf2go` แล้ว `main.go` attach โปรแกรม XDP เข้ากับ `w07-s` ใน namespace `w07-server` พร้อมเติม IP ที่ต้องการบล็อกลง map `blocked_ips` → ทุกแพ็กเก็ตจาก `w07-client` จะถูกตรวจ bounds ทีละชั้น (Ethernet → IPv4 → L4) นับโปรโตคอลใน `proto_counters` และถ้า `saddr` อยู่ใน blocklist จะถูก `XDP_DROP` ทันที (ping จาก 10.10.1.10 หาย, จาก 10.10.1.11 ผ่าน) → ฝั่ง Go อ่านทั้งสอง map มาแสดง dashboard ทุก 1 วินาที ส่วน `make test` ใช้ `BPF_PROG_TEST_RUN` ยิงแพ็กเก็ตสังเคราะห์เพื่อตรวจ verdict โดยไม่ต้องมีทราฟฟิกจริง
 
 ---

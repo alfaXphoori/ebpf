@@ -42,7 +42,7 @@ flowchart TD
     subgraph KERNEL["④ Kernel Space"]
         EV(["exec / open / connect ใน lab-files"]) --> HK["hook ที่ policy เลือก<br/>BPF LSM / kprobe"]
         HK --> AC{"matchArgs / matchBinaries ตรง?"}
-        AC -- "monitor" --> OUT[("event → tetragon daemon")]
+        AC -- "monitor" --> OUT["ส่ง event → tetragon daemon"]
         AC -- "enforce" --> DENY["Sigkill / -EPERM + Post"]
         DENY --> OUT
     end
@@ -60,13 +60,11 @@ flowchart TD
 
     classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
     classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    class HK,AC,DENY,P1,P2,P3,P4,P5,P6 kern
-    class V1,V2,U1,U2,U3,U4,U5,U6 user
-    class OUT map
-    class C1,C2,C3,C4 net
+    class HK,AC,DENY,OUT,P1,P2,P3,P4,P5,P6 kern
+    class V1,V2,U1,U2,U3,U4,U5,U6,C1,C2,C3,C4 user
 ```
+
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
 
 **อ่านแผนภาพ:** ก่อนแตะเคอร์เนล `make test` ตรวจว่าทุก policy จำกัดอยู่ใน `lab-files/` เท่านั้น → `make up` เตรียมไฟล์ทดลองและสตาร์ต Tetragon ใน privileged container → `make apply-*` ส่ง `TracingPolicy` YAML ให้ daemon แปลงเป็น BPF program ชนิด LSM หรือ kprobe ที่เราเคยเขียนเองในสัปดาห์ก่อน ๆ → เมื่อมีการ exec/open/connect ที่ตรงเงื่อนไข เคอร์เนลจะส่ง event (โหมด monitor) หรือบังคับใช้นโยบายด้วย `Sigkill`/`Override` (โหมด enforce) แล้วเราดูผลผ่าน `tetra getevents` และ `bpftool prog show` → ปิดท้ายด้วย `make down` ที่ตรวจว่าไม่มีโปรแกรมค้าง ส่วน Cilium เป็นเส้นทางทางเลือกบน kind เพื่อดู eBPF datapath, NetworkPolicy และ Hubble
 

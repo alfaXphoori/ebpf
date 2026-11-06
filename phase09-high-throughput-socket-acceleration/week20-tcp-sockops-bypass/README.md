@@ -66,6 +66,8 @@ flowchart TD
     class EST,SEND,FAST,SLOW,RECV net
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** Agent สร้าง cgroup `w20-sockops-lab` แล้วแนบ `bpf_sockops_handler()` เข้ากับ cgroup และแนบ `bpf_sk_msg_handler()` เป็น verdict ของ `sock_hash` → เมื่อการเชื่อมต่อ TCP (IPv4) ของโปรเซสใน cgroup สร้างเสร็จ sockops จะบันทึก socket ทั้งฝั่ง client และ server ลง `sock_hash` → ทุก `sendmsg()` จะผ่าน sk_msg ซึ่งสร้าง key ของ socket ปลายทาง (สลับ src/dst) แล้วเรียก `bpf_msg_redirect_hash()`: ถ้าเจอ peer ข้อมูลถูกย้ายเข้า Receive Queue ปลายทาง **ลัดข้าม TCP/IP Stack ทั้งหมด** (เส้นทาง Bypass) ถ้าไม่เจอจะวิ่งผ่าน Stack ปกติ (Fallback) โดยทั้งสองกรณีถูกนับใน `bypass_stats` เพื่อพิสูจน์ว่า redirect เกิดจริง และนำไปเทียบ throughput/latency กับ Baseline ด้วย `tcpbench`/`iperf3`
 
 ---

@@ -58,6 +58,8 @@ flowchart TD
     class C,R net
 ```
 
+> **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
+
 **อ่านแผนภาพ:** `main.go` ใน namespace `w08-lb` เขียน VIP และ backend ลง map แล้ว attach 3 โปรแกรมบน `eth0` (XDP + TCX ingress + TCX egress) → คำขอ `curl` จาก `w08-client` ที่ส่งมายัง VIP `10.10.1.100` ถูก `xdp_load_balancer` เลือก backend ด้วย `flow_hash()`, บันทึก flow ลง `flows`, ทำ DNAT พร้อมแก้ checksum แล้ว `XDP_TX` ออกไปยัง `w08-b0`/`w08-b1` → คำตอบของ backend วิ่งกลับผ่าน LB ซึ่ง `tc_reverse_nat` เปลี่ยน source IP กลับเป็น VIP ตามข้อมูลใน `flows` → ขาออก `tc_egress_prog` นับสถิติตามพอร์ตและติด `skb->mark = 0x42` ส่วน `make test` ตรวจทุกเส้นทางด้วย `BPF_PROG_TEST_RUN`
 
 ---
