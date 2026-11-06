@@ -61,6 +61,43 @@ flowchart TD
 
 **อ่านแผนภาพ:** `main.go` โหลดโปรแกรมสองตัวแล้ว attach ผ่าน `link.AttachTracing()` → เคอร์เนล patch จุดเริ่มของ `do_sys_openat2` ให้ `call` ไปยัง trampoline → `fentry` บันทึกเวลาเริ่มลง `start_map` ส่วน `fexit` อ่านทั้งอาร์กิวเมนต์ `filename` และค่า `ret` ในโปรแกรมเดียว คำนวณ latency แล้วส่ง event ผ่าน ring buffer ให้ Go พิมพ์ผล → ฝั่งทดสอบตรวจว่าค่า `ret` ถูกต้องทั้งกรณีสำเร็จและ `-ENOENT` และ `run_bench.sh` วัด overhead ของ probe ทั้ง 4 แบบบนฟังก์ชันเดียวกัน
 
+### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    box rgb(226,240,253) User Space
+        participant P as โปรเซส<br/>เช่น cat
+        participant G as main.go
+    end
+    box rgb(253,226,226) Kernel Space
+        participant D as do_sys_openat2
+        participant TR as BPF trampoline<br/>สร้างโดย JIT
+        participant FE as fentry<br/>trace_openat2_entry
+        participant FX as fexit<br/>trace_openat2_exit
+        participant SM as start_map<br/>HASH
+        participant RB as fexit_events<br/>RINGBUF
+    end
+
+    G->>TR: link.AttachTracing() ทั้งสองโปรแกรม<br/>เคอร์เนล patch nop 5 ไบต์ต้นฟังก์ชันเป็น call
+    P->>D: openat() → do_sys_openat2(dfd, filename, how)
+    D->>TR: direct call เข้า trampoline
+    TR->>TR: เซฟอาร์กิวเมนต์ลง ctx[] ชนิด u64
+    TR->>FE: ctx = dfd, filename, how
+    FE->>SM: start_map[pid_tgid] = bpf_ktime_get_ns()
+    TR->>D: trampoline เรียกเนื้อฟังก์ชันจริงเอง
+    D-->>TR: ret = fd หรือ -errno
+    TR->>TR: เก็บ ret ต่อท้าย ctx[]
+    TR->>FX: ctx = dfd, filename, how, ret
+    FX->>SM: lookup แล้ว delete → duration_ns
+    FX->>RB: ringbuf reserve/submit<br/>pid, ret, comm, filename, duration_ns
+    TR-->>P: กลับไปยังผู้เรียกโดยตรง syscall คืน fd
+    G->>RB: rd.Read()
+    G->>G: กรอง -comm แล้วพิมพ์ PID, COMM, FD/RET, LATENCY, FILENAME
+```
+
+**อ่านแผนภาพ:** จุดต่างจาก kprobe/kretprobe คือ trampoline เป็นผู้ **เรียกเนื้อฟังก์ชันจริงเอง** (ข้อ 7) จึงได้ค่า `ret` มาโดยไม่ต้องแก้ return address และ fexit ยังเห็นอาร์กิวเมนต์เดิมครบ (ข้อ 10) ส่วน `start_map` ใช้จับคู่ fentry กับ fexit ของ thread เดียวกันด้วย `pid_tgid` เพื่อคำนวณ latency
+
 ---
 
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)

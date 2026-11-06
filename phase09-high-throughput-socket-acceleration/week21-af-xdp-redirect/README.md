@@ -72,6 +72,48 @@ flowchart TD
 
 **อ่านแผนภาพ:** แล็บสร้าง veth pair ระหว่าง netns `w21-tx` (10.21.0.2) และ `w21-rx` (10.21.0.1) → `af-xdp-pipeline` แนบ `xsk_redirect_prog()` ที่ `w21-xsk0` แล้วสร้าง AF_XDP socket เอง (UMEM + FILL/COMPLETION/RX ring ผ่าน `mmap()`, bind queue 0 แบบ `XDP_COPY`) และใส่ fd ลงใน `xsks_map` → ทุกแพ็กเก็ตที่เข้ามา XDP ตรวจ header: ถ้าไม่ใช่ IPv4/UDP (เช่น ping) หรือยังไม่มี socket บน queue นั้นจะ `XDP_PASS` เข้า **TCP/IP Stack ปกติ**; ถ้าเป็น UDP และมี socket จะ `XDP_REDIRECT` **ข้าม Stack ทั้งหมด** ไปลง frame ใน UMEM และวาง descriptor บน RX ring → goroutine ฝั่ง Go `Poll()`/`Receive()` อ่านแพ็กเก็ตตรงจาก UMEM แล้วคืน frame กลับไปที่ FILL ring เพื่อรับรอบถัดไป ผลคือ `nstat` ใน `w21-rx` จะไม่เห็น UDP เหล่านี้เลย
 
+### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant P as w21-tx<br/>10.21.0.2
+    box rgb(253,226,226) Kernel ใน netns w21-rx
+        participant X as XDP<br/>xsk_redirect_prog
+        participant XM as xsks_map<br/>XSKMAP
+    end
+    box transparent หน่วยความจำร่วมที่ mmap
+        participant FR as FILL ring
+        participant UM as UMEM frames
+        participant RX as RX ring
+    end
+    box rgb(226,240,253) User Space
+        participant G as main.go<br/>xsk.go
+    end
+
+    G->>X: link.AttachXDP บน w21-xsk0
+    G->>UM: socket AF_XDP, mmap UMEM, XDP_UMEM_REG
+    G->>FR: fillFrames(): ใส่ที่อยู่ frame ว่าง แล้วขยับ producer
+    G->>G: bind queue 0 แบบ XDP_COPY
+    G->>XM: XsksMap.Put(0, xsk fd)
+    P->>X: UDP → 10.21.0.1:9999
+    X->>XM: bpf_redirect_map ตาม rx_queue_index<br/>ค่าสำรอง XDP_PASS
+    alt มี socket ผูกกับ queue นี้
+        X->>FR: ดึงที่อยู่ frame ว่าง (kernel เป็น consumer)
+        X->>UM: copy แพ็กเก็ตลง frame
+        X->>RX: ใส่ descriptor addr, len แล้วขยับ producer
+        Note over X: คืน XDP_REDIRECT และนับ redirected
+        G->>RX: Poll(200) แล้ว Receive(): อ่าน descriptor และขยับ consumer
+        G->>UM: อ่านแพ็กเก็ตจาก frame → describePacket()
+        G->>FR: fillFrames(recycle): คืน frame ให้ kernel ใช้ซ้ำ
+    else ไม่ใช่ UDP หรือยังไม่มี socket
+        X-->>P: XDP_PASS → TCP/IP stack ปกติ เช่น ตอบ ping
+    end
+    Note over FR,RX: ถ้า FILL ring ว่างหรือ RX ring เต็ม kernel จะทิ้งแพ็กเก็ต<br/>ดูได้จาก xsk.Stats(): fill_empty, ring_full, rx_dropped
+```
+
+**อ่านแผนภาพ:** user space และ kernel ไม่ส่งแพ็กเก็ตหากันผ่าน syscall แต่ผลัดกันขยับ index ของ ring ในหน่วยความจำร่วม: user space เป็นผู้ผลิตของ FILL ring (ส่ง frame ว่างให้) และเป็นผู้บริโภคของ RX ring (รับ frame ที่มีข้อมูล) ส่วน kernel ทำกลับกัน frame จึงวนใช้ซ้ำไม่รู้จบ ถ้า user space คืน frame ไม่ทัน FILL ring จะว่างและแพ็กเก็ตจะถูกทิ้งตั้งแต่ใน kernel
+
 ---
 
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)

@@ -70,6 +70,43 @@ flowchart TD
 
 **อ่านแผนภาพ:** Agent สร้าง cgroup `w20-sockops-lab` แล้วแนบ `bpf_sockops_handler()` เข้ากับ cgroup และแนบ `bpf_sk_msg_handler()` เป็น verdict ของ `sock_hash` → เมื่อการเชื่อมต่อ TCP (IPv4) ของโปรเซสใน cgroup สร้างเสร็จ sockops จะบันทึก socket ทั้งฝั่ง client และ server ลง `sock_hash` → ทุก `sendmsg()` จะผ่าน sk_msg ซึ่งสร้าง key ของ socket ปลายทาง (สลับ src/dst) แล้วเรียก `bpf_msg_redirect_hash()`: ถ้าเจอ peer ข้อมูลถูกย้ายเข้า Receive Queue ปลายทาง **ลัดข้าม TCP/IP Stack ทั้งหมด** (เส้นทาง Bypass) ถ้าไม่เจอจะวิ่งผ่าน Stack ปกติ (Fallback) โดยทั้งสองกรณีถูกนับใน `bypass_stats` เพื่อพิสูจน์ว่า redirect เกิดจริง และนำไปเทียบ throughput/latency กับ Baseline ด้วย `tcpbench`/`iperf3`
 
+### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as client socket<br/>nc หรือ tcpbench
+    box rgb(253,226,226) Kernel Space
+        participant K as TCP/IP stack<br/>ผ่าน lo
+        participant SO as sockops<br/>bpf_sockops_handler
+        participant H as sock_hash<br/>SOCKHASH
+        participant M as sk_msg<br/>bpf_sk_msg_handler
+    end
+    participant S as server socket<br/>127.0.0.1:18080
+
+    Note over C,S: ทั้งสองฝั่งต้องอยู่ใน cgroup w20-sockops-lab ที่ผูก sockops ไว้
+    C->>K: connect() 127.0.0.1:18080
+    K->>S: SYN, SYN-ACK, ACK ผ่าน lo
+    K->>SO: ACTIVE_ESTABLISHED_CB ของฝั่ง client
+    SO->>H: bpf_sock_hash_update key = sip, dip, sport, dport<br/>BPF_NOEXIST
+    K->>SO: PASSIVE_ESTABLISHED_CB ของฝั่ง server
+    SO->>H: bpf_sock_hash_update key ของฝั่ง server
+    Note over H,M: socket ใน sock_hash ถูกผูก sk_msg verdict ให้อัตโนมัติ
+    C->>M: sendmsg(data)
+    M->>H: bpf_msg_redirect_hash key กลับด้าน<br/>BPF_F_INGRESS
+    alt เจอ socket ของ peer
+        H-->>M: SK_PASS
+        M->>S: ใส่ข้อมูลเข้า ingress queue ของ server ตรง ๆ<br/>ข้าม TCP/IP stack และนับ redirect
+    else ไม่เจอ เช่น connection เกิดก่อน attach
+        H-->>M: SK_DROP
+        M->>K: return SK_PASS และนับ fallback
+        K->>S: เส้นทางปกติ: header, netfilter, lo, softirq, ACK
+    end
+    S->>S: recv() ได้ข้อมูลชุดเดียวกันทั้งสองทาง
+```
+
+**อ่านแผนภาพ:** งานแบ่งเป็นสองช่วง ช่วงแรกเกิดครั้งเดียวตอน handshake: `sockops` ลงทะเบียน socket ทั้งสองฝั่งใน `sock_hash` ช่วงที่สองเกิดทุกครั้งที่ส่งข้อมูล: `sk_msg` สลับ 4-tuple เพื่อหา socket ของ peer แล้วย้ายข้อมูลเข้าคิวรับของ peer โดยตรง ถ้าหาไม่เจอโปรแกรมยังคืน `SK_PASS` ข้อมูลจึงไปตามเส้นทาง TCP/IP ปกติและไม่สูญหาย
+
 ---
 
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)

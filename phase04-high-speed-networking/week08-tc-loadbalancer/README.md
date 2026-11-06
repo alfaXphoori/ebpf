@@ -62,6 +62,44 @@ flowchart TD
 
 **อ่านแผนภาพ:** `main.go` ใน namespace `w08-lb` เขียน VIP และ backend ลง map แล้ว attach 3 โปรแกรมบน `eth0` (XDP + TCX ingress + TCX egress) → คำขอ `curl` จาก `w08-client` ที่ส่งมายัง VIP `10.10.1.100` ถูก `xdp_load_balancer` เลือก backend ด้วย `flow_hash()`, บันทึก flow ลง `flows`, ทำ DNAT พร้อมแก้ checksum แล้ว `XDP_TX` ออกไปยัง `w08-b0`/`w08-b1` → คำตอบของ backend วิ่งกลับผ่าน LB ซึ่ง `tc_reverse_nat` เปลี่ยน source IP กลับเป็น VIP ตามข้อมูลใน `flows` → ขาออก `tc_egress_prog` นับสถิติตามพอร์ตและติด `skb->mark = 0x42` ส่วน `make test` ตรวจทุกเส้นทางด้วย `BPF_PROG_TEST_RUN`
 
+### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as w08-client<br/>10.10.2.10
+    box rgb(253,226,226) Kernel ของ w08-lb บน eth0
+        participant X as XDP<br/>xdp_load_balancer
+        participant F as flows<br/>LRU_HASH
+        participant T as TC ingress<br/>tc_reverse_nat
+        participant S as IP stack<br/>ip_forward
+        participant E as TC egress<br/>tc_egress_prog
+    end
+    participant B as Backend<br/>w08-b0 หรือ b1
+
+    C->>X: SYN 10.10.2.10:sport → VIP 10.10.1.100:80
+    alt ไม่ใช่ IPv4 TCP หรือ daddr ไม่ใช่ VIP
+        X->>S: XDP_PASS → stack ปกติ
+    else ตรง VIP
+        X->>X: flow_hash() % 2 เลือก backend
+        X->>F: ยังไม่มี flow_key → update ค่า vip
+        X->>X: เปลี่ยน MAC และ daddr เป็น backend<br/>แก้ IP และ TCP checksum ด้วย bpf_csum_diff
+        X->>B: XDP_TX ออก eth0 ใบเดิม (hairpin)
+    end
+    Note over B: http.server :80 รับ SYN ที่ dst เป็นตัวเอง
+    B->>T: SYN-ACK backend:80 → client ผ่าน gateway 10.10.1.1
+    T->>F: lookup client=daddr, backend=saddr, ports
+    F-->>T: vip เดิมของ flow นี้
+    T->>T: saddr → VIP<br/>bpf_l4_csum_replace + bpf_l3_csum_replace
+    T->>S: TC_ACT_OK
+    S->>E: forward ไป 10.10.2.0/24 ออก eth0
+    E->>E: นับ egress_stats ตาม dport<br/>skb mark 0x42 priority 1
+    E->>C: TC_ACT_OK → client เห็นคำตอบจาก VIP
+    Note over C,B: แพ็กเก็ตถัดไปใน connection เดิมได้ hash เดิม จึงไป backend เดิมทุกครั้ง
+```
+
+**อ่านแผนภาพ:** ขาไป XDP ทำ DNAT แล้วส่งกลับออกการ์ดใบเดิมด้วย `XDP_TX` โดยไม่ผ่าน stack เลย พร้อมจด flow ไว้ใน `flows` ส่วนขากลับต้องรอให้ backend ตอบผ่าน gateway ก่อน TC ingress จึงค้น flow เดิมเพื่อเปลี่ยน `saddr` กลับเป็น VIP ถ้าไม่มีขั้นนี้ client จะได้ SYN-ACK จาก IP ของ backend ซึ่งไม่ตรงกับปลายทางที่ connect ไป แล้วจะทิ้งแพ็กเก็ตนั้น
+
 ---
 
 ## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
