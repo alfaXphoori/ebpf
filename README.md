@@ -133,6 +133,121 @@ flowchart TD
 
 > สีของแต่ละสัปดาห์: 🟩 เครือข่าย · 🟦 แกนหลัก eBPF/เครื่องมือ · 🟥 ความปลอดภัย · 🟨 ประสิทธิภาพ/observability — ทุกสัปดาห์มีแผนภาพ **Workflow Overview** ของตัวเองอยู่ต้น `README.md` ของสัปดาห์นั้น
 
+### 🧭 แผนผังลำดับการเรียน (Prerequisite Map)
+
+แผนภาพด้านบนเรียงตามตารางสอน ส่วนแผนผังนี้แสดง **การพึ่งพากันจริง** ลูกศรจาก A ไป B หมายความว่า B ใช้แนวคิดหรือไฟล์ที่สอนใน A (ตามป้ายบนลูกศร) ใช้วางแผนเรียนข้ามเฟส หรือดูว่าต้องย้อนทบทวนสัปดาห์ไหนก่อนเริ่มสัปดาห์ที่สนใจ (ใช้สีเดียวกับแผนภาพด้านบน)
+
+```mermaid
+flowchart TD
+    W01["W01 Packet bytes + netns"]
+    W02["W02 Bridge/Router + data path"]
+    W03["W03 bpftool + bpftrace"]
+    W04["W04 BCC + Python"]
+    W05["W05 CO-RE + bpf2go"]
+    W06["W06 Maps + Verifier + test_run"]
+    W07["W07 XDP parsing"]
+    W08["W08 XDP LB + TC egress"]
+    W09["W09 Ring Buffer + uprobes"]
+    W10["W10 BPF LSM"]
+    W11["W11 Prometheus exporter"]
+    W12["W12 Capstone IPS"]
+    W13["W13 Dropwatch"]
+    W14["W14 cgroup connect4"]
+    W15["W15 Reverse shell guard"]
+    W16["W16 eBPF integrity audit"]
+    W17["W17 biolatency"]
+    W18["W18 CPU profiler + stacks"]
+    W19["W19 OOM watcher"]
+    W20["W20 sockops + sk_msg"]
+    W21["W21 AF_XDP"]
+    W22["W22 fentry/fexit"]
+    W23["W23 BPF iterators"]
+    W24["W24 kfuncs + Arena"]
+    W25["W25 struct_ops + sched_ext"]
+    W26["W26 Tetragon + Cilium"]
+
+    W01 -- "netns + veth" --> W02
+    W02 -- "จุด hook ใน data path" --> W07
+    W03 -- "kprobe + map แบบ bpftrace" --> W04
+    W04 -- "เลิก runtime compile สู่ CO-RE" --> W05
+    W05 -- "bpf2go + vmlinux.h" --> W06
+    W06 -- "map + test_run" --> W07
+    W06 -- "map + CO-RE" --> W09
+    W06 -- "HASH/ARRAY map" --> W17
+    W07 -- "XDP parsing" --> W08
+    W07 -- "XDP firewall" --> W11
+    W07 -- "XDP redirect" --> W21
+    W11 -- "Prometheus exporter" --> W12
+    W09 -- "ring buffer" --> W12
+    W09 -- "ring buffer" --> W10
+    W09 -- "ring buffer" --> W13
+    W09 -- "ring buffer" --> W14
+    W09 -- "ring buffer + CO-RE" --> W15
+    W09 -- "ring buffer" --> W19
+    W13 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
+    W14 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
+    W10 -- "fentry" --> W16
+    W10 -- "fentry" --> W22
+    W10 -- "BPF LSM" --> W26
+    W14 -- "แนบโปรแกรมกับ cgroup" --> W20
+    W17 -- "tracing ประสิทธิภาพ" --> W18
+    W18 -- "stack + kallsyms" --> W19
+    W22 -- "BTF tracing program" --> W23
+    W22 -- "BTF + BPF_PROG" --> W24
+    W24 -- "kfuncs" --> W25
+    W08 -- "TC/TCX สู่ Cilium" --> W26
+
+    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
+    classDef core fill:#e2f0fd,stroke:#2471a3,color:#000
+    classDef sec fill:#fde2e2,stroke:#c0392b,color:#000
+    classDef perf fill:#fff4d6,stroke:#b9770e,color:#000
+    class W01,W02,W07,W08,W13,W20,W21 net
+    class W03,W04,W05,W06,W22,W23,W24,W25 core
+    class W09,W10,W12,W14,W15,W16,W26 sec
+    class W11,W17,W18,W19 perf
+```
+
+**อ่านแผนผัง:**
+- มีจุดเริ่มต้นสองจุด คือ **W01** (สายเครือข่าย ยังไม่ต้องรู้ eBPF) และ **W03** (สาย eBPF) ทั้งสองสายมาบรรจบกันที่ **W07**
+- **W06** และ **W09** เป็นศูนย์กลาง: W06 ปูเรื่อง map, verifier และ `test_run` ให้ทุกสาย ส่วน ring buffer จาก W09 ถูกใช้ต่อในเกือบทุกแล็บด้านความปลอดภัยและ observability
+- ผ่าน W06 แล้วข้ามไปสายประสิทธิภาพ **W17 → W18 → W19** ได้ทันที (W19 ต้องใช้ ring buffer จาก W09 ด้วย)
+- **W16** ต้องผ่าน W13 และ W14 ก่อน เพราะ build ไฟล์ `.o` ของสองสัปดาห์นั้นมาใช้เป็นโปรแกรมทดสอบ
+- **W26** รวมของจากหลายสาย: TC/TCX จาก W08 และ BPF LSM จาก W10
+
+<details>
+<summary>ตารางสัปดาห์ที่ต้องผ่านก่อน (เฉพาะที่พึ่งพาโดยตรง)</summary>
+
+| สัปดาห์ | ต้องผ่านก่อน (แนวคิดที่ใช้ต่อ) |
+|---|---|
+| W01 Packet bytes + netns | จุดเริ่มต้น |
+| W02 Bridge/Router + data path | **W01** netns + veth |
+| W03 bpftool + bpftrace | จุดเริ่มต้น |
+| W04 BCC + Python | **W03** kprobe + map แบบ bpftrace |
+| W05 CO-RE + bpf2go | **W04** เลิก runtime compile สู่ CO-RE |
+| W06 Maps + Verifier + test_run | **W05** bpf2go + vmlinux.h |
+| W07 XDP parsing | **W02** จุด hook ใน data path · **W06** map + test_run |
+| W08 XDP LB + TC egress | **W07** XDP parsing |
+| W09 Ring Buffer + uprobes | **W06** map + CO-RE |
+| W10 BPF LSM | **W09** ring buffer |
+| W11 Prometheus exporter | **W07** XDP firewall |
+| W12 Capstone IPS | **W09** ring buffer · **W11** Prometheus exporter |
+| W13 Dropwatch | **W09** ring buffer |
+| W14 cgroup connect4 | **W09** ring buffer |
+| W15 Reverse shell guard | **W09** ring buffer + CO-RE |
+| W16 eBPF integrity audit | **W10** fentry · **W13** ใช้ .o เป็นโปรแกรมทดสอบ · **W14** ใช้ .o เป็นโปรแกรมทดสอบ |
+| W17 biolatency | **W06** HASH/ARRAY map |
+| W18 CPU profiler + stacks | **W17** tracing ประสิทธิภาพ |
+| W19 OOM watcher | **W09** ring buffer · **W18** stack + kallsyms |
+| W20 sockops + sk_msg | **W14** แนบโปรแกรมกับ cgroup |
+| W21 AF_XDP | **W07** XDP redirect |
+| W22 fentry/fexit | **W10** fentry |
+| W23 BPF iterators | **W22** BTF tracing program |
+| W24 kfuncs + Arena | **W22** BTF + BPF_PROG |
+| W25 struct_ops + sched_ext | **W24** kfuncs |
+| W26 Tetragon + Cilium | **W08** TC/TCX สู่ Cilium · **W10** BPF LSM |
+
+</details>
+
 ---
 
 ## 📑 สารบัญห้องทดลองปฏิบัติการครบทั้ง 26 สัปดาห์ (Weekly Labs & Source Code Index)
