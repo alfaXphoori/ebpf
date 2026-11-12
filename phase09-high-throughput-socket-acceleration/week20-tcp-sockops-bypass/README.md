@@ -13,58 +13,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all / make test"]
-        SRC["sockops.c<br/>SEC sockops + SEC sk_msg"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["bin/sockops-accelerator<br/>+ bin/tcpbench"]
-        GEN --> TST["go test -exec sudo<br/>TestLoadPrograms, TestRedirectEndToEnd"]
-    end
-
-    subgraph USER["② User Space: main.go"]
-        U1["rlimit.RemoveMemlock()<br/>สร้าง cgroup /sys/fs/cgroup/w20-sockops-lab"] --> U2["loadBpfObjects()"]
-        U2 --> U3["link.AttachCgroup<br/>AttachCGroupSockOps → BpfSockopsHandler"]
-        U2 --> U4["link.RawAttachProgram<br/>AttachSkMsgVerdict → SockHash.FD()"]
-        U3 --> U5["ticker 2s: printStats()<br/>readStat(BypassStats) + countSockhashEntries()"]
-        U4 --> U5
-    end
-
-    subgraph KERNEL["③ Kernel Space"]
-        EST(["TCP handshake สำเร็จ<br/>ACTIVE / PASSIVE_ESTABLISHED_CB"]) --> SO["bpf_sockops_handler()<br/>key = sip, dip, sport, dport host order"]
-        SO --> SH[("sock_hash<br/>SOCKHASH 65535")]
-        SEND(["client เรียก sendmsg()"]) --> SM["bpf_sk_msg_handler()<br/>สร้าง key กลับด้านของ peer"]
-        SM --> RD{"bpf_msg_redirect_hash()<br/>BPF_F_INGRESS เจอ peer?"}
-        SH -. "lookup peer socket" .-> RD
-        RD -- "เจอ: Bypass" --> FAST["ใส่ Receive Queue ของ<br/>socket ปลายทางโดยตรง"]
-        RD -- "ไม่เจอ: Fallback" --> SLOW["TCP/IP Stack ปกติ<br/>header, netfilter, lo, softirq, ACK"]
-        FAST --> RECV(["server recv()"])
-        SLOW --> RECV
-        SO --> BS[("bypass_stats<br/>ARRAY redirect / fallback / socks_added")]
-        RD --> BS
-    end
-
-    subgraph TEST["④ ทดสอบใน cgroup"]
-        T1["echo PID > w20-sockops-lab/cgroup.procs"] --> T2["nc -l 127.0.0.1 18080<br/>nc -q 1 127.0.0.1 18080"]
-        T2 --> T3["bpftool map dump name sock_hash<br/>ต้องเห็น 2 entries"]
-        T1 --> T4["tcpbench -mode throughput<br/>iperf3 -p 15201 เทียบ Baseline"]
-    end
-
-    BIN --> U1
-    U3 -. "attach cgroup" .-> EST
-    U4 -. "attach verdict" .-> SH
-    T2 --> EST
-    T4 --> SEND
-    BS -. "poll" .-> U5
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    class SO,SM,RD kern
-    class U1,U2,U3,U4,U5 user
-    class SH,BS map
-    class EST,SEND,FAST,SLOW,RECV net
-```
+![แผนภาพภาพรวมการทำงาน Week 20](../../docs/diagrams/week20-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 

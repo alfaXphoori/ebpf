@@ -1,0 +1,28 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "'Noto Sans', 'Noto Sans Thai', 'DejaVu Sans', sans-serif",
+    "fontSize": "15px",
+    "primaryColor": "#f8fafc",
+    "primaryBorderColor": "#64748b",
+    "primaryTextColor": "#0f172a",
+    "secondaryColor": "#f8fafc",
+    "tertiaryColor": "#ffffff",
+    "lineColor": "#334155",
+    "textColor": "#0f172a",
+    "clusterBkg": "#f8fafc",
+    "clusterBorder": "#94a3b8",
+    "titleColor": "#0f172a",
+    "edgeLabelBackground": "#ffffff"
+  },
+  "flowchart": {
+    "htmlLabels": true,
+    "curve": "basis",
+    "padding": 16,
+    "nodeSpacing": 42,
+    "rankSpacing": 56,
+    "diagramPadding": 28,
+    "useMaxWidth": false
+  },
+  "themeCSS": ".cluster-label .nodeLabel, .cluster-label span { font-weight: 700; color: #0f172a; } .cluster-label div { max-width: none !important; white-space: nowrap !important; } .cluster rect { stroke-width: 2px; stroke-dasharray: 7 5; } .flowchart-link { stroke-width: 2px; } .edge-pattern-dotted { stroke-dasharray: 3 5 !important; stroke-linecap: round; } .marker { fill: #334155; stroke: #334155; } .edgeLabel p, .edgeLabel span.edgeLabel { background: #ffffff; color: #334155; font-weight: 600; } foreignObject { overflow: visible; }"
+}

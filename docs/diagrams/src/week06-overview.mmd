@@ -1,0 +1,50 @@
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["syscall_stats.c<br/>verifier_fail.c, map_types.c"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["bin/syscall-top<br/>bin/verifier_fail"]
+    end
+
+    subgraph KERNEL["② Kernel Space: Syscall Top Monitor"]
+        EV(["ทุก syscall ของทุกโปรเซส"]) --> TP["tracepoint/raw_syscalls/<br/>sys_enter"]
+        TP --> H["track_syscalls()<br/>pid = pid_tgid ขวา 32 บิต"]
+        H -- "มี entry" --> H1["__sync_fetch_and_add(count)"]
+        H -- "ยังไม่มี" --> H2["bpf_map_update_elem<br/>count=1, BPF_ANY"]
+        H1 --> M[("syscall_map<br/>HASH max 4096<br/>pid → proc_stat")]
+        H2 --> M
+    end
+
+    subgraph USER["③ User Space: main.go"]
+        U1["loadBpfObjects()<br/>link.Tracepoint(raw_syscalls, sys_enter)"] --> U2["ticker ทุก 2 วินาที"]
+        U2 --> U3["renderTopSyscalls()<br/>SyscallMap.Iterate()"]
+        U3 --> U4["sort.Slice ตาม Count<br/>พิมพ์ Top 10 + SHARE"]
+        U4 --> U2
+    end
+
+    subgraph VERIF["④ Verifier Log: make verifier-demo"]
+        V1["xdp_no_bounds_check<br/>xdp_no_null_check"] -- "ถูกปฏิเสธ" --> V2["ebpf.VerifierError<br/>อ่าน log ระดับ instruction"]
+        V3["xdp_fixed"] -- "ผ่าน" --> V4["โหลดสำเร็จ"]
+    end
+
+    subgraph TESTRUN["⑤ BPF_PROG_TEST_RUN: make test"]
+        T1["go test -exec sudo ./..."] --> T2["CountByKey.Run(RunOptions<br/>Data = fake packet, Repeat)"]
+        T2 --> T3[("hash_map vs percpu_map<br/>vs lru_map")]
+        T3 --> T4["TestSameKeyCounts<br/>TestFullMapHashVsLRU<br/>TestTooShortPacketRejected"]
+        T1 --> T5["TestSyscallStatsLoads<br/>Run บน tracepoint → ErrNotSupported"]
+        T1 --> T6["TestVerifierRejectsBrokenPrograms<br/>bounds, nullcheck ถูกปฏิเสธ · fixed ผ่าน"]
+    end
+
+    BIN --> U1
+    BIN --> V1
+    BIN --> V3
+    U1 -. "attach" .-> TP
+    M -. "Iterate" .-> U3
+
+    U4 ~~~ T1
+    V4 ~~~ T1
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class TP,H,H1,H2,V1,V3 kern
+    class SRC,GEN,BIN,U1,U2,U3,U4,V2,V4,T1,T2,T4,T5,T6 user
+    class M,T3 map

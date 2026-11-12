@@ -1,0 +1,35 @@
+flowchart TD
+    subgraph SRC["แหล่ง Event"]
+        S1["Tracepoint / kprobe<br/>เช่น sched_process_exec, sys_enter_openat"]
+        S2["5.3 Uprobe บน libssl.so<br/>SSL_write: อ่าน buf ก่อนเข้ารหัส"]
+    end
+
+    subgraph RB["5.1–5.2 BPF Ring Buffer: MPSC"]
+        R1["bpf_ringbuf_reserve()"] --> R2{"reserve สำเร็จ?"}
+        R2 -- "NULL: buffer เต็ม" --> R0["return 0<br/>event นี้หาย"]
+        R2 -- "ได้ pointer" --> R3["เติมข้อมูลลง slot โดยตรง<br/>zero-copy"]
+        R3 --> R4{"ต้องการส่งไหม?"}
+        R4 -- "ใช่" --> R5["bpf_ringbuf_submit()"]
+        R4 -- "ไม่" --> R6["bpf_ringbuf_discard()"]
+        R5 --> BUF[("RINGBUF ก้อนเดียว<br/>ทุก CPU แชร์ · global order")]
+    end
+
+    subgraph LSM["5.4 BPF LSM: บล็อกที่จุดเกิดเหตุ"]
+        L0(["syscall เช่น open()"]) --> L1["LSM hook<br/>เช่น lsm/file_open"]
+        L1 --> L2{"ตรง Policy?"}
+        L2 -- "ใช่" --> L3["return -EPERM<br/>syscall ล้มเหลว"]
+        L2 -- "ไม่" --> L4["return 0 อนุญาต"]
+        L1 --> R1
+    end
+
+    S1 --> R1
+    S2 --> R1
+    BUF --> U["User Space: ringbuf reader<br/>อ่าน event ตามลำดับเวลา"]
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class S1,S2,R1,R3,R5,R6,R0,L1,L3,L4 kern
+    class BUF map
+    class U user

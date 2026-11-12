@@ -1,0 +1,27 @@
+flowchart LR
+    P03["เฟส 03: Modern eBPF Core (CO-RE)<br/>คู่มือบทที่ 3"]
+    P03 --> W05["Week 05<br/>libbpf, CO-RE + bpf2go"]
+    W05 --> W05H["Hook: tracepoint<br/>sched/sched_process_exec"]
+    W05 --> W05M["Maps: ARRAY exec_count"]
+    W05 --> W05F["ไฟล์: counter.c · main.go<br/>Makefile"]
+    W05 --> W05T["ทดสอบ: exec ใด ๆ → rate/sec"]
+    P03 --> W06["Week 06<br/>Maps + Verifier + test_run"]
+    W06 --> W06H["Hook: tracepoint raw_syscalls/sys_enter<br/>xdp (maps_testrun, verifier_fail)"]
+    W06 --> W06M["Maps: HASH · LRU_HASH<br/>PERCPU_HASH · ARRAY"]
+    W06 --> W06F["ไฟล์: syscall_stats.c · main.go<br/>maps_testrun/ · verifier_fail/"]
+    W06 --> W06T["ทดสอบ: make test: test_run<br/>make verifier-demo"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P03 phase
+    class W05,W06 week
+    class W05H,W06H hook
+    class W05M,W06M map
+    class W05F,W06F file
+    class W05T,W06T test

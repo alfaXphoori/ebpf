@@ -1,0 +1,39 @@
+flowchart TD
+    subgraph KF["11.1 kfuncs"]
+        K1["extern ... __ksym<br/>Verifier อ่าน signature จาก BTF"] --> K2["bpf_task_from_pid()<br/>KF_ACQUIRE · อาจเป็น NULL"]
+        K2 --> K3{"ตรวจ NULL แล้ว<br/>release ทุกเส้นทาง?"}
+        K3 -- "ใช่" --> K4["bpf_task_release()<br/>โหลดผ่าน"]
+        K3 -- "ไม่" --> K5["Verifier ปฏิเสธ<br/>reference leak"]
+    end
+
+    subgraph AR["11.2 BPF Arena"]
+        A1["Go: Map.Memory() mmap<br/>ก่อนโหลดโปรแกรม"] --> A2["BPF: bpf_arena_alloc_pages()<br/>pointer __arena"]
+        A2 --> A3["linked list / tree ในหน่วยความจำร่วม"]
+        A3 --> A4["Go อ่าน pointer เดียวกันได้ตรง ๆ"]
+    end
+
+    subgraph SX["11.3 struct_ops + sched_ext"]
+        X1["SEC .struct_ops.link<br/>link.AttachStructOps"] --> X2["select_cpu → enqueue"]
+        X2 --> X3["DSQ: dispatch queue<br/>คิวของ sched_ext ไม่ใช่ map"]
+        X3 --> X4["dispatch → running / stopping"]
+        X4 --> X5{"stall หรือ scx_bpf_error?"}
+        X5 -- "ใช่" --> X6["เคอร์เนล eject scheduler<br/>task กลับ fair class"]
+    end
+
+    subgraph ECO["11.4 Production Ecosystem"]
+        E1["Tetragon TracingPolicy<br/>kprobe / LSM + matchArgs"] --> E2{"action"}
+        E2 --> E3["Monitor: ส่ง event"]
+        E2 --> E4["Sigkill / Override -EPERM"]
+        E5["Cilium: CNI + kube-proxy-free<br/>CiliumNetworkPolicy + Hubble"]
+    end
+
+    K4 --> E1
+    A4 --> E1
+    X6 --> E5
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class K1,K2,K3,K4,K5,A2,A3,X2,X3,X4,X5,X6 kern
+    class A1,A4,X1,E1,E2,E3,E4,E5 user

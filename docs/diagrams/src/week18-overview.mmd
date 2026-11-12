@@ -1,0 +1,45 @@
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["cpu_stacks.c<br/>SEC perf_event"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/cpu-profiler"]
+        WL["workload/busy.c"] --> WB["clang -fno-omit-frame-pointer<br/>→ bin/busy"]
+    end
+
+    subgraph USER["② User Space: main.go + usersyms.go"]
+        U1["loadKallsyms()<br/>rlimit.RemoveMemlock()"] --> U2["loadBpf() → RewriteConstants<br/>targ_pid, include_idle"]
+        U2 --> U3["attachPerfSampler()<br/>perf_event_open SW_CPU_CLOCK -F 99 Hz<br/>1 fd ต่อ CPU → AttachRawLink"]
+        U3 --> U4["ticker 2s: StackCounts.Iterate()<br/>syms.snapshot(pid)"]
+        U4 --> U4
+        U4 -. "Ctrl+C หรือ -d" .-> U5["sampler.Close()<br/>เรียง entries ตาม count + printStats()"]
+        U5 --> U6["lookupStack() → resolveKaddr()<br/>และ syms.resolve() จาก ELF"]
+        U6 --> U7["TOP ON-CPU CALL CHAINS<br/>writeFolded() → -folded out.txt"]
+    end
+
+    subgraph KERNEL["③ Kernel Space"]
+        CLK(["perf timer ครบรอบบนแต่ละ CPU"]) --> DS["do_sample()<br/>กรอง idle tid 0 และ targ_pid"]
+        DS --> GS["bpf_get_stackid()<br/>kernel + BPF_F_USER_STACK"]
+        GS --> STK[("stack_traces<br/>STACK_TRACE depth 127")]
+        GS --> CNT[("stack_counts<br/>HASH key = pid, kstack, ustack, comm")]
+        DS --> STA[("stats<br/>PERCPU_ARRAY samples, EEXIST, full")]
+    end
+
+    subgraph TEST["④ ทดสอบและสร้าง Flame Graph"]
+        T1["./bin/busy 10 ในพื้นหลัง"] --> T2["sudo ./bin/cpu-profiler<br/>-p PID -d 6s -folded out.txt"]
+        T3["python3 flamegraph.py out.txt → cpu.svg<br/>หรือ flamegraph.pl / speedscope"]
+    end
+
+    BIN --> U1
+    WB --> T1
+    T2 --> U1
+    U3 -. "attach ทุก CPU" .-> CLK
+    CNT -. "iterate" .-> U4
+    STK -. "lookup stack id" .-> U6
+    STA -. "รวมค่าทุก CPU" .-> U5
+    U7 --> T3
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class CLK,DS,GS kern
+    class U1,U2,U3,U4,U5,U6,U7 user
+    class STK,CNT,STA map

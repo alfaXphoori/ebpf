@@ -6,73 +6,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make generate + make build"]
-        SRC["bpf/ips_kern.c<br/>SEC xdp: xdp_smart_ips"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/ips-agent"]
-    end
-
-    subgraph NET["② Test Network"]
-        ATK(["w12atk: 10.212.0.1<br/>ping -f / SYN burst"]) -- "veth w12a ⇄ w12b" --> IF["w12b ใน netns w12ips<br/>10.212.0.2"]
-    end
-
-    subgraph KERNEL["③ Kernel Space: XDP Data Plane"]
-        P1["parse Eth → IPv4 → TCP/ICMP<br/>bounds check"] --> D1{"src_ip อยู่ใน blacklist_map<br/>และยังไม่หมด TTL?"}
-        D1 -- "ใช่" --> DROPB["XDP_DROP<br/>DROPPED_BLACKLIST"]
-        D1 -- "ไม่" --> D2{"TCP SYN ไม่มี ACK<br/>หรือ ICMP Echo?"}
-        D2 -- "ไม่" --> PASS["XDP_PASS"]
-        D2 -- "ใช่" --> RT["rate_tracker นับต่อ src_ip<br/>fixed window 1 วินาที"]
-        RT --> D3{"count เกิน syn/icmp limit?"}
-        D3 -- "ไม่" --> PASS
-        D3 -- "เกิน" --> D4{"autoban เปิด?"}
-        D4 -- "ใช่" --> BAN["ใส่ src_ip ลง blacklist_map"]
-        D4 -- "ไม่" --> DROPR["XDP_DROP<br/>DROPPED_RATELIMIT"]
-        BAN --> DROPR
-        DROPR --> ALERT["bpf_ringbuf_reserve/submit<br/>ips_alert"]
-        CFG[("config_map ARRAY")]
-        RTM[("rate_tracker LRU_HASH")]
-        BL[("blacklist_map LRU_HASH")]
-        RB[("ips_events RINGBUF 4 MB")]
-        MET[("ips_metrics PERCPU_ARRAY")]
-    end
-
-    subgraph USER["④ User Space: cmd/ips-agent/main.go"]
-        U1["RemoveMemlock → loadBpfObjects"] --> U2["applyConfig → config_map<br/>-syn-limit -icmp-limit -autoban -ban-ttl"]
-        U2 --> U3["link.AttachXDP บน -iface"]
-        U3 --> U4["RunEvictionTicker ทุก 2s<br/>ExpireBans ลบ IP ที่ครบ TTL"]
-        U3 --> U5["ringbuf.NewReader<br/>log IPS ALERT"]
-        U3 --> U6["HTTP :2112<br/>/metrics + /api/blacklist GET POST DELETE"]
-    end
-
-    subgraph TEST["⑤ make test: BPF_PROG_TEST_RUN"]
-        T1["ips_test.go<br/>XdpSmartIps.Run กับแพ็กเก็ตที่สร้างเอง"]
-    end
-
-    BIN --> U1
-    IF --> P1
-    U3 -. "attach" .-> P1
-    U2 -. "เขียน limit" .-> CFG
-    CFG -. "อ่าน limit" .-> D3
-    BL -. "lookup" .-> D1
-    BAN -. "update" .-> BL
-    ALERT -. "submit" .-> RB
-    RB -. "Read" .-> U5
-    RT -. "นับต่อ IP" .-> RTM
-    U4 -. "ลบ IP ที่ครบ TTL" .-> BL
-    U6 -. "GET POST DELETE" .-> BL
-    MET -. "อ่านค่า" .-> U6
-    T1 -. "test_run" .-> P1
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    class P1,DROPB,PASS,RT,BAN,DROPR,ALERT kern
-    class U1,U2,U3,U4,U5,U6,T1 user
-    class CFG,RTM,BL,RB,MET map
-    class ATK,IF net
-```
+![แผนภาพภาพรวมการทำงาน Week 12](../../docs/diagrams/week12-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 

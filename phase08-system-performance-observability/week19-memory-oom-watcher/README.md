@@ -12,52 +12,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all"]
-        SRC["oom_watcher.c<br/>CO-RE + type flavors ___old / ___new"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/oom-watcher"]
-    end
-
-    subgraph USER["② User Space: main.go"]
-        U1["rlimit.RemoveMemlock()<br/>loadBpfObjects()"] --> U2["link.Tracepoint<br/>oom/mark_victim + exceptions/page_fault_user"]
-        U2 --> U3["ringbuf.NewReader(OomEvents)"]
-        U3 --> U4["goroutine: rd.Read()<br/>binary.Read → oomAlert"]
-        U4 --> U5["printAlert()<br/>CRITICAL OOM KILLER TRIGGERED<br/>+ cgroupPath() จาก /sys/fs/cgroup"]
-        U2 --> U6["ticker -interval 3s<br/>PageFaultCounts.Iterate()"]
-        U6 --> U7["Top 5 โปรเซสตาม page faults<br/>(แยก on write)"]
-        U7 --> U6
-    end
-
-    subgraph KERNEL["③ Kernel Space"]
-        PF(["โปรเซสแตะหน้าแรมที่ยังไม่ map"]) --> HPF["on_user_page_fault()<br/>error_code และ X86_PF_WRITE"]
-        HPF --> PFC[("page_fault_counts<br/>HASH key = comm<br/>value = faults, write_faults")]
-        OOM(["memory.max เต็ม → OOM killer เลือกเหยื่อ"]) --> HOOM["on_oom_mark_victim()<br/>bpf_core_field_exists() เช็คฟิลด์ RSS, uid, adj"]
-        HOOM --> CG["bpf_get_current_task_btf()<br/>cgroups → dfl_cgrp → kn → name"]
-        CG --> RB[("oom_events<br/>RINGBUF 1 MB")]
-    end
-
-    subgraph TEST["④ กระตุ้น OOM อย่างปลอดภัย"]
-        T1["systemd-run --user --scope<br/>-p MemoryMax=50M -p MemorySwapMax=0<br/>python3 จองแรมทีละ 1 MiB"] --> T2["exit status 137 = SIGKILL"]
-        T3["journalctl -k | grep Killed process<br/>เทียบค่ากับ watcher"]
-    end
-
-    BIN --> U1
-    U2 -. "attach" .-> HPF
-    U2 -. "attach" .-> HOOM
-    T1 --> PF
-    T1 --> OOM
-    RB -. "event" .-> U4
-    PFC -. "poll" .-> U6
-    U5 --> T3
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class HPF,HOOM,CG kern
-    class U1,U2,U3,U4,U5,U6,U7 user
-    class PFC,RB map
-```
+![แผนภาพภาพรวมการทำงาน Week 19](../../docs/diagrams/week19-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
 

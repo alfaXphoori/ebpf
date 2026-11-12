@@ -1,0 +1,45 @@
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["biolatency.c<br/>vmlinux.h + BPF_CORE_READ"] --> GEN["go generate → bpf2go<br/>clang -target bpf"]
+        GEN --> BIN["go build → bin/biolatency"]
+    end
+
+    subgraph USER["② User Space: main.go"]
+        U1["rlimit.RemoveMemlock()<br/>loadBpfObjects()"] --> U2["link.AttachTracing()<br/>TraceRqIssue + TraceRqComplete"]
+        U2 --> U3["ticker ทุก -interval 3s<br/>IoTotals.Lookup(0) และ (1)"]
+        U3 --> U4["พิมพ์ Total I/O Ops + Avg Latency"]
+        U4 --> U3
+        U3 -. "Ctrl+C หรือ -duration" .-> U5["printFinal()<br/>IoLatencyHist.Iterate()"]
+        U5 --> U6["renderHistogram() แยกตาม<br/>disk ผ่าน devName() และ op"]
+    end
+
+    subgraph KERNEL["③ Kernel Space: block layer"]
+        RQ(["struct request ถูกส่งให้ไดรเวอร์"]) --> TI["tp_btf/block_rq_issue<br/>trace_rq_issue()"]
+        TI --> ST[("start_times<br/>HASH key = ptr ของ rq<br/>value = bpf_ktime_get_ns")]
+        HW(["ดิสก์ตอบกลับ"]) --> TC["tp_btf/block_rq_complete<br/>trace_rq_complete()"]
+        ST -. "lookup + delete" .-> TC
+        TC --> CALC["delta_us → slot = log2l()<br/>op = READ / WRITE / OTHER<br/>dev = MKDEV(major, first_minor)"]
+        CALC --> HI[("io_latency_hist<br/>HASH key = dev, op, slot")]
+        CALC --> TO[("io_totals<br/>ARRAY 0 = count, 1 = sum us")]
+    end
+
+    subgraph TEST["④ สร้างโหลดทดสอบ"]
+        T1["sudo gnudd if=/dev/sda of=/dev/null<br/>bs=4k count=5000 iflag=direct"]
+        T2["dd if=/dev/zero of=/var/tmp/biolat.XXXXXX<br/>bs=1M count=64 oflag=direct"]
+        T3["bpftool map dump name io_totals"]
+    end
+
+    BIN --> U1
+    U2 -. "attach" .-> TI
+    U2 -. "attach" .-> TC
+    T1 --> RQ
+    T2 --> RQ
+    TO -. "poll" .-> U3
+    HI -. "อ่านตอนจบ" .-> U5
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class TI,TC,CALC kern
+    class U1,U2,U3,U4,U5,U6 user
+    class ST,HI,TO map

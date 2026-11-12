@@ -1,0 +1,33 @@
+flowchart TD
+    subgraph BYTES["1.1–1.4 แกะแพ็กเก็ตระดับไบต์"]
+        B1["Ethernet 14 ไบต์<br/>dst MAC, src MAC, EtherType"] --> B2["IPv4 Header<br/>IHL × 4 = ความยาว Header"]
+        B2 --> B3{"protocol?"}
+        B3 -- "6" --> B4["TCP 20+ ไบต์<br/>ports, seq, flags"]
+        B3 -- "17" --> B5["UDP 8 ไบต์"]
+        B4 --> B6["Network Byte Order → Host<br/>ntohs / ntohl"]
+        B5 --> B6
+    end
+
+    subgraph PATH["1.5 เส้นทาง Ingress: From Wire to Socket"]
+        N1(["สัญญาณบนสาย"]) --> N2["NIC: ตรวจ FCS<br/>DMA → RX Ring"]
+        N2 --> N3["Hard IRQ<br/>napi_schedule()"]
+        N3 --> N4["SoftIRQ NET_RX<br/>napi_poll() แบบ Batch"]
+        N4 --> H1["HOOK 1: XDP<br/>ก่อนจอง sk_buff"]
+        H1 --> N5["Allocate sk_buff"]
+        N5 --> H2["HOOK 2: TC Ingress<br/>TCX หรือ cls_bpf"]
+        H2 --> N6["Netfilter / Conntrack<br/>→ Routing → INPUT"]
+        N6 --> N7["tcp_v4_rcv() / udp_rcv()"]
+        N7 --> N8["sk_receive_queue"]
+        N8 --> N9(["แอปเรียก read()"])
+    end
+
+    B6 -. "ความรู้นี้ใช้ตอนเขียน Parser ใน" .-> H1
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class N1,N2,B1,B2,B4,B5 net
+    class N3,N4,N5,N6,N7,N8 kern
+    class H1,H2 map
+    class N9 user

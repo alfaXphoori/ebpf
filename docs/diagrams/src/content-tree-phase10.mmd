@@ -1,0 +1,27 @@
+flowchart LR
+    P10["เฟส 10: Cutting-Edge eBPF<br/>คู่มือบทที่ 10"]
+    P10 --> W22["Week 22<br/>fentry / fexit Trampoline"]
+    W22 --> W22H["Hook: fentry + fexit<br/>do_sys_openat2"]
+    W22 --> W22M["Maps: HASH start_map<br/>RINGBUF"]
+    W22 --> W22F["ไฟล์: trampoline.c · main.go<br/>bench/"]
+    W22 --> W22T["ทดสอบ: make test<br/>make bench vs kprobe"]
+    P10 --> W23["Week 23<br/>BPF Task Iterators"]
+    W23 --> W23H["Hook: iter/task"]
+    W23 --> W23M["Maps: ไม่ใช้ map<br/>BPF_SEQ_PRINTF → seq_file"]
+    W23 --> W23F["ไฟล์: task_iter.c · main.go<br/>main_test.go"]
+    W23 --> W23T["ทดสอบ: make test<br/>เทียบเวลากับ /proc"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P10 phase
+    class W22,W23 week
+    class W22H,W23H hook
+    class W22M,W23M map
+    class W22F,W23F file
+    class W22T,W23T test

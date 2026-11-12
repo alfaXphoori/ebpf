@@ -13,49 +13,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all"]
-        SRC["trampoline.c<br/>SEC fentry/do_sys_openat2 + fexit/do_sys_openat2"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/trampoline-tracer"]
-    end
-
-    subgraph USER["② User Space: main.go"]
-        U1["rlimit.RemoveMemlock()<br/>loadBpfObjects()"] --> U2["link.AttachTracing()<br/>TraceOpenat2Entry + TraceOpenat2Exit"]
-        U2 --> U3["ringbuf.NewReader(FexitEvents)"]
-        U3 --> U4["rd.Read() → binary.Read fexitEvent"]
-        U4 --> U5["กรอง -comm ฝั่ง userspace<br/>พิมพ์ PID, COMM, FD/RET, LATENCY, FILENAME"]
-        U5 --> U4
-    end
-
-    subgraph KERNEL["③ Kernel Space: BPF Trampoline"]
-        EV(["openat() → do_sys_openat2()"]) --> FE["fentry: trace_openat2_entry<br/>bpf_ktime_get_ns()"]
-        FE --> SM[("start_map<br/>HASH key=pid_tgid")]
-        EV --> FX["fexit: trace_openat2_exit<br/>ได้ทั้ง args และ ret"]
-        SM -. "lookup + delete" .-> FX
-        FX --> RB[("fexit_events<br/>RINGBUF 4MB")]
-    end
-
-    subgraph TEST["④ ทดสอบและวัดผล"]
-        T1["make test → TestFexitReturnValue<br/>เปิดไฟล์ที่มีอยู่ + ไฟล์ที่ไม่มี"] --> T2["ตรวจ ret ≥ 0 และ ret = -ENOENT"]
-        B1["make bench → bench/run_bench.sh<br/>openbench วน openat /dev/null"] --> B2["bpftrace kprobe / kretprobe / fentry / fexit<br/>เทียบ baseline + bpf_stats run_time_ns"]
-    end
-
-    BIN --> U1
-    U2 -. "attach" .-> FE
-    U2 -. "attach" .-> FX
-    RB -. "event" .-> U4
-
-    RB ~~~ T1
-    RB ~~~ B1
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class FE,FX kern
-    class U1,U2,U3,U4,U5 user
-    class SM,RB map
-```
+![แผนภาพภาพรวมการทำงาน Week 22](../../docs/diagrams/week22-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
 

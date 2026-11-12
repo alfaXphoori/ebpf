@@ -7,7 +7,7 @@
 
 ## 📚 แหล่งเรียนรู้หลักและสคริปต์สภาพแวดล้อม (Core References)
 
-- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII + แผนภาพภาพรวม Mermaid ทุกบท โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
+- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII + แผนภาพภาพรวม (SVG) ทุกบท โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
 - 📖 **อภิธานศัพท์ (Glossary)**: [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — ศัพท์ eBPF และเคอร์เนล 86 คำ แบ่ง 10 หมวด พร้อมความหมายภาษาไทยและลิงก์ไปยังสัปดาห์ที่สอน
 - 🌳 **แผนผังเนื้อหาทั้งหมด (Content Tree)**: [`docs/CONTENT_TREE.md`](docs/CONTENT_TREE.md) — ต้นไม้ภาพรวม 11 เฟส / 26 สัปดาห์ และต้นไม้รายเฟสที่บอก Hook, Maps, ไฟล์ และวิธีทดสอบของทุกแล็บ
 - ⚙️ **สคริปต์ติดตั้งสภาพแวดล้อมอัตโนมัติ**: [`scripts/setup_env.sh`](scripts/setup_env.sh) — Provisioning Ubuntu 26.04 LTS (Kernel 7.0+, แพลตฟอร์มหลัก) / 24.04 LTS (Kernel 6.8, Best-effort), ตรวจสอบ BTF, สร้าง `vmlinux.h` และตั้งค่า BPF LSM
@@ -72,65 +72,7 @@
 
 ### 🔀 แผนภาพลำดับการเรียนรู้ (Course Flow Diagram)
 
-```mermaid
-flowchart TD
-    subgraph P1["เฟส 01: Network Foundation"]
-        direction LR
-        W01["W01 Packet bytes + netns"] --> W02["W02 Bridge/Router + data path"]
-    end
-    subgraph P2["เฟส 02: First Step eBPF"]
-        direction LR
-        W03["W03 bpftool + bpftrace"] --> W04["W04 BCC + Python"]
-    end
-    subgraph P3["เฟส 03: Modern eBPF Core"]
-        direction LR
-        W05["W05 CO-RE + bpf2go"] --> W06["W06 Maps + Verifier + test_run"]
-    end
-    subgraph P4["เฟส 04: High-Speed Networking"]
-        direction LR
-        W07["W07 XDP parsing"] --> W08["W08 XDP LB + TC egress"]
-    end
-    subgraph P5["เฟส 05: Security + Observability"]
-        direction LR
-        W09["W09 Ring Buffer + uprobes"] --> W10["W10 BPF LSM"]
-    end
-    subgraph P6["เฟส 06: Production Capstone"]
-        direction LR
-        W11["W11 Prometheus exporter"] --> W12["W12 Capstone IPS"]
-    end
-    subgraph P7["เฟส 07: Advanced Security"]
-        direction LR
-        W13["W13 Dropwatch"] --> W14["W14 cgroup connect4"] --> W15["W15 Reverse shell guard"] --> W16["W16 eBPF integrity audit"]
-    end
-    subgraph P8["เฟส 08: System Performance"]
-        direction LR
-        W17["W17 biolatency"] --> W18["W18 CPU profiler + stacks"] --> W19["W19 OOM watcher"]
-    end
-    subgraph P9["เฟส 09: Socket Acceleration"]
-        direction LR
-        W20["W20 sockops + sk_msg"] --> W21["W21 AF_XDP"]
-    end
-    subgraph P10["เฟส 10: Cutting-Edge eBPF"]
-        direction LR
-        W22["W22 fentry/fexit"] --> W23["W23 BPF iterators"]
-    end
-    subgraph P11["เฟส 11: Modern Extensibility"]
-        direction LR
-        W24["W24 kfuncs + Arena"] --> W25["W25 struct_ops + sched_ext"] --> W26["W26 Tetragon + Cilium"]
-    end
-
-    P1 --> P2 --> P3 --> P4 --> P5 --> P6
-    P6 --> P7 --> P8 --> P9 --> P10 --> P11
-
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    classDef core fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef sec fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef perf fill:#fff4d6,stroke:#b9770e,color:#000
-    class W01,W02,W07,W08,W13,W20,W21 net
-    class W03,W04,W05,W06,W22,W23,W24,W25 core
-    class W09,W10,W12,W14,W15,W16,W26 sec
-    class W11,W17,W18,W19 perf
-```
+![แผนภาพลำดับการเรียนรู้ (Course Flow Diagram)](docs/diagrams/course-flow.svg)
 
 > สีของแต่ละสัปดาห์: 🟩 เครือข่าย · 🟦 แกนหลัก eBPF/เครื่องมือ · 🟥 ความปลอดภัย · 🟨 ประสิทธิภาพ/observability — ทุกสัปดาห์มีแผนภาพ **Workflow Overview** ของตัวเองอยู่ต้น `README.md` ของสัปดาห์นั้น
 
@@ -138,75 +80,7 @@ flowchart TD
 
 แผนภาพด้านบนเรียงตามตารางสอน ส่วนแผนผังนี้แสดง **การพึ่งพากันจริง** ลูกศรจาก A ไป B หมายความว่า B ใช้แนวคิดหรือไฟล์ที่สอนใน A (ตามป้ายบนลูกศร) ใช้วางแผนเรียนข้ามเฟส หรือดูว่าต้องย้อนทบทวนสัปดาห์ไหนก่อนเริ่มสัปดาห์ที่สนใจ (ใช้สีเดียวกับแผนภาพด้านบน)
 
-```mermaid
-flowchart TD
-    W01["W01 Packet bytes + netns"]
-    W02["W02 Bridge/Router + data path"]
-    W03["W03 bpftool + bpftrace"]
-    W04["W04 BCC + Python"]
-    W05["W05 CO-RE + bpf2go"]
-    W06["W06 Maps + Verifier + test_run"]
-    W07["W07 XDP parsing"]
-    W08["W08 XDP LB + TC egress"]
-    W09["W09 Ring Buffer + uprobes"]
-    W10["W10 BPF LSM"]
-    W11["W11 Prometheus exporter"]
-    W12["W12 Capstone IPS"]
-    W13["W13 Dropwatch"]
-    W14["W14 cgroup connect4"]
-    W15["W15 Reverse shell guard"]
-    W16["W16 eBPF integrity audit"]
-    W17["W17 biolatency"]
-    W18["W18 CPU profiler + stacks"]
-    W19["W19 OOM watcher"]
-    W20["W20 sockops + sk_msg"]
-    W21["W21 AF_XDP"]
-    W22["W22 fentry/fexit"]
-    W23["W23 BPF iterators"]
-    W24["W24 kfuncs + Arena"]
-    W25["W25 struct_ops + sched_ext"]
-    W26["W26 Tetragon + Cilium"]
-
-    W01 -- "netns + veth" --> W02
-    W02 -- "จุด hook ใน data path" --> W07
-    W03 -- "kprobe + map แบบ bpftrace" --> W04
-    W04 -- "เลิก runtime compile สู่ CO-RE" --> W05
-    W05 -- "bpf2go + vmlinux.h" --> W06
-    W06 -- "map + test_run" --> W07
-    W06 -- "map + CO-RE" --> W09
-    W06 -- "HASH/ARRAY map" --> W17
-    W07 -- "XDP parsing" --> W08
-    W07 -- "XDP firewall" --> W11
-    W07 -- "XDP redirect" --> W21
-    W11 -- "Prometheus exporter" --> W12
-    W09 -- "ring buffer" --> W12
-    W09 -- "ring buffer" --> W10
-    W09 -- "ring buffer" --> W13
-    W09 -- "ring buffer" --> W14
-    W09 -- "ring buffer + CO-RE" --> W15
-    W09 -- "ring buffer" --> W19
-    W13 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
-    W14 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
-    W10 -- "fentry" --> W16
-    W10 -- "fentry" --> W22
-    W10 -- "BPF LSM" --> W26
-    W14 -- "แนบโปรแกรมกับ cgroup" --> W20
-    W17 -- "tracing ประสิทธิภาพ" --> W18
-    W18 -- "stack + kallsyms" --> W19
-    W22 -- "BTF tracing program" --> W23
-    W22 -- "BTF + BPF_PROG" --> W24
-    W24 -- "kfuncs" --> W25
-    W08 -- "TC/TCX สู่ Cilium" --> W26
-
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    classDef core fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef sec fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef perf fill:#fff4d6,stroke:#b9770e,color:#000
-    class W01,W02,W07,W08,W13,W20,W21 net
-    class W03,W04,W05,W06,W22,W23,W24,W25 core
-    class W09,W10,W12,W14,W15,W16,W26 sec
-    class W11,W17,W18,W19 perf
-```
+![แผนผังลำดับการเรียน (Prerequisite Map)](docs/diagrams/prerequisite-map.svg)
 
 **อ่านแผนผัง:**
 - มีจุดเริ่มต้นสองจุด คือ **W01** (สายเครือข่าย ยังไม่ต้องรู้ eBPF) และ **W03** (สาย eBPF) ทั้งสองสายมาบรรจบกันที่ **W07**
@@ -289,11 +163,14 @@ flowchart TD
 ```
 .
 ├── docs/
-│   ├── CONTENT_TREE.md                    # แผนผังต้นไม้เนื้อหาทั้งหมด (Mermaid)
+│   ├── diagrams/                          # แผนภาพ SVG ทั้งหมด + src/*.mmd ต้นฉบับ (ดู diagrams/README.md)
+│   ├── CONTENT_TREE.md                    # แผนผังต้นไม้เนื้อหาทั้งหมด
 │   ├── GLOSSARY.md                        # อภิธานศัพท์ eBPF ไทย-อังกฤษ
 │   └── MASTER_STUDY_GUIDE.md              # หนังสือคู่มือและทฤษฎีฉบับสมบูรณ์ 11 บท (ภาษาไทย)
 ├── scripts/
-│   └── setup_env.sh                       # สคริปต์ติดตั้ง Toolchain และสภาพแวดล้อมอัตโนมัติ
+│   ├── setup_env.sh                       # สคริปต์ติดตั้ง Toolchain และสภาพแวดล้อมอัตโนมัติ
+│   ├── render_diagrams.sh                 # render docs/diagrams/src/*.mmd → SVG (make diagrams)
+│   └── diagram_postprocess.py             # ตกแต่ง SVG สไตล์การ์ด + ฝังฟอนต์ไทย
 ├── phase01-network-foundation/
 │   ├── week01-packet-netns/               # ปฏิบัติการระดับ Packet และ Network Namespaces
 │   └── week02-linux-net-stack/            # จำลองและตรวจสอบ Linux Network Stack

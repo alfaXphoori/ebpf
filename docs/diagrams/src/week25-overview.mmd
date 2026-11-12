@@ -1,0 +1,56 @@
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["scx_w25.c + scx_mini.h<br/>SEC .struct_ops.link → w25_ops"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/scx-w25"]
+    end
+
+    subgraph USER["② User Space: main.go + sched.go"]
+        U1["loadScheduler(): ตั้ง .rodata vtime_mode, fail_mode<br/>+ ops.timeout_ms ผ่าน MapSpec"] --> U2["LoadAndAssign()<br/>→ link.AttachStructOps(W25Ops)"]
+        U2 --> U3["startWorkload(): ext-run<br/>sched_setattr policy SCHED_EXT = 7"]
+        U3 --> U4["ticker: readStats() + printState()<br/>/sys/kernel/sched_ext/state"]
+        U4 --> U4
+        U4 -. "ถูก eject" .-> U5["exitInfo(): kind เช่น<br/>ERROR_STALL / ERROR_BPF"]
+    end
+
+    subgraph KERNEL["③ Kernel: sched_ext callbacks ของ w25_ops"]
+        W(["task SCHED_EXT ตื่น / runnable"]) --> SC["w25_select_cpu()<br/>scx_bpf_select_cpu_dfl()"]
+        SC -- "CPU ว่าง" --> LD["local DSQ: SCX_DSQ_LOCAL<br/>ของ CPU นั้น"]
+        SC -- "ไม่ว่าง" --> EQ["w25_enqueue()<br/>fifo: scx_bpf_dsq_insert<br/>vtime: scx_bpf_dsq_insert_vtime"]
+        EQ --> SD["SHARED_DSQ id 0<br/>scx_bpf_create_dsq ใน w25_init()"]
+        SD --> DP["w25_dispatch()<br/>scx_bpf_dsq_move_to_local()"]
+        DP --> LD
+        LD --> RN["w25_running()<br/>task ขึ้น CPU"]
+        RN --> ST["w25_stopping()<br/>vtime += ใช้ไป × 100 / weight"]
+        ST -. "runnable อีกครั้ง" .-> W
+        SC & EQ & DP & RN --> STATS[("stats<br/>PERCPU_ARRAY 4 ช่อง")]
+    end
+
+    subgraph SAFETY["④ Safety net"]
+        F1["-fail stall: dispatch ไม่ดึงงาน<br/>→ watchdog timeout_ms"] --> EJ["eject scheduler<br/>w25_exit() → exit_info"]
+        F2["-fail error: scx_bpf_error()<br/>หลัง running 1000 ครั้ง"] --> EJ
+        EJ --> FB["task กลับไป fair class"]
+    end
+
+    subgraph TEST["⑤ ทดสอบ: make test / demo"]
+        T1["TestSchedulerDispatchesExtTasks<br/>TestWatchdogEjectsStalledScheduler<br/>TestScxBpfErrorEjects, TestStructOpsHasNoTestRun"]
+        T2["make demo-nice → nice_demo.sh<br/>เทียบ cpu_ms ของ nice 0 กับ 10"]
+    end
+
+    BIN --> U1
+    U2 -. "register" .-> SC
+    STATS -. "อ่านค่า" .-> U4
+    EJ -. "exit_info" .-> U5
+
+    STATS ~~~ F1
+    STATS ~~~ F2
+    FB ~~~ T1
+    FB ~~~ T2
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class SC,EQ,DP,RN,ST,LD,SD,EJ,FB kern
+    class U1,U2,U3,U4,U5 user
+    class STATS map
+    class F1,F2 trig

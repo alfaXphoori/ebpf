@@ -1,0 +1,32 @@
+flowchart LR
+    P11["เฟส 11: Modern Extensibility<br/>คู่มือบทที่ 11"]
+    P11 --> W24["Week 24<br/>kfuncs + BPF Arena"]
+    W24 --> W24H["Hook: SEC syscall<br/>kfuncs acquire / release"]
+    W24 --> W24M["Maps: ARENA"]
+    W24 --> W24F["ไฟล์: task_kfunc.c · arena_list.c<br/>task_kfunc_broken.c · patches/"]
+    W24 --> W24T["ทดสอบ: make test<br/>syscall prog ผ่าน test_run"]
+    P11 --> W25["Week 25<br/>struct_ops + sched_ext"]
+    W25 --> W25H["Hook: struct_ops w25_ops<br/>sched_ext callbacks"]
+    W25 --> W25M["Maps: PERCPU_ARRAY stats<br/>DSQ เป็นคิวของ sched_ext ไม่ใช่ map"]
+    W25 --> W25F["ไฟล์: scx_w25.c · scx_mini.h<br/>main.go · sched.go"]
+    W25 --> W25T["ทดสอบ: make test: attach จริง<br/>nice_demo.sh"]
+    P11 --> W26["Week 26<br/>Tetragon + Cilium"]
+    W26 --> W26H["Hook: Tetragon TracingPolicy<br/>kprobe / LSM"]
+    W26 --> W26M["Maps: จัดการโดย Tetragon"]
+    W26 --> W26F["ไฟล์: policies/ 6 ไฟล์<br/>cilium/ · run-tetragon.sh"]
+    W26 --> W26T["ทดสอบ: validate-policies.py<br/>make up / down"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P11 phase
+    class W24,W25,W26 week
+    class W24H,W25H,W26H hook
+    class W24M,W25M,W26M map
+    class W24F,W25F,W26F file
+    class W24T,W25T,W26T test

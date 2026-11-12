@@ -6,46 +6,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all"]
-        SRC["ringbuf_events.c<br/>vmlinux.h + BPF_CORE_READ"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/ringbuf_events"]
-    end
-
-    subgraph USER["② User Space: main.go"]
-        U1["loadBpfObjects()"] --> U2["link.Tracepoint ตาม -exec-hook<br/>sched หรือ syscall"]
-        U2 --> U3["findLibsslPath() → libssl.so.3<br/>ex.Uprobe SSL_write + SSL_write_ex"]
-        U3 --> U4["ringbuf.NewReader(Events)"]
-        U4 --> U5["rd.Read() → binary.Read secEvent"]
-        U5 --> U6{"event_type ?"}
-        U6 -- "1" --> U7["พิมพ์ EXECVE<br/>pid ppid uid comm binary"]
-        U6 -- "2" --> U8["sanitizePayload()<br/>พิมพ์ TLS_PLAINTEXT"]
-        U7 --> U5
-        U8 --> U5
-    end
-
-    subgraph KERNEL["③ Kernel Space"]
-        A1(["ผู้ใช้รัน echo, id, curl, python3"]) --> K1["tp_sched_process_exec<br/>หรือ tp_sys_enter_execve"]
-        A2(["curl --http1.1 https://example.com<br/>เรียก SSL_write ก่อนเข้ารหัส"]) --> K2["uprobe_ssl_write<br/>uprobe_ssl_write_ex"]
-        K1 --> K3["bpf_ringbuf_reserve()<br/>fill_common: pid, ppid จาก real_parent, uid, comm"]
-        K2 --> K3
-        K3 --> K4["คัดลอกชื่อไฟล์ หรือ plaintext สูงสุด 127 ไบต์<br/>bpf_ringbuf_submit()"]
-        K4 --> M[("events<br/>RINGBUF 16 MB")]
-    end
-
-    BIN --> U1
-    U2 -. "attach" .-> K1
-    U3 -. "attach" .-> K2
-    M -. "stream" .-> U5
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class K1,K2,K3,K4 kern
-    class U1,U2,U3,U4,U5,U6,U7,U8 user
-    class M map
-```
+![แผนภาพภาพรวมการทำงาน Week 09](../../docs/diagrams/week09-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
 

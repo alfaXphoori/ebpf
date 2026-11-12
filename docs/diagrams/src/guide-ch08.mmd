@@ -1,0 +1,36 @@
+flowchart TD
+    subgraph BIO["8.1 Block I/O Latency"]
+        B1["tp_btf/block_rq_issue"] --> B2[("start_times<br/>key = pointer ของ struct request")]
+        B2 --> B3["tp_btf/block_rq_complete<br/>delta = now − start"]
+        B3 --> B4["log2 bucket แบบ branch-free<br/>แยกตาม disk และ READ/WRITE"]
+        B4 --> B5[("histogram<br/>__sync_fetch_and_add")]
+    end
+
+    subgraph CPU["8.2 On-CPU Profiler"]
+        C1["perf_event_open SW_CPU_CLOCK<br/>99 Hz ทีละ CPU"] --> C2["SEC perf_event"]
+        C2 --> C3["bpf_get_stackid() kernel: flags 0<br/>user: BPF_F_USER_STACK · นับ -EEXIST"]
+        C3 --> C4[("stack_traces + stack_counts")]
+        C4 --> C5["kallsyms + ELF symbols<br/>→ folded stack → Flame Graph"]
+    end
+
+    subgraph MEM["8.3 Page Faults และ OOM"]
+        M1["exceptions:page_fault_user<br/>เลือก struct ด้วย CO-RE"] --> M2[("นับ fault ต่อ comm")]
+        M3["oom:mark_victim<br/>bpf_core_field_exists"] --> M4[("RINGBUF alert<br/>ข้อมูลเหยื่ออ่านจาก event")]
+    end
+
+    B5 --> UX["Go: แสดง histogram, Top N, alert"]
+    C5 --> UX
+    M2 --> UX
+    M4 --> UX
+
+    W1(["โหลดทดสอบ: gnudd (GNU dd) O_DIRECT, bin/busy,<br/>systemd-run MemoryMax=50M"]) -.-> B1
+    W1 -.-> C1
+    W1 -.-> M3
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class B1,B3,B4,C2,C3,M1,M3 kern
+    class B2,B5,C4,M2,M4 map
+    class C1,C5,UX user

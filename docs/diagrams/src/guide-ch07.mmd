@@ -1,0 +1,41 @@
+flowchart TD
+    RULE["7.0 กฎเหล็ก: ใช้ vmlinux.h + BPF_CORE_READ<br/>ห้ามประกาศ struct ของเคอร์เนลเอง"]
+
+    subgraph DROP["7.1 Dropwatch: ทำไมแพ็กเก็ตหาย"]
+        D1["kfree_skb_reason()"] --> D2["tracepoint/skb/kfree_skb"]
+        D2 --> D3["reason → ชื่อจาก BTF<br/>location → symbol+offset จาก kallsyms"]
+    end
+
+    subgraph EGRESS["7.2 Zero-Trust Egress: cgroup/connect4"]
+        E1["process ใน cgroup ของแล็บ<br/>เรียก connect()"] --> E2{"IP/port อยู่ใน blocklist?"}
+        E2 -- "ใช่" --> E3["return 0 → EPERM<br/>ไม่มี SYN ออกไป"]
+        E2 -- "ไม่" --> E4["return 1 อนุญาต"]
+    end
+
+    subgraph RSHELL["7.3 Reverse Shell Guard"]
+        S1["sched_process_exec"] --> S2["อ่าน fd 0/1/2 และ real_parent->comm<br/>ผ่าน CO-RE"]
+        S2 --> S3{"stdio เป็น socket หรือ<br/>parent เป็น daemon?"}
+        S3 -- "ใช่" --> S4["Alert ระดับ CRITICAL"]
+    end
+
+    subgraph AUDIT["7.4 eBPF Integrity Auditor"]
+        A1["fentry/__sys_bpf<br/>fallback: raw_syscalls/sys_enter"] --> A2["อ่าน cmd + attr"]
+        A2 --> A3["ประเมินความเสี่ยง<br/>+ startup scan หลัง attach"]
+    end
+
+    RULE --> D2
+    RULE --> S2
+    RULE --> A2
+    D3 --> EV[("RINGBUF → Go agent")]
+    E3 --> EV
+    S4 --> EV
+    A3 --> EV
+    EV --> LIM["ทุกเครื่องมือระบุ Evasion ที่ยังหลบได้<br/>เช่น UDP sendto, IPv6, PTY shell, root kill agent"]
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class D1,D2,D3,E2,E3,E4,S1,S2,S3,S4,A1,A2,A3 kern
+    class EV map
+    class E1,LIM user

@@ -1,0 +1,27 @@
+flowchart LR
+    P05["เฟส 05: Security + Observability<br/>คู่มือบทที่ 5"]
+    P05 --> W09["Week 09<br/>Ring Buffer + TLS Uprobes"]
+    W09 --> W09H["Hook: tracepoint/sched/sched_process_exec<br/>uprobe SSL_write / SSL_write_ex"]
+    W09 --> W09M["Maps: RINGBUF events"]
+    W09 --> W09F["ไฟล์: ringbuf_events.c<br/>main.go"]
+    W09 --> W09T["ทดสอบ: exec + HTTPS ผ่าน libssl"]
+    P05 --> W10["Week 10<br/>BPF LSM"]
+    W10 --> W10H["Hook: lsm/file_open<br/>fentry/security_file_open (audit)"]
+    W10 --> W10M["Maps: HASH · ARRAY<br/>RINGBUF lsm_events"]
+    W10 --> W10F["ไฟล์: lsm_file_guard.c<br/>main.go"]
+    W10 --> W10T["ทดสอบ: เปิดไฟล์ secret<br/>→ EPERM หรือ audit"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P05 phase
+    class W09,W10 week
+    class W09H,W10H hook
+    class W09M,W10M map
+    class W09F,W10F file
+    class W09T,W10T test

@@ -13,57 +13,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all"]
-        SRC["task_kfunc.c + task_kfunc_broken.c + arena_list.c"] --> GEN["go generate → bpf2go<br/>kfunc / broken / arena objects"]
-        GEN --> VEN["go mod vendor + patch<br/>cilium-ebpf-v0.22.0-addr-space-cast.patch"]
-        VEN --> BIN["go build → bin/kfunc-arena"]
-    end
-
-    subgraph USER["② User Space: main.go"]
-        P1["Part 1: loadKfuncObjects()<br/>queryTask() → prog.Run ด้วย task_query"] --> P1B["loadBrokenProgram() ทีละตัว<br/>verifierTail() แสดง error"]
-        P2["Part 2: newArenaLab()<br/>ebpf.NewMap(arena) → m.Memory() mmap"] --> P2B["LoadAndAssign + MapReplacements"]
-        P2B --> P2C["upsert() × n ครั้ง<br/>ArenaUpsert.Run"]
-        P2C --> P2D["walk(): อ่าน header + เดิน next pointer<br/>จาก mmap โดยตรง ไม่มี syscall"]
-        P2D --> P2E["peek() หน้าที่จอง / ยังไม่จอง<br/>สาธิต page fault"]
-    end
-
-    subgraph KFUNC["③ Kernel: SEC syscall query_task"]
-        K1["bpf_task_from_pid() KF_ACQUIRE"] --> K2["bpf_cpumask_create()<br/>bpf_rcu_read_lock → real_parent, cpus_ptr"]
-        K2 --> K3["bpf_cpumask_weight()<br/>bpf_cpumask_release()"]
-        K3 --> K4["bpf_task_release() KF_RELEASE"]
-        K5["bpf_ksym_exists()<br/>bpf_task_from_vpid / no_such_kfunc"]
-        VR{"Verifier"} -- "ปฏิเสธ" --> BR["leak_task, no_null_check,<br/>use_after_release, wrong_prog_type"]
-    end
-
-    subgraph ARENA["④ Kernel: SEC syscall arena_upsert / arena_peek"]
-        A1["bump_alloc()<br/>bpf_arena_alloc_pages()"] --> AM[("arena<br/>BPF_MAP_TYPE_ARENA 16 หน้า<br/>BPF_F_MMAPABLE")]
-        A2["arena_upsert: เดิน list ≤ MAX_WALK<br/>พบ → count++, ไม่พบ → push-front"] --> A1
-    end
-
-    subgraph TEST["⑤ ทดสอบ: make test"]
-        T1["TestQueryTask* / TestBrokenProgramsRejected"]
-        T2["TestArenaUpsertAndWalk, PointersAreUserAddresses,<br/>PageFaults, WalkLimit, RequiresMmapBeforeLoad"]
-    end
-
-    BIN --> P1
-    BIN --> P2
-    P1 -. "BPF_PROG_RUN" .-> K1
-    P1B -. "load" .-> VR
-    P2C -. "BPF_PROG_RUN" .-> A2
-    AM -. "mmap ร่วมกัน" .-> P2D
-
-    AM ~~~ T1
-    AM ~~~ T2
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class K1,K2,K3,K4,K5,VR,BR,A1,A2 kern
-    class P1,P1B,P2,P2B,P2C,P2D,P2E user
-    class AM map
-```
+![แผนภาพภาพรวมการทำงาน Week 24](../../docs/diagrams/week24-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ◇ จุดตัดสินใจ
 

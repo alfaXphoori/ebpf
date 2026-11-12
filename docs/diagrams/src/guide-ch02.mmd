@@ -1,0 +1,39 @@
+flowchart TD
+    subgraph BUILD["2.2 Build Pipeline"]
+        C1["my_prog.bpf.c"] --> C2["clang -target bpf -O2 -g"]
+        C2 --> C3[("ELF .o<br/>.text bytecode · .maps · .BTF")]
+    end
+
+    subgraph LOAD["User Space Loader: cilium/ebpf หรือ libbpf"]
+        L1["อ่าน ELF + BTF relocation"] --> L2["bpf(BPF_PROG_LOAD)"]
+    end
+
+    subgraph KERNEL["Kernel"]
+        V1{"2.3 Verifier ขั้น 1<br/>CFG: ไม่มีลูปไม่รู้จบ<br/>ไม่มีโค้ดเข้าไม่ถึง?"}
+        V1 -- "ผ่าน" --> V2{"Verifier ขั้น 2<br/>Abstract execution<br/>R0–R10, pointer bounds?"}
+        V1 -- "ไม่ผ่าน" --> REJ["ปฏิเสธ + Verifier Log<br/>EACCES / EINVAL"]
+        V2 -- "ไม่ผ่าน" --> REJ
+        V2 -- "ผ่าน" --> J["2.4 JIT → x86_64 / ARM64<br/>RO+X memory, bpf_jit_harden"]
+        J --> VM["2.1 eBPF VM<br/>11 registers, stack 512 B"]
+        VM --> HK["Hook: XDP, TC, kprobe,<br/>tracepoint, LSM"]
+    end
+
+    subgraph TOOLS["เครื่องมือในเฟส 02"]
+        T1["bpftrace one-liners<br/>Week 03"]
+        T2["BCC + Python<br/>คอมไพล์ตอน runtime · Week 04"]
+        T3["bpftool prog/map<br/>dump xlated / jited"]
+    end
+
+    C3 --> L1
+    L2 --> V1
+    T1 -. "ใช้ pipeline เดียวกัน" .-> V1
+    T2 -. "ใช้ pipeline เดียวกัน" .-> V1
+    T3 -. "ตรวจผลลัพธ์" .-> J
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class V1,V2,J,VM,HK,REJ kern
+    class L1,L2,T1,T2,T3 user
+    class C3 map

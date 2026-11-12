@@ -9,51 +9,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Compile: sudo bpftrace trace_exec_and_tcp.bt"]
-        B1["trace_exec_and_tcp.bt<br/>ภาษา bpftrace"] --> B2["bpftrace parser<br/>→ LLVM → eBPF bytecode"]
-        B2 --> B3["bpf() syscall → Verifier → JIT"]
-        B3 --> B4["Attached 6 probes<br/>BEGIN, END, exec, tcp_sendmsg,<br/>retransmit, interval"]
-    end
-
-    subgraph KERNEL["② Kernel Space: probes"]
-        E1(["execve() สำเร็จ"]) --> K1["tracepoint:sched:sched_process_exec<br/>printf uid, pid, real_parent.comm, filename"]
-        E2(["แอปส่งข้อมูล TCP"]) --> K2["kprobe:tcp_sendmsg<br/>size = arg2"]
-        E3(["TCP ตรวจพบ packet loss"]) --> K3["tracepoint:tcp:tcp_retransmit_skb<br/>printf saddr:sport → daddr:dport"]
-        K1 --> M1[("@process_exec_count")]
-        K2 --> M2[("@tcp_send_bytes = hist()<br/>@tcp_send_calls = count()<br/>@tcp_send_total_bytes = sum()")]
-        K3 --> M3[("@tcp_retransmit_count")]
-    end
-
-    subgraph USER["③ User Space: bpftrace process"]
-        U1["interval:s:10<br/>print สะสมตั้งแต่เริ่ม"]
-        U2["Ctrl+C → END<br/>FINAL OBSERVABILITY SUMMARY"]
-        U3["clear(@maps) → detach ทุก probe"]
-        U2 --> U3
-    end
-
-    subgraph INSPECT["④ Inspect: Terminal ที่ 3"]
-        I1["bpftool prog show"] --> I2["bpftool prog dump xlated / jited"]
-        I1 --> I3["bpftool map show / map dump"]
-    end
-
-    B4 --> K1
-    B4 --> K2
-    B4 --> K3
-    M1 -. "อ่าน" .-> U1
-    M2 -. "อ่าน" .-> U1
-    M3 -. "อ่าน" .-> U1
-    U1 --> U2
-    B4 -. "โปรแกรมที่ JIT แล้ว" .-> I1
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    class B3,K1,K2,K3 kern
-    class B1,B2,B4,U1,U2,U3,I1,I2,I3 user
-    class M1,M2,M3 map
-```
+![แผนภาพภาพรวมการทำงาน Week 03](../../docs/diagrams/week03-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี)
 

@@ -14,57 +14,7 @@ eBPF เป็นดาบสองคม ความสามารถเด�
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all ของ week13, week14, week16"]
-        SRC["bpf_audit.c + ../../vmlinux.h<br/>fentry/__sys_bpf + tracepoint/raw_syscalls/sys_enter"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/bpf-audit"]
-    end
-
-    subgraph SIM["② โปรแกรมทดสอบ"]
-        PRE(["ก่อนเริ่ม: bpftool prog load<br/>week13 bpf_bpfel.o → /sys/fs/bpf/w16_preloaded"])
-        LIVE(["ขณะรัน: taskset -c CPU bpftool prog load<br/>week14 bpf_bpfel.o → /sys/fs/bpf/w16_cpuN"])
-    end
-
-    subgraph USER["③ User Space: main.go"]
-        U1["auditHardening<br/>unprivileged_bpf_disabled, bpf_jit_harden,<br/>bpf_jit_enable, BPF LSM"] --> U2["loadAndAttach -hook auto<br/>RewriteConstants bpf_syscall_nr = SYS_BPF"]
-        U2 --> D1{"AttachTracing fentry สำเร็จ?"}
-        D1 -- "ใช่" --> HF["ใช้ fentry/__sys_bpf"]
-        D1 -- "ไม่" --> HR["fallback: raw_syscalls sys_enter"]
-        HF --> U3["inventoryPrograms<br/>ProgramGetNextID → NewProgramFromID"]
-        HR --> U3
-        U3 --> U4["ringbuf.NewReader → rd.Read"]
-        U4 --> D3{"pid เป็นของ auditor เอง?"}
-        D3 -- "ใช่" --> U4
-        D3 -- "ไม่" --> R{"riskOf cmd"}
-        R --> OUT["ATTACH / PROG_LOAD / DETACH / NOTICE<br/>INFO แสดงเมื่อใส่ -all<br/>+ prog_type, prog_name"]
-    end
-
-    subgraph KERNEL["④ Kernel Space: ทุกการเรียก bpf()"]
-        SYS(["bpf cmd, attr, size"]) --> KF["audit_sys_bpf<br/>uattr.is_kernel?"]
-        SYS --> KR["audit_raw_sys_enter<br/>id == bpf_syscall_nr?"]
-        KF --> EM["emit_event<br/>BPF_PROG_LOAD → อ่าน prog_type, prog_name<br/>bpf_core_read หรือ bpf_core_read_user"]
-        KR --> EM
-        RB[("bpf_audit_events RINGBUF 4 MB")]
-    end
-
-    BIN --> U1
-    PRE -.-> U3
-    LIVE --> SYS
-    HF -. "attach" .-> KF
-    HR -. "attach" .-> KR
-    EM -.-> RB
-    RB -.-> U4
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef trig fill:#eceff1,stroke:#546e7a,color:#000
-    class KF,KR,EM kern
-    class U1,U2,HF,HR,U3,U4,OUT user
-    class RB map
-    class PRE,LIVE trig
-```
+![แผนภาพภาพรวมการทำงาน Week 16](../../docs/diagrams/week16-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · ⬜ ตัวกระตุ้นสีเทา (คำสั่งหรือตัวเลือกที่ใช้ทดสอบ) · ⬭ เหตุการณ์ในระบบ (กรอบมน ไม่ลงสี) · ◇ จุดตัดสินใจ
 

@@ -1,0 +1,29 @@
+flowchart TD
+    subgraph SOCK["9.1 sockops + sk_msg: Local TCP Bypass"]
+        S1["connect / accept ใน cgroup"] --> S2["sockops: ESTABLISHED_CB<br/>active + passive"]
+        S2 --> S3[("SOCKHASH<br/>key = 4-tuple")]
+        S4["แอปเรียก sendmsg()"] --> S5["sk_msg: สร้าง key กลับด้าน<br/>ระวัง byte order ของ port"]
+        S5 --> S6{"bpf_msg_redirect_hash<br/>หา socket คู่สนทนาเจอ?"}
+        S6 -- "เจอ" --> S7["ส่งเข้า receive queue ของ peer<br/>ข้าม TCP/IP stack ของ loopback"]
+        S6 -- "ไม่เจอ" --> S8["Fallback: TCP/IP stack ปกติ"]
+        S3 -.-> S6
+    end
+
+    subgraph XSK["9.2 AF_XDP: Kernel Bypass ถึง User Space"]
+        X1["User Space: จอง UMEM<br/>mmap FILL / RX / COMPLETION<br/>แล็บรับอย่างเดียว ไม่ใช้ TX ring"] --> X2["bind (ifindex, queue_id)<br/>ใส่ fd ลง XSKMAP"]
+        P(["แพ็กเก็ตเข้า NIC"]) --> X3["XDP: bpf_redirect_map<br/>xsks_map, rx_queue_index, XDP_PASS"]
+        X3 --> X4{"มี socket ใน queue นี้?"}
+        X4 -- "มี" --> X5["frame ลง UMEM → RX ring<br/>แอปอ่านเอง"]
+        X4 -- "ไม่มี" --> X6["XDP_PASS → stack ปกติ"]
+        X5 --> X7["คืน frame ทาง FILL ring"]
+        X2 -.-> X4
+    end
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class S2,S5,S6,X3,X4 kern
+    class S3 map
+    class S1,S4,X1,X2,X5,X7 user
+    class S7,S8,X6,P net

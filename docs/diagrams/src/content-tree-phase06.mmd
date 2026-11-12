@@ -1,0 +1,27 @@
+flowchart LR
+    P06["เฟส 06: Production Capstone<br/>คู่มือบทที่ 6"]
+    P06 --> W11["Week 11<br/>Prometheus Exporter"]
+    W11 --> W11H["Hook: xdp"]
+    W11 --> W11M["Maps: PERCPU_ARRAY<br/>traffic_metrics"]
+    W11 --> W11F["ไฟล์: metrics_exporter.c · main.go<br/>metrics_test.go"]
+    W11 --> W11T["ทดสอบ: make test: test_run<br/>curl :2112/metrics"]
+    P06 --> W12["Week 12<br/>Capstone: eBPF IPS"]
+    W12 --> W12H["Hook: xdp xdp_smart_ips"]
+    W12 --> W12M["Maps: LRU_HASH ×2 · ARRAY<br/>PERCPU_ARRAY · RINGBUF"]
+    W12 --> W12F["ไฟล์: bpf/ips_kern.c<br/>cmd/ips-agent/"]
+    W12 --> W12T["ทดสอบ: make test: test_run<br/>ping -f / SYN burst"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P06 phase
+    class W11,W12 week
+    class W11H,W12H hook
+    class W11M,W12M map
+    class W11F,W12F file
+    class W11T,W12T test

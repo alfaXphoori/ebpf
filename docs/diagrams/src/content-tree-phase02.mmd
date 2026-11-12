@@ -1,0 +1,27 @@
+flowchart LR
+    P02["เฟส 02: First Step into eBPF<br/>คู่มือบทที่ 2"]
+    P02 --> W03["Week 03<br/>bpftool + bpftrace"]
+    W03 --> W03H["Hook: tracepoint sched_process_exec<br/>kprobe tcp_sendmsg<br/>tracepoint tcp:tcp_retransmit_skb"]
+    W03 --> W03M["Maps: bpftrace @maps<br/>hist / count / sum"]
+    W03 --> W03F["ไฟล์: trace_exec_and_tcp.bt"]
+    W03 --> W03T["ทดสอบ: bpftool prog / map dump<br/>xlated + jited"]
+    P02 --> W04["Week 04<br/>BCC + Python"]
+    W04 --> W04H["Hook: kprobe + kretprobe<br/>tcp_v4_connect"]
+    W04 --> W04M["Maps: HASH start_ts<br/>PERF_OUTPUT + log2 hist"]
+    W04 --> W04F["ไฟล์: tcp_v4_latency.py"]
+    W04 --> W04T["ทดสอบ: curl → latency histogram"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P02 phase
+    class W03,W04 week
+    class W03H,W04H hook
+    class W03M,W04M map
+    class W03F,W04F file
+    class W03T,W04T test

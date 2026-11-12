@@ -1,0 +1,67 @@
+flowchart TD
+    W01["W01 Packet bytes + netns"]
+    W02["W02 Bridge/Router + data path"]
+    W03["W03 bpftool + bpftrace"]
+    W04["W04 BCC + Python"]
+    W05["W05 CO-RE + bpf2go"]
+    W06["W06 Maps + Verifier + test_run"]
+    W07["W07 XDP parsing"]
+    W08["W08 XDP LB + TC egress"]
+    W09["W09 Ring Buffer + uprobes"]
+    W10["W10 BPF LSM"]
+    W11["W11 Prometheus exporter"]
+    W12["W12 Capstone IPS"]
+    W13["W13 Dropwatch"]
+    W14["W14 cgroup connect4"]
+    W15["W15 Reverse shell guard"]
+    W16["W16 eBPF integrity audit"]
+    W17["W17 biolatency"]
+    W18["W18 CPU profiler + stacks"]
+    W19["W19 OOM watcher"]
+    W20["W20 sockops + sk_msg"]
+    W21["W21 AF_XDP"]
+    W22["W22 fentry/fexit"]
+    W23["W23 BPF iterators"]
+    W24["W24 kfuncs + Arena"]
+    W25["W25 struct_ops + sched_ext"]
+    W26["W26 Tetragon + Cilium"]
+
+    W01 -- "netns + veth" --> W02
+    W02 -- "จุด hook ใน data path" --> W07
+    W03 -- "kprobe + map แบบ bpftrace" --> W04
+    W04 -- "เลิก runtime compile สู่ CO-RE" --> W05
+    W05 -- "bpf2go + vmlinux.h" --> W06
+    W06 -- "map + test_run" --> W07
+    W06 -- "map + CO-RE" --> W09
+    W06 -- "HASH/ARRAY map" --> W17
+    W07 -- "XDP parsing" --> W08
+    W07 -- "XDP firewall" --> W11
+    W07 -- "XDP redirect" --> W21
+    W11 -- "Prometheus exporter" --> W12
+    W09 -- "ring buffer" --> W12
+    W09 -- "ring buffer" --> W10
+    W09 -- "ring buffer" --> W13
+    W09 -- "ring buffer" --> W14
+    W09 -- "ring buffer + CO-RE" --> W15
+    W09 -- "ring buffer" --> W19
+    W13 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
+    W14 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
+    W10 -- "fentry" --> W16
+    W10 -- "fentry" --> W22
+    W10 -- "BPF LSM" --> W26
+    W14 -- "แนบโปรแกรมกับ cgroup" --> W20
+    W17 -- "tracing ประสิทธิภาพ" --> W18
+    W18 -- "stack + kallsyms" --> W19
+    W22 -- "BTF tracing program" --> W23
+    W22 -- "BTF + BPF_PROG" --> W24
+    W24 -- "kfuncs" --> W25
+    W08 -- "TC/TCX สู่ Cilium" --> W26
+
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef core fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef sec fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef perf fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class W01,W02,W07,W08,W13,W20,W21 net
+    class W03,W04,W05,W06,W22,W23,W24,W25 core
+    class W09,W10,W12,W14,W15,W16,W26 sec
+    class W11,W17,W18,W19 perf

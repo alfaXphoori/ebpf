@@ -1,0 +1,60 @@
+flowchart LR
+    ROOT["eBPF Zero to Hero<br/>11 เฟส · 26 สัปดาห์"]
+    ROOT --> DOCS["docs/"]
+    DOCS --> GUIDE["MASTER_STUDY_GUIDE.md<br/>คู่มือ 11 บท"]
+    DOCS --> TREE["CONTENT_TREE.md<br/>แผนผังนี้"]
+    DOCS --> GLOS["GLOSSARY.md<br/>อภิธานศัพท์"]
+    ROOT --> TOOLS["เครื่องมือ"]
+    TOOLS --> SETUP["scripts/setup_env.sh"]
+    TOOLS --> MK["Makefile<br/>make · make test · make check"]
+    TOOLS --> VM["vmlinux.h<br/>จาก BTF ของเคอร์เนล"]
+    ROOT --> P01["เฟส 01: Network Foundation"]
+    P01 --> W01["W01 Packet bytes + Network Namespaces"]
+    P01 --> W02["W02 Bridge, Router + Data Path"]
+    ROOT --> P02["เฟส 02: First Step into eBPF"]
+    P02 --> W03["W03 bpftool + bpftrace"]
+    P02 --> W04["W04 BCC + Python"]
+    ROOT --> P03["เฟส 03: Modern eBPF Core (CO-RE)"]
+    P03 --> W05["W05 libbpf, CO-RE + bpf2go"]
+    P03 --> W06["W06 Maps + Verifier + test_run"]
+    ROOT --> P04["เฟส 04: High-Speed Networking"]
+    P04 --> W07["W07 XDP Parsing + Bounds Checking"]
+    P04 --> W08["W08 XDP LB + TC Egress"]
+    ROOT --> P05["เฟส 05: Security + Observability"]
+    P05 --> W09["W09 Ring Buffer + TLS Uprobes"]
+    P05 --> W10["W10 BPF LSM"]
+    ROOT --> P06["เฟส 06: Production Capstone"]
+    P06 --> W11["W11 Prometheus Exporter"]
+    P06 --> W12["W12 Capstone: eBPF IPS"]
+    ROOT --> P07["เฟส 07: Advanced Kernel Security"]
+    P07 --> W13["W13 Dropwatch"]
+    P07 --> W14["W14 Zero-Trust Egress"]
+    P07 --> W15["W15 Reverse Shell Guard"]
+    P07 --> W16["W16 eBPF Integrity Audit"]
+    ROOT --> P08["เฟส 08: System Performance"]
+    P08 --> W17["W17 biolatency"]
+    P08 --> W18["W18 CPU Profiler + Flame Graph"]
+    P08 --> W19["W19 Page Faults + OOM"]
+    ROOT --> P09["เฟส 09: Socket Acceleration"]
+    P09 --> W20["W20 sockops + sk_msg Bypass"]
+    P09 --> W21["W21 AF_XDP Redirect"]
+    ROOT --> P10["เฟส 10: Cutting-Edge eBPF"]
+    P10 --> W22["W22 fentry / fexit Trampoline"]
+    P10 --> W23["W23 BPF Task Iterators"]
+    ROOT --> P11["เฟส 11: Modern Extensibility"]
+    P11 --> W24["W24 kfuncs + BPF Arena"]
+    P11 --> W25["W25 struct_ops + sched_ext"]
+    P11 --> W26["W26 Tetragon + Cilium"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class ROOT root
+    class DOCS,GUIDE,TREE,GLOS,TOOLS,SETUP,MK,VM doc
+    class P01,P02,P03,P04,P05,P06,P07,P08,P09,P10,P11 phase
+    class W01,W02,W03,W04,W05,W06,W07,W08,W09,W10,W11,W12,W13,W14,W15,W16,W17,W18,W19,W20,W21,W22,W23,W24,W25,W26 week

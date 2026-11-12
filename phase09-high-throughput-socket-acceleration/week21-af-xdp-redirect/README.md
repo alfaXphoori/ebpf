@@ -13,60 +13,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all / make test"]
-        SRC["xsk_kern.c<br/>SEC xdp"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/af-xdp-pipeline"]
-        GEN --> TST["go test -exec sudo<br/>TestVerdictsWithoutSocket, TestRedirectWithSocket"]
-    end
-
-    subgraph USER["③ User Space: main.go + xsk.go"]
-        U1["loadBpfObjects()<br/>link.AttachXDP(w21-xsk0)"] --> U2["NewXSK(): socket AF_XDP<br/>mmap UMEM + XDP_UMEM_REG"]
-        U2 --> U3["ตั้งขนาดและ mmap FILL, COMPLETION, RX ring<br/>bind queue 0 แบบ XDP_COPY"]
-        U3 --> U4["XsksMap.Put(queue 0, xsk fd)"]
-        U4 --> U5["goroutine: xsk.Poll(200)<br/>→ xsk.Receive()"]
-        U5 --> U6["describePacket() พิมพ์ RX<br/>คืน frame → fillFrames()"]
-        U6 --> U5
-        U4 --> U7["ticker 2s: XskStats + xsk.Stats()<br/>rx_dropped, ring_full, fill_empty"]
-    end
-
-    subgraph KERNEL["④ Kernel Space: XDP บน w21-xsk0"]
-        XP["xsk_redirect_prog()<br/>bounds check eth + iphdr"] --> D1{"IPv4 และ UDP?"}
-        D1 -- "ไม่ใช่: ICMP, ARP, TCP" --> PASS["XDP_PASS → TCP/IP Stack ปกติ<br/>เคอร์เนลตอบ ping"]
-        D1 -- "ใช่" --> D2{"bpf_redirect_map()<br/>xsks_map มี socket ของ rx_queue_index?"}
-        D2 -- "ไม่มี" --> PASS
-        D2 -- "มี: Kernel Bypass" --> REDIR["XDP_REDIRECT<br/>copy เข้า frame ใน UMEM → RX ring"]
-        XM[("xsks_map<br/>XSKMAP key = queue id")]
-        XS[("xsk_stats<br/>ARRAY redirected, passed, no_xsk")]
-    end
-
-    subgraph LAB["② Lab Network"]
-        TX["netns w21-tx<br/>w21-peer0 10.21.0.2"] -- "veth pair" --> RXIF["netns w21-rx<br/>w21-xsk0 10.21.0.1"]
-        T1["ping -c 3 10.21.0.1"] --> TX
-        T2["UDP → 10.21.0.1:9999<br/>/dev/udp และ python 20000 pkts"] --> TX
-    end
-
-    BIN --> U1
-    RXIF --> XP
-    U1 -. "attach" .-> XP
-    U4 -. "ใส่ fd" .-> XM
-    XM -. "lookup" .-> D2
-    REDIR -- "RX ring" --> U5
-    U6 -. "FILL ring" .-> REDIR
-    D1 --> XS
-    D2 --> XS
-    XS -. "poll" .-> U7
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    class XP,D1,D2,PASS,REDIR kern
-    class U1,U2,U3,U4,U5,U6,U7 user
-    class XM,XS map
-    class TX,RXIF,T1,T2 net
-```
+![แผนภาพภาพรวมการทำงาน Week 21](../../docs/diagrams/week21-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 

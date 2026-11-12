@@ -8,13 +8,14 @@
 #   make clean        # remove bin/ and bpf2go generated files in every lab
 #   make list         # list all lab directories
 #   make vmlinux      # (re)generate ./vmlinux.h from the running kernel's BTF
+#   make diagrams     # re-render docs/diagrams/src/*.mmd into docs/diagrams/*.svg (needs docker)
 #   make week07       # build a single week (week01..week23)
 #   make week07-test  # test a single week
 #
 
 LABS := $(sort $(patsubst %/Makefile,%,$(wildcard phase*/week*/Makefile)))
 
-.PHONY: all test check clean list vmlinux $(LABS)
+.PHONY: all test check clean list vmlinux diagrams $(LABS)
 
 all: vmlinux.h
 	@set -e; for d in $(LABS); do \
@@ -33,8 +34,8 @@ test: vmlinux.h
 
 # Everything the old GitHub Actions job ran, on the local Linux 7.0 machine
 check: all test
-	bash -n scripts/setup_env.sh phase01-network-foundation/*/*.sh
-	python3 -m py_compile phase01-network-foundation/week01-packet-netns/raw_sniffer.py phase02-first-step-ebpf/week04-bcc-python/tcp_v4_latency.py
+	bash -n scripts/setup_env.sh scripts/render_diagrams.sh phase01-network-foundation/*/*.sh
+	python3 -m py_compile scripts/diagram_postprocess.py phase01-network-foundation/week01-packet-netns/raw_sniffer.py phase02-first-step-ebpf/week04-bcc-python/tcp_v4_latency.py
 	@echo "===> check passed"
 
 clean:
@@ -49,6 +50,10 @@ vmlinux.h:
 
 vmlinux:
 	bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h
+
+# Course diagrams: edit docs/diagrams/src/<name>.mmd, then run this
+diagrams:
+	scripts/render_diagrams.sh
 
 # Per-week shortcuts: `make week07`, `make week07-test`
 week%:

@@ -9,61 +9,7 @@
 
 ## 🗺️ แผนภาพภาพรวมการทำงาน (Workflow Overview)
 
-```mermaid
-flowchart TD
-    subgraph BUILD["① Build: make all"]
-        SRC["sock_enforce.c<br/>SEC cgroup/connect4: sock4_connect"] --> GEN["go generate → bpf2go"]
-        GEN --> BIN["go build → bin/sock-enforce"]
-    end
-
-    subgraph USER["② User Space: main.go"]
-        U1["prepareCgroup<br/>สร้าง /sys/fs/cgroup/w14-sock-enforce<br/>ปฏิเสธ root cgroup ถ้าไม่ใส่ -allow-root"] --> U2["loadBpfObjects"]
-        U2 --> U3["BlockedPorts.Put 2323<br/>BlockedIps.Put 10.99.99.99"]
-        U3 --> U4["link.AttachCgroup<br/>AttachCGroupInet4Connect"]
-        U4 --> U5["ringbuf.NewReader<br/>พิมพ์ DENY connect() ... → EPERM"]
-        U5 -. "Ctrl+C" .-> U6["พิมพ์ Final denies<br/>detach + ลบ cgroup"]
-    end
-
-    subgraph CLIENT["③ Test Client: client.py"]
-        C0(["python3 client.py"]) --> CG{"โปรเซสอยู่ใน cgroup<br/>w14-sock-enforce?"}
-        CG -- "ไม่: baseline" --> OKALL["เชื่อมต่อได้ทั้งหมด"]
-        CG -- "ใช่: echo PID → cgroup.procs" --> SYS["connect() IPv4<br/>TCP หรือ UDP"]
-        CG -- "ใช่ แต่ bypass" --> BYP["UDP sendto ไม่ connect<br/>TCP6 ::ffff:127.0.0.1"]
-    end
-
-    subgraph KERNEL["④ Kernel Space: ก่อนสร้าง SYN"]
-        H["sock4_connect()"] --> D0{"user_family == AF_INET?"}
-        D0 -- "ไม่" --> ALLOW["return 1 → ALLOW"]
-        D0 -- "ใช่" --> D1{"user_ip4 อยู่ใน blocked_ips?"}
-        D1 -- "ใช่" --> DENY["นับ drop + emit_deny<br/>return 0 → EPERM"]
-        D1 -- "ไม่" --> D2{"user_port อยู่ใน blocked_ports?"}
-        D2 -- "ใช่" --> DENY
-        D2 -- "ไม่" --> ALLOW
-        MP[("blocked_ports HASH<br/>port → count")]
-        MI[("blocked_ips HASH<br/>ip → count")]
-        RB[("deny_events RINGBUF 64 KB")]
-    end
-
-    BIN --> U1
-    U3 -.-> MP
-    U3 -.-> MI
-    U4 -. "attach" .-> H
-    SYS --> H
-    BYP -. "ไม่ผ่าน connect4 → OK" .-> OKALL
-    MI -.-> D1
-    MP -.-> D2
-    DENY -.-> RB
-    RB -.-> U5
-
-    classDef kern fill:#fde2e2,stroke:#c0392b,color:#000
-    classDef user fill:#e2f0fd,stroke:#2471a3,color:#000
-    classDef map fill:#fff4d6,stroke:#b9770e,color:#000
-    classDef net fill:#e3f7e3,stroke:#1e8449,color:#000
-    class H,ALLOW,DENY kern
-    class U1,U2,U3,U4,U5,U6 user
-    class MP,MI,RB map
-    class C0,OKALL,SYS,BYP net
-```
+![แผนภาพภาพรวมการทำงาน Week 14](../../docs/diagrams/week14-overview.svg)
 
 > **สัญลักษณ์:** 🟥 Kernel Space · 🟦 User Space / เครื่องมือ · 🟨 BPF Map · 🟩 เครือข่าย (netns, veth, แพ็กเก็ต) · ◇ จุดตัดสินใจ
 

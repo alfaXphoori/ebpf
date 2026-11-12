@@ -1,0 +1,27 @@
+flowchart TD
+    subgraph TRAMP["10.1 BPF Trampoline: fentry / fexit"]
+        F0["ฟังก์ชันเคอร์เนลมี ftrace NOP 5 ไบต์"] --> F1["attach: เขียนทับเป็น call<br/>ไป Trampoline ที่ JIT สร้าง"]
+        F1 --> F2["fentry: อ่าน args ตาม BTF<br/>ไม่ต้องใช้ PT_REGS_PARM"]
+        F2 --> F3["ฟังก์ชันจริงทำงาน"]
+        F3 --> F4["fexit: อ่าน args + ret<br/>ชนิดของ ret ต้องตรง BTF"]
+        F4 --> F5["เทียบต้นทุน: fentry ถูกกว่า kprobe<br/>fexit ถูกกว่า kretprobe ชัดเจน"]
+    end
+
+    subgraph ITER["10.2 BPF Iterators: iter/task"]
+        I1["User Space: BPF_ITER_CREATE"] --> I2["read() fd ของ iterator"]
+        I2 --> I3["เคอร์เนลเรียกโปรแกรม 1 ครั้งต่อ task"]
+        I3 --> I4{"seq_num == 0?"}
+        I4 -- "ใช่" --> I5["พิมพ์ Header"]
+        I4 -- "ไม่" --> I6{"pid == tgid และ<br/>ไม่ใช่ PF_KTHREAD?"}
+        I5 --> I6
+        I6 -- "ใช่" --> I7["BPF_SEQ_PRINTF → seq_file"]
+        I6 -- "ไม่" --> I8["ข้าม thread นี้"]
+        I7 --> I9["ได้ข้อความทั้งหมดใน read() เดียว<br/>เร็วกว่าวน /proc หลายเท่า"]
+    end
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class F0,F1,F2,F3,F4,I3,I4,I5,I6,I7,I8 kern
+    class F5,I1,I2,I9 user

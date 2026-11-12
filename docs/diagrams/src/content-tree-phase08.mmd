@@ -1,0 +1,32 @@
+flowchart LR
+    P08["เฟส 08: System Performance<br/>คู่มือบทที่ 8"]
+    P08 --> W17["Week 17<br/>biolatency"]
+    W17 --> W17H["Hook: tp_btf/block_rq_issue<br/>tp_btf/block_rq_complete"]
+    W17 --> W17M["Maps: HASH start_times<br/>HASH hist · ARRAY"]
+    W17 --> W17F["ไฟล์: biolatency.c<br/>main.go"]
+    W17 --> W17T["ทดสอบ: gnudd (GNU dd) O_DIRECT"]
+    P08 --> W18["Week 18<br/>CPU Profiler + Flame Graph"]
+    W18 --> W18H["Hook: perf_event 99 Hz"]
+    W18 --> W18M["Maps: STACK_TRACE · HASH<br/>PERCPU_ARRAY"]
+    W18 --> W18F["ไฟล์: cpu_stacks.c · main.go<br/>usersyms.go · flamegraph.py"]
+    W18 --> W18T["ทดสอบ: workload/busy.c<br/>→ flame graph SVG"]
+    P08 --> W19["Week 19<br/>Page Faults + OOM"]
+    W19 --> W19H["Hook: tracepoint/exceptions/page_fault_user<br/>tracepoint/oom/mark_victim"]
+    W19 --> W19M["Maps: HASH page_fault_counts<br/>RINGBUF oom_events"]
+    W19 --> W19F["ไฟล์: oom_watcher.c<br/>main.go"]
+    W19 --> W19T["ทดสอบ: systemd-run<br/>MemoryMax=50M"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P08 phase
+    class W17,W18,W19 week
+    class W17H,W18H,W19H hook
+    class W17M,W18M,W19M map
+    class W17F,W18F,W19F file
+    class W17T,W18T,W19T test

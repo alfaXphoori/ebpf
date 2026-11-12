@@ -1,0 +1,27 @@
+flowchart LR
+    P04["เฟส 04: High-Speed Networking<br/>คู่มือบทที่ 4"]
+    P04 --> W07["Week 07<br/>XDP Parsing + Bounds Checking"]
+    W07 --> W07H["Hook: xdp"]
+    W07 --> W07M["Maps: HASH blocked_ips<br/>PERCPU_ARRAY proto_counters"]
+    W07 --> W07F["ไฟล์: xdp_firewall.c · main.go<br/>main_test.go"]
+    W07 --> W07T["ทดสอบ: make test: test_run<br/>netns traffic"]
+    P04 --> W08["Week 08<br/>XDP LB + TC Egress"]
+    W08 --> W08H["Hook: xdp + tc (TCX)"]
+    W08 --> W08M["Maps: LRU_HASH flows<br/>HASH · ARRAY"]
+    W08 --> W08F["ไฟล์: xdp_lb.c · tc_egress.c<br/>main.go · main_test.go"]
+    W08 --> W08T["ทดสอบ: make test: test_run<br/>curl VIP 10.10.1.100"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P04 phase
+    class W07,W08 week
+    class W07H,W08H hook
+    class W07M,W08M map
+    class W07F,W08F file
+    class W07T,W08T test

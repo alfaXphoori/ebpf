@@ -1,0 +1,38 @@
+flowchart TD
+    subgraph BUILD["① Build: make all"]
+        SRC["task_iter.c<br/>SEC iter/task → dump_task()"] --> GEN["go generate → bpf2go"]
+        GEN --> BIN["go build → bin/task-iter"]
+    end
+
+    subgraph USER["② User Space: main.go"]
+        U1["rlimit.RemoveMemlock()<br/>loadBpfObjects()"] --> U2["link.AttachIter(DumpTask)"]
+        U2 --> U3["readIter(): it.Open() → io.ReadAll<br/>วัดเวลา best-of -runs รอบ"]
+        U3 --> U5["พิมพ์ตารางโปรเซส + สรุปเวลา<br/>iter/task เทียบ procfs"]
+        P1["procfsWalk(): os.ReadDir /proc<br/>→ ReadFile /proc/PID/status ทีละไฟล์"] --> U5
+    end
+
+    subgraph KERNEL["③ Kernel Space: bpf_iter"]
+        K0(["read() บน iterator fd"]) --> K1["เคอร์เนลเดินรายการ task_struct<br/>เรียก dump_task() 1 ครั้งต่อ task"]
+        K1 --> K2{"seq_num = 0 ?"}
+        K2 -- "ใช่" --> K3["พิมพ์ header 1 ครั้ง"]
+        K2 --> K4{"pid = tgid และ<br/>ไม่ใช่ PF_KTHREAD และมี mm ?"}
+        K4 -- "ไม่" --> K5["ข้าม thread / kernel thread"]
+        K4 -- "ใช่" --> K6["BPF_SEQ_PRINTF<br/>PID, UID, THREADS, VM_SIZE_KB, COMM"]
+        K3 --> SEQ["seq_file เดียว<br/>บัฟเฟอร์ข้อความ ไม่ใช่ map"]
+        K6 --> SEQ
+    end
+
+    subgraph TEST["④ ทดสอบ: make test"]
+        T1["TestTaskIterOneRowPerProcess"] --> T2["header 1 บรรทัด, PID ละ 1 แถว<br/>มี PID 1 และ PID ตัวเอง, THREADS มากกว่า 1"]
+    end
+
+    BIN --> U1
+    U3 -. "read" .-> K0
+    SEQ -. "ข้อความทั้งหมด" .-> U3
+
+    SEQ ~~~ T1
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class K1,K2,K3,K4,K5,K6,SEQ kern
+    class U1,U2,U3,U5,P1 user

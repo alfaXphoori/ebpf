@@ -1,0 +1,34 @@
+flowchart TD
+    subgraph CORE["3.1–3.2 CO-RE: Compile Once – Run Everywhere"]
+        K1["/sys/kernel/btf/vmlinux"] --> K2["bpftool btf dump → vmlinux.h"]
+        K2 --> K3["prog.bpf.c ใช้ BPF_CORE_READ"]
+        K3 --> K4["clang → .o พร้อม CO-RE relocation"]
+        K4 --> K5["Loader เทียบ BTF ของเครื่องปลายทาง<br/>ปรับ offset ของ field อัตโนมัติ"]
+        K5 --> K6["รันได้หลายเวอร์ชันเคอร์เนล<br/>ไม่ต้องมี linux-headers"]
+    end
+
+    subgraph MAPS["3.3 เลือก Map ให้เหมาะกับงาน"]
+        Q{"ลักษณะข้อมูล?"}
+        Q -- "Key-Value ทั่วไป" --> M1[("HASH")]
+        Q -- "หน่วยความจำจำกัด<br/>ไล่ entry เก่าทิ้งได้" --> M2[("LRU_HASH")]
+        Q -- "Counter ความถี่สูง" --> M3[("PERCPU_ARRAY")]
+        Q -- "สตรีม Event" --> M4[("RINGBUF")]
+    end
+
+    subgraph RACE["3.4 แก้ Race Condition ข้าม CPU"]
+        R0["หลาย CPU เขียน key เดียวกัน<br/>อ่าน-บวก-เขียน ทับกัน"] --> R1{"วิธีแก้"}
+        R1 --> R2["__sync_fetch_and_add<br/>atomic"]
+        R1 --> R3["Per-CPU map<br/>User Space รวมผลเอง"]
+    end
+
+    K6 --> Q
+    M1 --> R0
+    M3 --> R3
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class K1,K5 kern
+    class K2,K3,K4,K6 user
+    class M1,M2,M3,M4 map

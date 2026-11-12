@@ -1,0 +1,27 @@
+flowchart LR
+    P01["เฟส 01: Network Foundation<br/>คู่มือบทที่ 1"]
+    P01 --> W01["Week 01<br/>Packet bytes + Network Namespaces"]
+    W01 --> W01H["Hook: ไม่ใช้ BPF<br/>AF_PACKET raw socket"]
+    W01 --> W01M["Maps: —"]
+    W01 --> W01F["ไฟล์: lab_netns.sh<br/>raw_sniffer.py"]
+    W01 --> W01T["ทดสอบ: ping / UDP ข้าม veth<br/>sniffer แกะ Eth/IP/TCP"]
+    P01 --> W02["Week 02<br/>Bridge, Router + Data Path"]
+    W02 --> W02H["Hook: ไม่ใช้ BPF<br/>br0 + ip_forward"]
+    W02 --> W02M["Maps: —"]
+    W02 --> W02F["ไฟล์: bridge_router_lab.sh"]
+    W02 --> W02T["ทดสอบ: ping ข้าม bridge<br/>softnet_stat, perf net"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P01 phase
+    class W01,W02 week
+    class W01H,W02H hook
+    class W01M,W02M map
+    class W01F,W02F file
+    class W01T,W02T test

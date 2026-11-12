@@ -1,0 +1,36 @@
+flowchart TD
+    subgraph GEN["6.1 bpf2go: สร้างโค้ดล่วงหน้า"]
+        G1["go:generate bpf2go ... prog.c"] --> G2["bpf_bpfel.o + bpf_bpfel.go<br/>bpfObjects ที่ type-safe"]
+        G2 --> G3["go build → binary เดียว<br/>ฝัง ELF ไว้ข้างใน · ไม่ต้องใช้ CGO"]
+    end
+
+    subgraph RUN["6.2 พิมพ์เขียว Go Control Plane"]
+        U1["rlimit.RemoveMemlock()"] --> U2["loadBpfObjects()"]
+        U2 --> U3{"Verifier ผ่าน?"}
+        U3 -- "ไม่" --> U4["*ebpf.VerifierError<br/>พิมพ์ด้วย %+v · บรรทัดท้ายคือสาเหตุ"]
+        U3 -- "ผ่าน" --> U5["link.AttachXDP / Tracepoint / ..."]
+        U5 --> U6["อ่าน Map / ringbuf.Reader"]
+        U6 --> U7["Prometheus /metrics<br/>หรือ log / dashboard"]
+        U7 --> U8["Ctrl+C → defer Close()<br/>detach ทุก link"]
+    end
+
+    subgraph TEST["6.4 ทดสอบด้วย BPF_PROG_TEST_RUN"]
+        T1["สร้างแพ็กเก็ตจำลอง<br/>ปกติ, ตรง Policy, ผิดรูป"] --> T2["prog.Run / Test / Benchmark"]
+        T2 --> T3["ตรวจ retval, DataOut<br/>และค่าใน Map หลังรัน"]
+    end
+
+    subgraph CHEAT["6.3 Cheat Sheet ตรวจระบบจริง"]
+        C1["bpftool prog / map / net"]
+        C2["ip link xdp · tc filter"]
+    end
+
+    G3 --> U1
+    U2 --> T2
+    U5 -. "ตรวจว่า attach จริง" .-> C1
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class G1,G2,G3,U1,U2,U5,U6,U7,U8,T1,T2,T3,C1,C2 user
+    class U3,U4 kern

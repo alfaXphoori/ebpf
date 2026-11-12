@@ -1,0 +1,27 @@
+flowchart LR
+    P09["เฟส 09: Socket Acceleration<br/>คู่มือบทที่ 9"]
+    P09 --> W20["Week 20<br/>sockops + sk_msg Bypass"]
+    W20 --> W20H["Hook: sockops + sk_msg"]
+    W20 --> W20M["Maps: SOCKHASH<br/>ARRAY bypass_stats"]
+    W20 --> W20F["ไฟล์: sockops.c · main.go<br/>cmd/tcpbench/"]
+    W20 --> W20T["ทดสอบ: make test: end-to-end<br/>tcpbench / iperf3"]
+    P09 --> W21["Week 21<br/>AF_XDP Redirect"]
+    W21 --> W21H["Hook: xdp → XSKMAP"]
+    W21 --> W21M["Maps: XSKMAP · ARRAY"]
+    W21 --> W21F["ไฟล์: xsk_kern.c · xsk.go<br/>main.go · main_test.go"]
+    W21 --> W21T["ทดสอบ: make test<br/>UDP ใน netns w21"]
+
+    classDef root fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff
+    classDef phase fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#0f172a
+    classDef week fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef hook fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef file fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,color:#0f172a
+    classDef test fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef doc fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#0f172a
+    class P09 phase
+    class W20,W21 week
+    class W20H,W21H hook
+    class W20M,W21M map
+    class W20F,W21F file
+    class W20T,W21T test
