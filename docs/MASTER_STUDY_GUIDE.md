@@ -5,7 +5,7 @@
 
 ## สารบัญเนื้อหา (Table of Contents)
 
-> 🌳 ดูแผนผังเนื้อหาทั้งหลักสูตร (เฟส → สัปดาห์ → Hook / Maps / ไฟล์ / การทดสอบ) ได้ที่ [`CONTENT_TREE.md`](CONTENT_TREE.md)
+> 🌳 ดูแผนผังเนื้อหาทั้งหลักสูตร (เฟส → สัปดาห์ → Hook / Maps / ไฟล์ / การทดสอบ) ได้ที่ [`CONTENT_TREE.md`](CONTENT_TREE.md) · 📖 ความหมายของศัพท์เทคนิคดูได้ที่ [`GLOSSARY.md`](GLOSSARY.md)
 
 1. [บทที่ 1: ผ่าโครงสร้าง Packet และการเดินทางใน Linux Kernel (เฟส 01)](#บทที่-1-ผ่าโครงสร้าง-packet-และการเดินทางใน-linux-kernel-เฟส-01)
    - [🗺️ แผนภาพภาพรวมบทที่ 1 (Chapter Overview)](#overview-1)

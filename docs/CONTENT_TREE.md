@@ -33,6 +33,7 @@ flowchart LR
     ROOT --> DOCS["docs/"]
     DOCS --> GUIDE["MASTER_STUDY_GUIDE.md<br/>คู่มือ 11 บท"]
     DOCS --> TREE["CONTENT_TREE.md<br/>แผนผังนี้"]
+    DOCS --> GLOS["GLOSSARY.md<br/>อภิธานศัพท์"]
     ROOT --> TOOLS["เครื่องมือ"]
     TOOLS --> SETUP["scripts/setup_env.sh"]
     TOOLS --> MK["Makefile<br/>make · make test · make check"]
@@ -84,7 +85,7 @@ flowchart LR
     classDef test fill:#e3f7e3,stroke:#1e8449,color:#000
     classDef doc fill:#fdebd0,stroke:#ca6f1e,color:#000
     class ROOT root
-    class DOCS,GUIDE,TREE,TOOLS,SETUP,MK,VM doc
+    class DOCS,GUIDE,TREE,GLOS,TOOLS,SETUP,MK,VM doc
     class P01,P02,P03,P04,P05,P06,P07,P08,P09,P10,P11 phase
     class W01,W02,W03,W04,W05,W06,W07,W08,W09,W10,W11,W12,W13,W14,W15,W16,W17,W18,W19,W20,W21,W22,W23,W24,W25,W26 week
 ```

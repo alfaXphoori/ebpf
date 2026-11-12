@@ -8,6 +8,7 @@
 ## 📚 แหล่งเรียนรู้หลักและสคริปต์สภาพแวดล้อม (Core References)
 
 - 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII + แผนภาพภาพรวม Mermaid ทุกบท โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
+- 📖 **อภิธานศัพท์ (Glossary)**: [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — ศัพท์ eBPF และเคอร์เนล 86 คำ แบ่ง 10 หมวด พร้อมความหมายภาษาไทยและลิงก์ไปยังสัปดาห์ที่สอน
 - 🌳 **แผนผังเนื้อหาทั้งหมด (Content Tree)**: [`docs/CONTENT_TREE.md`](docs/CONTENT_TREE.md) — ต้นไม้ภาพรวม 11 เฟส / 26 สัปดาห์ และต้นไม้รายเฟสที่บอก Hook, Maps, ไฟล์ และวิธีทดสอบของทุกแล็บ
 - ⚙️ **สคริปต์ติดตั้งสภาพแวดล้อมอัตโนมัติ**: [`scripts/setup_env.sh`](scripts/setup_env.sh) — Provisioning Ubuntu 26.04 LTS (Kernel 7.0+, แพลตฟอร์มหลัก) / 24.04 LTS (Kernel 6.8, Best-effort), ตรวจสอบ BTF, สร้าง `vmlinux.h` และตั้งค่า BPF LSM
 
@@ -289,6 +290,7 @@ flowchart TD
 .
 ├── docs/
 │   ├── CONTENT_TREE.md                    # แผนผังต้นไม้เนื้อหาทั้งหมด (Mermaid)
+│   ├── GLOSSARY.md                        # อภิธานศัพท์ eBPF ไทย-อังกฤษ
 │   └── MASTER_STUDY_GUIDE.md              # หนังสือคู่มือและทฤษฎีฉบับสมบูรณ์ 11 บท (ภาษาไทย)
 ├── scripts/
 │   └── setup_env.sh                       # สคริปต์ติดตั้ง Toolchain และสภาพแวดล้อมอัตโนมัติ
