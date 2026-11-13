@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 01: พื้นฐานระบบเครือข่ายและการดักจับแพ็กเก็ต (Packet Sniffing & Network Namespaces)
 
-ยินดีต้อนรับสู่ **Week 01** ของหลักสูตร **eBPF Zero to Hero**! 
+**Week 01** — ปูพื้นฐานเครือข่ายและ Network Namespace ด้วยการลงมือจับแพ็กเก็ตจริง 
 ก่อนที่เราจะเขียนโปรแกรม eBPF และโปรแกรม XDP เพื่อดักจับหรือกรองแพ็กเก็ตด้วยความเร็วระดับ Kernel Space สิ่งแรกที่วิศวกรระบบทุกคนต้องเข้าใจอย่างถ่องแท้คือ: **"แพ็กเก็ตเดินทางใน Linux Kernel อย่างไร และโครงสร้างระดับไบต์ (Byte-level layout) ของ Ethernet, IPv4, TCP, UDP และ ICMP จัดเรียงตัวอย่างไร"**
 
 ในสัปดาห์นี้ เราจะสร้างห้องทดลองเครือข่ายจำลองแบบเสมือนจริงด้วย **Linux Network Namespaces** และพัฒนา **Raw Packet Sniffer ด้วยภาษา Python** โดยไม่พึ่งพา External Library อย่าง Scapy เพื่อแกะไบต์ออกมาทีละฟิลด์ด้วย `struct.unpack`
@@ -17,7 +17,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 Linux Network Namespaces คืออะไร?
 ในระบบปฏิบัติการ Linux, **Network Namespace (`netns`)** เป็นฟีเจอร์ระดับเคอร์เนลที่ทำการแยกส่วน (Isolate) ทรัพยากรเครือข่ายออกจากกันโดยสิ้นเชิง เสมือนว่าคุณมีคอมพิวเตอร์และเราเตอร์แยกกันหลายๆ เครื่องอยู่ในระบบเดียวกัน แต่ละ Namespace จะมี:
@@ -468,24 +468,24 @@ rtt min/avg/max/mdev = 0.023/0.047/0.074/0.020 ms
 
 ### ระดับพื้นฐาน
 1. **แยกโปรโตคอลด้วยตัวกรอง**: รัน sniffer ด้วย `--protocol udp` แล้วส่งทั้ง ping และ UDP จาก `w01-ns1`
-   - **สิ่งที่ต้องส่ง**: ภาพหน้าจอ/ข้อความผลลัพธ์ที่แสดงเฉพาะบรรทัด `[UDP]` พร้อมอธิบายว่าทำไมสถิติท้ายโปรแกรมยังนับ `ICMP Packets` ด้วย (ดูลำดับการนับ `STATS` เทียบกับ `continue` ในโค้ด)
+   - **ผลที่ควรได้**: ภาพหน้าจอ/ข้อความผลลัพธ์ที่แสดงเฉพาะบรรทัด `[UDP]` พร้อมอธิบายว่าทำไมสถิติท้ายโปรแกรมยังนับ `ICMP Packets` ด้วย (ดูลำดับการนับ `STATS` เทียบกับ `continue` ในโค้ด)
    - **วิธีตรวจ**: `sudo ip netns exec w01-ns2 python3 raw_sniffer.py -i w01-veth2 -p udp` แล้วใน Terminal 2: `sudo ip netns exec w01-ns1 ping -c 2 10.10.1.2; sudo ip netns exec w01-ns1 bash -c "echo hi | nc -u -w1 10.10.1.2 9999"`
 2. **คำนวณ Offset ด้วยมือ**: จาก hexdump ของ ICMP Echo Request ในหัวข้อ 4.2 ระบุว่า ICMP Identifier และ Sequence Number อยู่ไบต์ใดของ ICMP Header และมีค่าเท่าใด
-   - **สิ่งที่ต้องส่ง**: ตารางไบต์ -> ฟิลด์ -> ค่า (ฐาน 16 และฐาน 10)
+   - **ผลที่ควรได้**: ตารางไบต์ -> ฟิลด์ -> ค่า (ฐาน 16 และฐาน 10)
    - **วิธีตรวจ**: เทียบกับ `sudo ip netns exec w01-ns2 tcpdump -ni w01-veth2 -c 2 -vv icmp` ซึ่งพิมพ์ `id` และ `seq` ออกมาให้
 
 ### ระดับปานกลาง
 3. **เพิ่ม TCP Window Scale**: แก้ `parse_tcp()` ให้อ่าน TCP Options (เมื่อ `header_len > 20`) และพิมพ์ `MSS` กับ `WScale` ของแพ็กเก็ต `[SYN]`
-   - **สิ่งที่ต้องส่ง**: diff ของโค้ด + ผลลัพธ์ที่เห็น `MSS=1460` (ค่าจริงขึ้นกับ MTU) และ `WScale=N` บนบรรทัด SYN/SYN-ACK
+   - **ผลที่ควรได้**: diff ของโค้ด + ผลลัพธ์ที่เห็น `MSS=1460` (ค่าจริงขึ้นกับ MTU) และ `WScale=N` บนบรรทัด SYN/SYN-ACK
    - **วิธีตรวจ**: `sudo ip netns exec w01-ns2 nc -l -p 8080 &` แล้ว `sudo ip netns exec w01-ns1 bash -c "echo hi | nc -w1 10.10.1.2 8080"`; เทียบกับ `tcpdump -ni w01-veth2 -c 3 tcp` ซึ่งแสดง `options [mss ...,wscale ...]`
 4. **ตรวจ IPv4 Header Checksum**: เขียนฟังก์ชันคำนวณ Internet Checksum (RFC 1071) แล้วพิมพ์ `CHK=OK/BAD` ต่อท้ายบรรทัด IPv4 ทุกบรรทัด
-   - **สิ่งที่ต้องส่ง**: โค้ด + ผลลัพธ์ที่ทุกแพ็กเก็ตเป็น `OK` เมื่อปิด offload แล้ว
+   - **ผลที่ควรได้**: โค้ด + ผลลัพธ์ที่ทุกแพ็กเก็ตเป็น `OK` เมื่อปิด offload แล้ว
    - **วิธีตรวจ**: รัน `sudo ./lab_netns.sh capture` (หรือรัน sniffer เอง) ทุกบรรทัดต้องขึ้น `CHK=OK`
 
 ### ระดับท้าทาย
 5. **Topology 3 โหนดแบบ Router**: เพิ่ม namespace `w01-r` ตรงกลางเป็น Router (`w01-ns1` <-> `w01-r` <-> `w01-ns2` คนละ subnet) เปิด `net.ipv4.ip_forward=1` **ภายใน** `w01-r` เท่านั้น
-   - **สิ่งที่ต้องส่ง**: สคริปต์ `setup`/`clean` ที่ปรับปรุงแล้ว + ผล sniffer ที่เห็น `TTL=63` (ลดลง 1 หลังผ่าน Router)
+   - **ผลที่ควรได้**: สคริปต์ `setup`/`clean` ที่ปรับปรุงแล้ว + ผล sniffer ที่เห็น `TTL=63` (ลดลง 1 หลังผ่าน Router)
    - **วิธีตรวจ**: `sudo ip netns exec w01-ns1 ping -c 2 <IP ของ w01-ns2>` สำเร็จ และ `sysctl net.ipv4.ip_forward` ของ Host ต้องไม่เปลี่ยน
 6. **ลดภาระด้วย Classic BPF**: ใช้ `SO_ATTACH_FILTER` ผูก cBPF ที่ได้จาก `tcpdump -dd icmp` เข้ากับ raw socket เพื่อให้เคอร์เนลกรองเฉพาะ ICMP ก่อนส่งขึ้น User Space (นี่คือบรรพบุรุษของ eBPF!)
-   - **สิ่งที่ต้องส่ง**: โค้ด + คำอธิบายว่าแตกต่างจากตัวกรอง `--protocol` เดิมอย่างไร
+   - **ผลที่ควรได้**: โค้ด + คำอธิบายว่าแตกต่างจากตัวกรอง `--protocol` เดิมอย่างไร
    - **วิธีตรวจ**: ส่ง UDP และ ping พร้อมกัน — `Total Packets Captured` ต้องนับเฉพาะ ICMP (เพราะแพ็กเก็ตอื่นไม่ถูกส่งขึ้นมาถึง socket เลย)

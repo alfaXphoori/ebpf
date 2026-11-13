@@ -14,7 +14,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 สถาปัตยกรรม Smart IPS: การทำงานระหว่าง Data Plane และ Control Plane
 ในระบบเครือข่ายความเร็วสูง การหยุดยั้งการโจมตีแบบ DoS/DDoS ต้องทำตั้งแต่จุดที่เร็วที่สุดเท่าที่จะเป็นไปได้ ก่อนที่แพ็กเก็ตจะถูกส่งต่อเข้าสู่ Kernel Network Stack ปกติ
@@ -490,24 +490,24 @@ ips_total_bytes 29762
 
 ### ระดับพื้นฐาน
 1. **ปรับ Window ได้จาก Flag**: เพิ่ม Flag `-window` (เช่น `500ms`, `2s`) ให้ Agent แทนค่า `time.Second` ที่ฝังไว้ และแสดงใน `[CONFIG]` Log
-   - **ส่งงาน**: Diff ของ `main.go` + Log ตอนรันด้วย `-window 2s`
+   - **ผลที่ควรได้**: Diff ของ `main.go` + Log ตอนรันด้วย `-window 2s`
    - **ตรวจสอบ**: เพิ่มเทสต์ที่ตั้ง Window = 300ms แล้วยืนยันว่ายังถูก Rate-limit ที่ 200ms และผ่านได้อีกครั้งหลัง 350ms; `make test` ผ่าน
 2. **Allowlist**: เพิ่ม `BPF_MAP_TYPE_HASH` ชื่อ `allowlist_map` ที่ IP ในนี้จะ `XDP_PASS` เสมอ (ตรวจก่อน Blacklist) และเพิ่ม REST Endpoint `/api/allowlist`
-   - **ส่งงาน**: โค้ด C/Go + ผลการ `ping -f` จาก IP ที่อยู่ใน Allowlist ซึ่งไม่ถูกแบน
+   - **ผลที่ควรได้**: โค้ด C/Go + ผลการ `ping -f` จาก IP ที่อยู่ใน Allowlist ซึ่งไม่ถูกแบน
    - **ตรวจสอบ**: เทสต์ `BPF_PROG_TEST_RUN` ที่ยิง SYN จาก IP ใน Allowlist เกิน Limit แล้วยังได้ `XDP_PASS` และไม่มี Entry ใน `blacklist_map`
 
 ### ระดับปานกลาง
 1. **UDP Flood Detection**: เพิ่มการนับ UDP ต่อ IP พร้อม `CONF_UDP_LIMIT` และ `REASON_UDP_FLOOD`
-   - **ส่งงาน**: โค้ด C/Go (อย่าลืมขยาย `config_map` และ Struct ที่ต้องตรงกันทั้งสองฝั่ง) + Alert จริงจากการยิง `nc -u` หรือสคริปต์ส่ง UDP ถี่ๆ ใน Namespace `w12atk`
+   - **ผลที่ควรได้**: โค้ด C/Go (อย่าลืมขยาย `config_map` และ Struct ที่ต้องตรงกันทั้งสองฝั่ง) + Alert จริงจากการยิง `nc -u` หรือสคริปต์ส่ง UDP ถี่ๆ ใน Namespace `w12atk`
    - **ตรวจสอบ**: เพิ่ม `TestUDPFlood` แบบเดียวกับ `TestICMPFloodAutoBan` และ `make test` ผ่าน
 2. **วัดผลของ Atomic**: แก้ `__sync_fetch_and_add(&b_entry->drop_count, 1)` กลับเป็น `b_entry->drop_count++` แล้วเขียน Test ที่ใส่ IP ลง Blacklist ก่อน จากนั้นรัน `Program.Run()` จากหลาย Goroutine พร้อมกัน โดยแต่ละ Goroutine เรียก `runtime.LockOSThread()` และ `unix.SchedSetaffinity()` ผูก Thread ไว้คนละ CPU (`BPF_PROG_TEST_RUN` รันโปรแกรมบน CPU ของ Thread ที่เรียก; ฟิลด์ `RunOptions.CPU` ใช้กับ XDP ไม่ได้) แล้วเทียบค่า `drop_count` กับจำนวนแพ็กเก็ตที่ส่งจริง
-   - **ส่งงาน**: ตารางผลลัพธ์ทั้งสองแบบ (บันทึกจำนวน CPU ของเครื่อง) + คำอธิบายว่าทำไมผลอาจไม่ต่างกันในบางรอบ
+   - **ผลที่ควรได้**: ตารางผลลัพธ์ทั้งสองแบบ (บันทึกจำนวน CPU ของเครื่อง) + คำอธิบายว่าทำไมผลอาจไม่ต่างกันในบางรอบ
    - **ตรวจสอบ**: เวอร์ชัน Atomic ต้องได้ `drop_count` เท่ากับจำนวนแพ็กเก็ตทุกครั้ง
 
 ### ระดับท้าทาย
 1. **Sliding Window แบบ Two-Bucket Weighted**: เปลี่ยน `rate_state` ให้เก็บ `prev_count` และ `curr_count` แล้วประเมินอัตราด้วย `curr + prev × (window - elapsed) / window` เพื่อปิดช่องโหว่ Boundary Burst (หัวข้อ 1.5)
-   - **ส่งงาน**: โค้ด C + คำอธิบายวิธีจัดการ Concurrency ของการเลื่อน Bucket + เทสต์ที่ยิง Limit ตัวท้าย Window แรก และ Limit ตัวต้น Window ถัดไป
+   - **ผลที่ควรได้**: โค้ด C + คำอธิบายวิธีจัดการ Concurrency ของการเลื่อน Bucket + เทสต์ที่ยิง Limit ตัวท้าย Window แรก และ Limit ตัวต้น Window ถัดไป
    - **ตรวจสอบ**: เทสต์ดังกล่าวต้อง **ถูก Drop** ในเวอร์ชันใหม่ แต่ **ผ่าน** ในเวอร์ชัน Fixed Window เดิม (ควบคุมเวลาโดย `time.Sleep` ใกล้ขอบ Window หรือปรับ `window_start_ns` ใน Map โดยตรงจากเทสต์)
 2. **ป้องกัน Spoofed-Source Ban**: ออกแบบและสร้างกลไกลดความเสี่ยงที่ผู้โจมตีปลอม IP เพื่อให้ IP บริสุทธิ์ถูกแบน (หัวข้อ 5) เช่น แบนเฉพาะ IP ที่เคยทำ TCP Handshake สำเร็จ (ติดตามด้วย Map ของ ACK ที่ตอบกลับถูกต้อง), หรือใช้ `bpf_tcp_raw_gen_syncookie_ipv4()` / `bpf_tcp_raw_check_syncookie_ipv4()` (Linux 6.0+) ตอบ SYN Cookie จาก XDP แทนการแบน
-   - **ส่งงาน**: เอกสารออกแบบ 1 หน้า (Threat Model ก่อน/หลัง) + โค้ด + ผลการทดลองจริงที่ยิง SYN ด้วย Source IP ปลอมจาก Namespace `w12atk`
+   - **ผลที่ควรได้**: เอกสารออกแบบ 1 หน้า (Threat Model ก่อน/หลัง) + โค้ด + ผลการทดลองจริงที่ยิง SYN ด้วย Source IP ปลอมจาก Namespace `w12atk`
    - **ตรวจสอบ**: IP ที่ถูกปลอมต้องไม่ปรากฏใน `GET /api/blacklist` ขณะที่ SYN Flood จริงยังถูกจำกัด และเทสต์เดิมทั้งหมดยังผ่าน (หรืออธิบายเหตุผลที่ต้องปรับเทสต์)

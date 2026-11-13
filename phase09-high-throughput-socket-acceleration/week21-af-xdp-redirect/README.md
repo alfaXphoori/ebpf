@@ -1,6 +1,6 @@
 # Week 21: AF_XDP — ส่งแพ็กเก็ตจาก XDP เข้า User Space โดยตรงด้วย XSKMAP และ UMEM
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 21 ของหลักสูตร **eBPF: Zero-to-Hero** ใน **Phase 9: High-Throughput Socket Acceleration**
+**Week 21** — ส่งแพ็กเก็ตตรงเข้า User Space ด้วย XDP Redirect + AF_XDP
 
 ใน Week 07 เราใช้ XDP ตัดสินใจ `XDP_DROP`/`XDP_PASS` ที่ระดับไดรเวอร์ แต่ถ้าเราต้องการ **ประมวลผลแพ็กเก็ตด้วยโปรแกรม User Space** (เช่น Load Balancer, Packet Capture, DNS Server ความเร็วสูง, NFV) โดยไม่ต้องผ่าน TCP/IP Stack และไม่ต้องใช้เฟรมเวิร์กที่ยึดการ์ดแลนทั้งใบแบบ DPDK — คำตอบของ Linux คือ **AF_XDP (Address Family XDP)**
 
@@ -27,7 +27,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 สถาปัตยกรรม AF_XDP
 
@@ -453,6 +453,17 @@ UdpNoPorts                      0                  0.0
 - [x] ใช้ `bpf_redirect_map(..., XDP_PASS)` ให้ล้มอย่างปลอดภัยเมื่อยังไม่มี Socket
 - [x] รับแพ็กเก็ต UDP จริงผ่าน veth ใน Network Namespace และยืนยันว่าเคอร์เนลไม่เห็นแพ็กเก็ตเหล่านั้น
 - [x] เขียน `BPF_PROG_TEST_RUN` Test ตรวจ Verdict ของ XDP ด้วยแพ็กเก็ตที่สร้างเอง
+
+---
+
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `bind(...flags=0x4): operation not supported` เมื่อใส่ `-zerocopy` | ไดรเวอร์ `veth` (และ NIC เสมือนส่วนใหญ่) ไม่รองรับ AF_XDP Zero-Copy — ถอด `-zerocopy` ออกเพื่อรันใน Copy Mode (ค่าเริ่มต้น) ตามขั้นตอนที่ 4 |
+| `no_xsk` เพิ่มขึ้นแต่ `AF_XDP RX` เป็น 0 | XDP ทำงานก่อนที่ socket จะถูกใส่ลง `xsks_map`, คีย์ Queue ID ไม่ตรง (`qid` ของ veth rx queue กับ socket), หรือรันหลาย queue โดยเปิด socket แค่ queue 0 |
+| เผลอรันกับ NIC จริงหรือ `lo` ของโฮสต์แล้ว UDP (DNS/DHCP) ใช้ไม่ได้ | **อันตราย:** XDP redirect UDP ทั้งหมดเข้า user space — กด `Ctrl+C` เพื่อ detach ทันที และทดสอบเฉพาะใน namespace `w21-rx` / `w21-tx` |
+| `fill_empty` เพิ่มขึ้นเมื่อยิง 20,000 UDP bursts เร็วๆ | user space โพสต์ frame กลับ FILL ring ไม่ทันจังหวะ burst ใน Copy Mode — เพิ่ม `-batch-size` หรือขนาด FILL ring ใน `DefaultXSKConfig` |
 
 ---
 

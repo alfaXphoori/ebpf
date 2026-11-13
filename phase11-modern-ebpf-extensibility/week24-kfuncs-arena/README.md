@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 24: kfuncs และ BPF Arena — เรียกฟังก์ชันเคอร์เนลอย่างปลอดภัย และแชร์หน่วยความจำกับ User Space
 
-ยินดีต้อนรับสู่ **Week 24** ของหลักสูตร eBPF Zero to Hero!
+**Week 24** — เรียกฟังก์ชันเคอร์เนลด้วย kfuncs และแชร์หน่วยความจำแบบ Pointer ผ่าน BPF Arena
 
 สัปดาห์นี้เป็นสัปดาห์แรกของ **Phase 11: Modern eBPF Extensibility** ตลอด 23 สัปดาห์ที่ผ่านมา โปรแกรม eBPF ของเราคุยกับเคอร์เนลผ่าน **BPF helpers** (`bpf_map_lookup_elem`, `bpf_probe_read_kernel`, ...) และคุยกับ user space ผ่าน **map** (lookup/update ทีละ key ด้วย syscall `bpf()`) สัปดาห์นี้เราจะรู้จักกลไกรุ่นใหม่สองอย่างที่ eBPF สมัยใหม่ (เช่น `sched_ext` ใน Week 25) พึ่งพาอย่างมาก:
 
@@ -21,7 +21,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 Helper vs kfunc
 

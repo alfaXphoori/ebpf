@@ -1,6 +1,6 @@
 # Week 17: Block I/O Latency Histogram ด้วย CO-RE biolatency (tp_btf)
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 17 ของหลักสูตร **eBPF: Zero-to-Hero** และเป็นสัปดาห์แรกของ **Phase 8: System Performance Observability** ในระบบฐานข้อมูลและระบบจัดเก็บข้อมูล ปัญหา "ค่าเฉลี่ยดูดี แต่ผู้ใช้บ่นว่าช้า" มักมาจาก **Tail Latency** ของดิสก์ — คำสั่ง I/O ส่วนน้อยที่ช้ากว่าปกติหลายสิบเท่า ซึ่งค่าเฉลี่ยจาก `iostat` มองไม่เห็น
+**Week 17** (เริ่มต้นเฟส System Performance Observability) — ในระบบฐานข้อมูลและระบบจัดเก็บข้อมูล ปัญหา "ค่าเฉลี่ยดูดี แต่ผู้ใช้บ่นว่าช้า" มักมาจาก **Tail Latency** ของดิสก์ — คำสั่ง I/O ส่วนน้อยที่ช้ากว่าปกติหลายสิบเท่า ซึ่งค่าเฉลี่ยจาก `iostat` มองไม่เห็น
 
 ในบทนี้เราจะสร้างเครื่องมือ **`biolatency`** ฉบับ CO-RE ของเราเอง (แนวคิดเดียวกับ `biolatency` ใน BCC/libbpf-tools) ที่:
 1. จับเวลาตั้งแต่ Request ถูกส่งให้ไดรเวอร์ (`block_rq_issue`) จนฮาร์ดแวร์ตอบกลับ (`block_rq_complete`)
@@ -20,7 +20,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 เส้นทางของ Block I/O ใน Linux (blk-mq)
 
@@ -52,7 +52,7 @@ typedef void (*btf_trace_block_rq_issue)(void *, struct request *);
 ```
 
 > [!NOTE]
-> Prototype `block_rq_issue(struct request *rq)` แบบอาร์กิวเมนต์เดียวใช้มาตั้งแต่ราว Linux 5.11 (ก่อนหน้านั้นมี `struct request_queue *q` นำหน้า) จึงครอบคลุมทั้ง Ubuntu 24.04 (6.8) และ 26.04 (7.0) ที่หลักสูตรนี้รองรับ — ถ้าต้องใช้กับเคอร์เนลเก่ากว่านั้น ควรตรวจ typedef ข้างบนบนเครื่องเป้าหมายก่อน
+> Prototype `block_rq_issue(struct request *rq)` แบบอาร์กิวเมนต์เดียวใช้มาตั้งแต่ราว Linux 5.11 (ก่อนหน้านั้นมี `struct request_queue *q` นำหน้า) จึงครอบคลุมทั้ง Ubuntu 24.04 (6.8) และ 26.04 (7.0) ที่แล็บนี้รองรับ — ถ้าต้องใช้กับเคอร์เนลเก่ากว่านั้น ควรตรวจ typedef ข้างบนบนเครื่องเป้าหมายก่อน
 
 ---
 

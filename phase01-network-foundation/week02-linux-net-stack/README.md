@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 02: เส้นทางของแพ็กเก็ตใน Linux Kernel Stack และ Linux Bridge
 
-ยินดีต้อนรับสู่ **Week 02** ของหลักสูตร **eBPF Zero to Hero**!
+**Week 02** — ลงมือจำลอง Linux Bridge และแกะเส้นทางแพ็กเก็ตในเคอร์เนล
 ในสัปดาห์นี้ เราจะเจาะลึกเข้าไปใน "เครื่องยนต์ภายใน" ของเคอร์เนล Linux: **เมื่อแพ็กเก็ตเดินทางมาถึงการ์ดแลน (NIC) หรือพอร์ตเสมือน (veth) เคอร์เนลประมวลผลมันอย่างไรตั้งแต่ระดับ Hardware Interrupt จนถึง User Space Socket?**
 
 เราจะสร้างห้องทดลองเครือข่ายที่มี **Linux Bridge (`br0`)** ทำหน้าที่เป็น Virtual L2 Switch เชื่อมต่อ Network Namespaces 3 ชุด (`w02-ns1`, `w02-ns2`, `w02-ns3`) เข้าด้วยกัน โดยตัว Bridge อยู่ใน namespace ของมันเองชื่อ `w02-sw` (ทำหน้าที่แทน "Host/Gateway") เพื่อไม่ให้ Lab ไปแตะ interface, route หรือ sysctl ของเครื่องจริง พร้อมทั้งใช้เครื่องมือวินิจฉัยเคอร์เนล เช่น `strace`, `/proc/net/softnet_stat`, `/proc/softirqs` และ `perf` เพื่อสังเกตการณ์พฤติกรรมของ **`sk_buff`**, **NAPI**, และ **SoftIRQ** ก่อนที่เราจะเข้าใจว่าทำไม **eBPF / XDP** จึงปฏิวัติประสิทธิภาพของระบบเครือข่ายด้วยการบายพาสสแตกเหล่านี้!
@@ -17,7 +17,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 วงจรชีวิตของแพ็กเก็ต (Packet Lifecycle) ใน Linux Kernel Stack
 
@@ -361,24 +361,24 @@ Note: 'TimeSqueeze' increments when net_rx_action() runs out of budget (netdev_b
 
 ### ระดับพื้นฐาน
 1. **FDB Ageing**: เปลี่ยน ageing time ของ `br0` เป็น 10 วินาที (`sudo ip netns exec w02-sw ip link set br0 type bridge ageing_time 1000` — หน่วยเป็น centisecond) แล้วสังเกตว่า MAC หายไปจาก FDB เมื่อไม่มีทราฟฟิก
-   - **สิ่งที่ต้องส่ง**: ผล `bridge fdb show br br0` ก่อน/หลังรอ 15 วินาที และหลัง ping ใหม่ พร้อมอธิบายว่าเกิด Flooding ตอนไหน
+   - **ผลที่ควรได้**: ผล `bridge fdb show br br0` ก่อน/หลังรอ 15 วินาที และหลัง ping ใหม่ พร้อมอธิบายว่าเกิด Flooding ตอนไหน
    - **วิธีตรวจ**: `sudo ip netns exec w02-sw bridge fdb show br br0 | grep -v permanent` ต้องว่างหลังรอ และกลับมาหลัง `sudo ip netns exec w02-ns1 ping -c1 10.20.0.12`
 2. **อ่าน softnet_stat แบบ Delta**: บันทึกคอลัมน์ Processed ของทุก CPU ก่อนและหลังรัน `sudo ip netns exec w02-ns1 ping -f -c 20000 10.20.0.12`
-   - **สิ่งที่ต้องส่ง**: ตาราง delta (ฐาน 10) ต่อ CPU และคำอธิบายว่าทำไมผลรวมไม่เท่ากับ 40,000 พอดี (เครื่องมีทราฟฟิกอื่นด้วย และแพ็กเก็ตหนึ่งตัวอาจผ่าน backlog หลายครั้งเมื่อวิ่งผ่าน veth/bridge)
+   - **ผลที่ควรได้**: ตาราง delta (ฐาน 10) ต่อ CPU และคำอธิบายว่าทำไมผลรวมไม่เท่ากับ 40,000 พอดี (เครื่องมีทราฟฟิกอื่นด้วย และแพ็กเก็ตหนึ่งตัวอาจผ่าน backlog หลายครั้งเมื่อวิ่งผ่าน veth/bridge)
    - **วิธีตรวจ**: `awk '{print $13, $1}' /proc/net/softnet_stat` ก่อน/หลัง แล้วแปลงด้วย `printf "%d\n" 0x<ค่า>`
 
 ### ระดับปานกลาง
 3. **นับเฟรมที่ผ่าน `br_handle_frame()`** (ใช้ความรู้ล่วงหน้าจาก Week 03): รัน `sudo bpftrace -e 'kprobe:br_handle_frame { @[comm] = count(); }'` ขณะ ping ข้าม namespace 10 ครั้ง
-   - **สิ่งที่ต้องส่ง**: ผลนับ + อธิบายว่าทำไมนับได้มากกว่า 10 (Request + Reply + ARP) และ `comm` ที่เห็นบอกอะไรเรื่องบริบทที่ softirq ทำงาน
+   - **ผลที่ควรได้**: ผลนับ + อธิบายว่าทำไมนับได้มากกว่า 10 (Request + Reply + ARP) และ `comm` ที่เห็นบอกอะไรเรื่องบริบทที่ softirq ทำงาน
    - **วิธีตรวจ**: ตรวจก่อนว่ามี probe จริงด้วย `sudo bpftrace -l 'kprobe:br_handle_frame*'`
 4. **เพิ่ม Namespace ที่ 4**: แก้อาร์เรย์ `NAMESPACES`/`NS_IPS`/`RAW_IPS` ให้มี `w02-ns4` (`10.20.0.14/24`) และเพิ่มคู่ทดสอบ ping ใน `test_connectivity`
-   - **สิ่งที่ต้องส่ง**: diff ของสคริปต์ + ผล `test` ที่ผ่านทั้งหมด + FDB ที่มี 4 รายการ
+   - **ผลที่ควรได้**: diff ของสคริปต์ + ผล `test` ที่ผ่านทั้งหมด + FDB ที่มี 4 รายการ
    - **วิธีตรวจ**: `sudo ./bridge_router_lab.sh setup && sudo ./bridge_router_lab.sh test` แล้ว `clean` ต้องลบ `w02-ns4` ด้วย
 
 ### ระดับท้าทาย
 5. **VLAN Isolation บน Bridge**: เปิด `vlan_filtering 1` บน `br0` แล้วกำหนด `veth-br1`/`veth-br2` เป็น VLAN 10 และ `veth-br3` เป็น VLAN 20 (`bridge vlan add dev veth-brX vid N pvid untagged` และลบ VLAN 1 ออก)
-   - **สิ่งที่ต้องส่ง**: สคริปต์คำสั่ง + ผลที่ `w02-ns1 -> w02-ns2` ผ่าน แต่ `w02-ns1 -> w02-ns3` ไม่ผ่าน
+   - **ผลที่ควรได้**: สคริปต์คำสั่ง + ผลที่ `w02-ns1 -> w02-ns2` ผ่าน แต่ `w02-ns1 -> w02-ns3` ไม่ผ่าน
    - **วิธีตรวจ**: `sudo ip netns exec w02-sw bridge vlan show` และ ping สองคู่ข้างต้น
 6. **วัดต้นทุนของสแตกด้วยตัวเอง**: ใช้ `iperf3` (server ใน `w02-ns2`, client ใน `w02-ns1`) วัด throughput เทียบระหว่างเปิดและปิด offload (`ethtool -K ... tso on gso on gro on` vs `off`)
-   - **สิ่งที่ต้องส่ง**: ตารางผลอย่างน้อย 3 รอบต่อกรณี (ค่าเฉลี่ย ± ส่วนเบี่ยงเบน) + ข้อสรุปว่าความต่างมาจากจำนวน `sk_buff` ต่อไบต์ที่ลดลงอย่างไร — ห้ามสรุปเป็นตัวเลข "เร็วกว่า X เท่า" แบบทั่วไป เพราะผลขึ้นกับเครื่องและ workload
+   - **ผลที่ควรได้**: ตารางผลอย่างน้อย 3 รอบต่อกรณี (ค่าเฉลี่ย ± ส่วนเบี่ยงเบน) + ข้อสรุปว่าความต่างมาจากจำนวน `sk_buff` ต่อไบต์ที่ลดลงอย่างไร — ห้ามสรุปเป็นตัวเลข "เร็วกว่า X เท่า" แบบทั่วไป เพราะผลขึ้นกับเครื่องและ workload
    - **วิธีตรวจ**: `sudo ip netns exec w02-ns2 iperf3 -s -1 &` แล้ว `sudo ip netns exec w02-ns1 iperf3 -c 10.20.0.12 -t 5`

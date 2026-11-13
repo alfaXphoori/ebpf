@@ -1,11 +1,11 @@
-# คู่มือวิศวกรรม eBPF ฉบับสมบูรณ์ (Master eBPF Study Guide)
-### จากโครงสร้างแพ็กเก็ตระดับฮาร์ดแวร์ สู่การเขียนโปรแกรมเคอร์เนลความเร็วสูงด้วย Modern eBPF, XDP, TC, Ring Buffer, BPF LSM และ Go (Cilium)
+# คู่มือ eBPF ฉบับสมบูรณ์ (Master eBPF Study Guide)
+### ตั้งแต่โครงสร้างแพ็กเก็ต ไปจนถึงเขียนโปรแกรมเคอร์เนลความเร็วสูงด้วย Modern eBPF, XDP, TC, Ring Buffer, BPF LSM และ Go (Cilium)
 
 ---
 
 ## สารบัญเนื้อหา (Table of Contents)
 
-> 🌳 ดูแผนผังเนื้อหาทั้งหลักสูตร (เฟส → สัปดาห์ → Hook / Maps / ไฟล์ / การทดสอบ) ได้ที่ [`CONTENT_TREE.md`](CONTENT_TREE.md) · 📖 ความหมายของศัพท์เทคนิคดูได้ที่ [`GLOSSARY.md`](GLOSSARY.md)
+> 🌳 ดูแผนผังภาพรวมทั้งหมด (เฟส → สัปดาห์ → Hook / Maps / ไฟล์ / วิธีทดสอบ) ได้ที่ [`CONTENT_TREE.md`](CONTENT_TREE.md) · 📖 ความหมายของศัพท์เทคนิคดูได้ที่ [`GLOSSARY.md`](GLOSSARY.md)
 
 1. [บทที่ 1: ผ่าโครงสร้าง Packet และการเดินทางใน Linux Kernel (เฟส 01)](#บทที่-1-ผ่าโครงสร้าง-packet-และการเดินทางใน-linux-kernel-เฟส-01)
    - [🗺️ แผนภาพภาพรวมบทที่ 1 (Chapter Overview)](#overview-1)
@@ -1189,7 +1189,7 @@ int trace_drop(struct trace_event_raw_kfree_skb *ctx)
 - **Startup Scan**: ตอนเริ่มทำงานให้ไล่ดูโปรแกรมที่ถูกโหลดไว้ก่อนแล้วด้วย `ebpf.ProgramGetNextID()` + `ebpf.NewProgramFromID()` และต้องทำ **หลัง** Attach Hook แล้ว เพื่อไม่ให้มีช่องว่างที่โปรแกรมหลุดรอดระหว่างสแกน
 - **ข้อจำกัดที่ต้องยอมรับ**: ผู้โจมตีที่มีสิทธิ์ root/`CAP_SYS_ADMIN` สามารถ kill หรือ detach ตัว Auditor ได้; การอ่าน `bpf_attr` จาก User Memory มีปัญหา TOCTOU; ถ้าต้องการ "บังคับ" ไม่ใช่แค่ "เฝ้าดู" ต้องใช้ BPF LSM Hook `bpf` / `bpf_prog_load`, BPF Token และ Program Signing ร่วมด้วย
 
-> ⚠️ **ข้อสังเกตจากเคอร์เนลทดลอง (Linux 7.0.0-38-generic, Ubuntu 26.04)**: พบว่าโปรแกรม BPF ที่ผูกกับ Tracepoint `syscalls:sys_enter_*` **บางตัว** ทำงานเฉพาะเมื่อ Syscall เกิดบน CPU 0 (ทดสอบ exec 24 ครั้งกระจายบน 8 CPU: `sys_enter_execve` จับได้ 3 ครั้ง ขณะที่ `raw_syscalls:sys_enter` และ `sched:sched_process_exec` จับได้ครบ 24 ครั้ง) พบอาการเดียวกันกับ `sys_enter_openat` แต่ `sys_enter_bpf` และ `sys_enter_getppid` ทำงานครบทุก CPU ยังไม่ได้ยืนยันสาเหตุในซอร์สโค้ดเคอร์เนล แล็บในหลักสูตรนี้จึงหลีกเลี่ยง `syscalls:sys_enter_*` สำหรับงานที่ต้องการความครบถ้วน และใช้ `sched_process_exec`, `raw_syscalls` หรือ `fentry` แทน **บทเรียนสำคัญ: เครื่องมือความปลอดภัยต้องทดสอบด้วยการกระจายเหตุการณ์ทุก CPU (`taskset -c N`) เสมอ**
+> ⚠️ **ข้อสังเกตจากเคอร์เนลทดลอง (Linux 7.0.0-38-generic, Ubuntu 26.04)**: พบว่าโปรแกรม BPF ที่ผูกกับ Tracepoint `syscalls:sys_enter_*` **บางตัว** ทำงานเฉพาะเมื่อ Syscall เกิดบน CPU 0 (ทดสอบ exec 24 ครั้งกระจายบน 8 CPU: `sys_enter_execve` จับได้ 3 ครั้ง ขณะที่ `raw_syscalls:sys_enter` และ `sched:sched_process_exec` จับได้ครบ 24 ครั้ง) พบอาการเดียวกันกับ `sys_enter_openat` แต่ `sys_enter_bpf` และ `sys_enter_getppid` ทำงานครบทุก CPU ยังไม่ได้ยืนยันสาเหตุในซอร์สโค้ดเคอร์เนล แล็บในคลังนี้จึงหลีกเลี่ยง `syscalls:sys_enter_*` สำหรับงานที่ต้องการความครบถ้วน และใช้ `sched_process_exec`, `raw_syscalls` หรือ `fentry` แทน **ข้อสำคัญ: เครื่องมือความปลอดภัยต้องทดสอบด้วยการกระจายเหตุการณ์ทุก CPU (`taskset -c N`) เสมอ**
 
 ---
 
@@ -1258,7 +1258,7 @@ int trace_drop(struct trace_event_raw_kfree_skb *ctx)
 3. **Bind** Socket เข้ากับ (ifindex, queue_id) แล้วใส่ fd ลง `BPF_MAP_TYPE_XSKMAP` โดยใช้ **RX Queue ID เป็น Key**
 4. โปรแกรม XDP เรียก `bpf_redirect_map(&xsks_map, ctx->rx_queue_index, XDP_PASS)` — Flag `XDP_PASS` เป็นค่า Fallback เมื่อไม่มี Socket ในช่องนั้น (เคอร์เนล 5.3+)
 
-**Copy mode vs Zero-copy**: บน veth หรือไดรเวอร์ที่ไม่รองรับ จะทำงานใน `XDP_COPY` (มีการ Copy หนึ่งครั้ง แต่ยังข้าม `sk_buff` และ Network Stack) การขอ `XDP_ZEROCOPY` บน veth ได้ `operation not supported` Zero-copy ต้องการไดรเวอร์ที่รองรับ (เช่น i40e, ice, mlx5) ตรวจโหมดได้ด้วย `ss --xdp` (`zc:0` / `zc:1`) ตัวเลขระดับหลายล้าน PPS ในบทความวิชาการ (เช่น Høiland-Jørgensen et al., CoNEXT 2018) วัดบน NIC จริงในโหมด Native/Zero-copy ไม่ควรนำมาอ้างกับการทดลองบน veth
+**Copy mode vs Zero-copy**: บน veth หรือไดรเวอร์ที่ไม่รองรับ จะทำงานใน `XDP_COPY` (มีการ Copy หนึ่งครั้ง แต่ยังข้าม `sk_buff` และ Network Stack) การขอ `XDP_ZEROCOPY` บน veth ได้ `operation not supported` Zero-copy ต้องการไดรเวอร์ที่รองรับ (เช่น i40e, ice, mlx5) ตรวจโหมดได้ด้วย `ss --xdp` (`zc:0` / `zc:1`) ตัวเลขระดับหลายล้าน PPS ในงานวิจัย (เช่น Høiland-Jørgensen et al., CoNEXT 2018) วัดบน NIC จริงในโหมด Native/Zero-copy ไม่ควรนำมาเทียบตรงๆ กับการทดลองบน veth
 
 ผลทดสอบจริงในแล็บ: ส่ง UDP 20,005 แพ็กเก็ตผ่าน veth ระหว่าง netns ถูก Redirect และรับครบ 20,005 แพ็กเก็ต ดรอป 0 โดย UDP Counter ของเคอร์เนลฝั่งรับไม่เพิ่มขึ้นเลย (ยืนยันว่าแพ็กเก็ตไม่ผ่าน Network Stack) ส่วน Ping/ARP ยังทำงานปกติเพราะโปรแกรมเลือกส่งเฉพาะ IPv4/UDP เข้า AF_XDP
 
@@ -1314,7 +1314,7 @@ Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) �
 
 ![แผนภาพภาพรวมบทที่ 11 (Chapter Overview)](diagrams/guide-ch11.svg)
 
-**อ่านแผนภาพ:** บทสุดท้ายขยายสิ่งที่ eBPF ทำได้จาก 'สังเกต' ไปสู่ 'ขยายเคอร์เนล' ได้แก่ kfuncs เรียกฟังก์ชันภายในเคอร์เนลภายใต้กฎ acquire/release ที่ Verifier บังคับ, Arena แชร์โครงสร้างข้อมูลแบบ pointer กับ User Space และ sched_ext เขียน CPU Scheduler ทั้งตัวโดยมี watchdog คอย eject เมื่อผิดพลาด ปิดท้ายด้วย Tetragon และ Cilium ซึ่งรวมกลไกทั้งหมดในหลักสูตรมาใช้ใน Production — แล็บประจำบท: **Week 24–26** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
+**อ่านแผนภาพ:** บทสุดท้ายขยายสิ่งที่ eBPF ทำได้จาก "แค่เฝ้าดู" ไปสู่ "ต่อเติมการทำงานของเคอร์เนล" ได้แก่ kfuncs เรียกฟังก์ชันภายในเคอร์เนลภายใต้กฎ acquire/release ที่ Verifier บังคับ, Arena แชร์โครงสร้างข้อมูลแบบ pointer กับ User Space และ sched_ext เขียน CPU Scheduler ทั้งตัวโดยมี watchdog คอยดีดออกเมื่อผิดพลาด ปิดท้ายด้วย Tetragon และ Cilium ที่รวมกลไกทั้งหมดในคลังนี้มาใช้ใน Production — แล็บประจำบท: **Week 24–26** (แต่ละสัปดาห์มีแผนภาพ Workflow Overview ของตัวเองใน README)
 
 ---
 
@@ -1372,15 +1372,15 @@ Kprobe ดั้งเดิมทำงานผ่าน Breakpoint (`int3`) �
 - `Override` ทำได้ 3 ทาง: ค่าคืนของ LSM Hook, โปรแกรม `fmod_ret` บนฟังก์ชัน `security_*`, หรือ `bpf_override_return` บน Syscall (ต้อง `CONFIG_BPF_KPROBE_OVERRIDE=y` และฟังก์ชันต้องอยู่ใน Error-injection Allowlist ซึ่งบนเครื่องทดลองมี 1066 ตัวและไม่มี `security_*`) การ Override บน kprobe ล้มเหลวเมื่อใช้ `kprobe_multi` ต้องรีสตาร์ทด้วย `--disable-kprobe-multi`
 - ความเสี่ยงที่ต้องยอมรับ: Agent รันแบบ Privileged เข้าถึงทุกอย่างในเครื่อง และ Policy แบบ kprobe ผูกกับชื่อ Symbol ของเคอร์เนลซึ่งเปลี่ยนได้ระหว่างเวอร์ชัน
 
-**Cilium** (แล็บใช้ v1.20.4 บน kind แบบไม่มี kube-proxy) คือการประกอบกลไกเครือข่ายทั้งหมดของหลักสูตร:
+**Cilium** (แล็บใช้ v1.20.4 บน kind แบบไม่มี kube-proxy) คือการนำเทคนิคเครือข่ายทั้งหมดมารวมใช้จริง:
 - Service Load Balancing ด้วย cgroup Hook `connect` / `getpeername` (กลไกเดียวกับ Week 14) จึงเชื่อมต่อไปยัง Pod IP โดยตรงตั้งแต่ `connect()` และไม่มีกฎ iptables `KUBE-SVC` เลย (ตรวจแล้วได้ 0 กฎ)
 - Datapath ผูกผ่าน TCX (Week 08) และ XDP (Week 07) สำหรับ North-South Load Balancing
 - **Hubble** แสดง Flow ระดับ L3/L4/L7 และเหตุผลการดรอป เช่น `Policy denied DROPPED` (แนวคิดเดียวกับ Dropwatch ใน Week 13)
 
 ---
 
-### บทสรุปและแนวทางการศึกษาต่อยอด (Next Steps)
-การเรียนรู้ eBPF ให้เชี่ยวชาญต้องอาศัยการลงมือปฏิบัติจริง หลังจากศึกษาเนื้อหาทั้ง 11 บทแล้ว ให้ทำแล็บรายสัปดาห์ใน `phase01` ถึง `phase11` (26 สัปดาห์) พร้อมแบบฝึกหัดท้ายบท 3 ระดับของแต่ละสัปดาห์ และฝึกนิสัยของวิศวกร eBPF ระดับโปรดักชัน 4 ข้อที่หลักสูตรนี้เน้นย้ำ:
+### สรุปและหัวข้อที่น่าลองต่อ (Next Steps)
+อยากเขียน eBPF ให้คล่องต้องลงมือทำจริง หลังอ่านเนื้อหาทั้ง 11 บทแล้ว แนะนำให้ไล่ทำแล็บใน `phase01` ถึง `phase11` (26 สัปดาห์) พร้อมลองทำแบบฝึกหัด 3 ระดับท้ายแต่ละสัปดาห์ และยึดหลักสำคัญ 4 ข้อสำหรับงาน Production:
 1. **ใช้ CO-RE (`vmlinux.h` + `BPF_CORE_READ`) เสมอ** ห้ามเขียน Struct ของเคอร์เนลเอง
 2. **เขียน Unit Test ด้วย `BPF_PROG_TEST_RUN`** (`make test`) และทดสอบ End-to-end บน netns/veth/cgroup ที่แยกจากระบบจริง
 3. **วัดก่อนอ้าง**: ทุกตัวเลขประสิทธิภาพต้องมาพร้อมวิธีวัด สภาพแวดล้อม และข้อจำกัด

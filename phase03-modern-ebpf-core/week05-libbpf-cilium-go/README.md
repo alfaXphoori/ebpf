@@ -1,6 +1,6 @@
 # Week 05: Modern eBPF with libbpf & Cilium ebpf-go
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 5 ของหลักสูตร **eBPF: Zero-to-Hero** ในสัปดาห์นี้ เราจะก้าวข้ามเครื่องมือระดับสูงอย่าง BCC/bpftrace เข้าสู่สถาปัตยกรรมระดับโปรดักชันยุคใหม่ (Modern eBPF) ด้วยการเขียนโปรแกรมฝั่งเคอร์เนลด้วยภาษา C และโปรแกรมฝั่งผู้ใช้งาน (Userspace Control Plane) ด้วยภาษา Go โดยใช้ไลบรารีมาตรฐานระดับโลกคือ **Cilium ebpf-go** ร่วมกับเครื่องมือคอมไพล์โค้ดอัตโนมัติ **bpf2go**
+**Week 05** — ก้าวออกจาก BCC/bpftrace มาเขียน eBPF แบบจริงจัง (Modern eBPF): ฝั่งเคอร์เนลใช้ C และฝั่ง user-space ใช้ Go ผ่านไลบรารี **Cilium ebpf-go** + **bpf2go**
 
 ---
 
@@ -14,7 +14,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 วิวัฒนาการจาก BCC สู่ Modern CO-RE (Compile Once – Run Everywhere)
 
@@ -377,24 +377,24 @@ for c in 0 1 2 3 4 5 6 7; do taskset -c $c /bin/true; done
 
 ### ระดับพื้นฐาน
 1. **นับแยกตาม CPU ด้วย `BPF_MAP_TYPE_PERCPU_ARRAY`**: เปลี่ยน map เป็น per-CPU แล้วลบ `__sync_fetch_and_add` ออก (ไม่จำเป็นแล้วเพราะแต่ละ CPU มีช่องของตัวเอง) ฝั่ง Go ให้ `Lookup` ใส่ `[]uint64` แล้วรวมค่าเอง
-   - **สิ่งที่ต้องส่ง**: diff + ผลลัพธ์ที่พิมพ์ยอดแยกราย CPU และยอดรวม
+   - **ผลที่ควรได้**: diff + ผลลัพธ์ที่พิมพ์ยอดแยกราย CPU และยอดรวม
    - **วิธีตรวจ**: `for c in 0 1 2 3; do taskset -c $c /bin/true; done` ต้องเห็นยอดของ CPU 0-3 เพิ่มขึ้น และ `sudo bpftool map dump name exec_count` แสดงค่าแยกตาม CPU
 2. **พิสูจน์ปัญหา hook เดิมด้วยตัวเอง**: เปลี่ยน `SEC()` และ `link.Tracepoint()` กลับเป็น `syscalls/sys_enter_execve` ชั่วคราว รันคู่กับเวอร์ชัน `sched_process_exec` แล้วเทียบตัวเลข Rate
-   - **สิ่งที่ต้องส่ง**: ตัวเลขทั้งสองเวอร์ชันในช่วงเวลาเดียวกัน + อัตราส่วน + ข้อสังเกตเทียบกับจำนวน CPU (`nproc`)
+   - **ผลที่ควรได้**: ตัวเลขทั้งสองเวอร์ชันในช่วงเวลาเดียวกัน + อัตราส่วน + ข้อสังเกตเทียบกับจำนวน CPU (`nproc`)
    - **วิธีตรวจ**: รันการทดสอบ `taskset` ข้างต้นขณะเปิดทั้งสองโปรแกรม แล้วเทียบยอดที่เพิ่มขึ้น (ถ้าเคอร์เนลของคุณไม่มีปัญหานี้ ทั้งสองควรเท่ากัน — รายงานผลตามจริง)
 
 ### ระดับปานกลาง
 3. **อ่าน `filename` จาก tracepoint context**: ประกาศ struct ของ `sched_process_exec` ตาม `/sys/kernel/tracing/events/sched/sched_process_exec/format` (header 8 ไบต์ + `__u32 filename_loc` + `pid` + `old_pid`) แล้วใช้ `bpf_probe_read_kernel_str()` อ่านสตริงที่ `(void *)ctx + (filename_loc & 0xFFFF)` พิมพ์ด้วย `bpf_printk`
-   - **สิ่งที่ต้องส่ง**: โค้ด C + ผล `trace_pipe` ที่เห็นชื่อไฟล์ เช่น `/usr/bin/true`
+   - **ผลที่ควรได้**: โค้ด C + ผล `trace_pipe` ที่เห็นชื่อไฟล์ เช่น `/usr/bin/true`
    - **วิธีตรวจ**: `taskset -c 3 /bin/true` แล้ว `sudo timeout 2 cat /sys/kernel/tracing/trace_pipe | grep true`
 4. **ส่งออกเป็น Prometheus-style text**: เพิ่ม HTTP endpoint `/metrics` ใน Go (ใช้ `net/http` ธรรมดา) ที่คืน `exec_events_total <ค่า>`
-   - **สิ่งที่ต้องส่ง**: diff + ผล `curl`
+   - **ผลที่ควรได้**: diff + ผล `curl`
    - **วิธีตรวจ**: `curl -s localhost:9100/metrics` สองครั้งห่างกัน 2 วินาที ค่าต้องเพิ่มขึ้น (เลือกพอร์ตที่ว่าง ตรวจด้วย `ss -ltn`)
 
 ### ระดับท้าทาย
 5. **ทำให้เป็น CO-RE จริง**: สร้าง `vmlinux.h` (`bpftool btf dump file /sys/kernel/btf/vmlinux format c > vmlinux.h`) แล้วใช้ `BPF_CORE_READ(task, real_parent, tgid)` จาก `bpf_get_current_task_btf()`/`bpf_get_current_task()` เพื่อนับ exec แยกตาม **PPID** ด้วย Hash Map
-   - **สิ่งที่ต้องส่ง**: โค้ด + ผลที่ PPID ของ shell คุณ (`echo $$`) มียอดเพิ่มขึ้นตามจำนวนคำสั่งที่พิมพ์ + อธิบายว่า relocation ถูกบันทึกไว้ใน ELF อย่างไร (`bpftool btf dump file bpf_bpfel.o | grep -i core` หรือ `llvm-objdump -r`)
+   - **ผลที่ควรได้**: โค้ด + ผลที่ PPID ของ shell คุณ (`echo $$`) มียอดเพิ่มขึ้นตามจำนวนคำสั่งที่พิมพ์ + อธิบายว่า relocation ถูกบันทึกไว้ใน ELF อย่างไร (`bpftool btf dump file bpf_bpfel.o | grep -i core` หรือ `llvm-objdump -r`)
    - **วิธีตรวจ**: พิมพ์ `true` 5 ครั้งใน shell ที่รู้ PID แล้วยอดของ PPID นั้นต้องเพิ่ม 5
 6. **Pin map ข้ามการรีสตาร์ต**: ใช้ `ebpf.CollectionOptions{Maps: ebpf.MapOptions{PinPath: "/sys/fs/bpf/w05"}}` และตั้ง `pinning` ให้ `exec_count` เพื่อให้ตัวนับไม่หายเมื่อปิด-เปิดโปรแกรมใหม่ (และเขียนคำสั่งลบ pin ให้เรียบร้อย)
-   - **สิ่งที่ต้องส่ง**: diff + ผลรันสองรอบที่รอบที่สองเริ่มจากค่าสุดท้ายของรอบแรก
+   - **ผลที่ควรได้**: diff + ผลรันสองรอบที่รอบที่สองเริ่มจากค่าสุดท้ายของรอบแรก
    - **วิธีตรวจ**: `sudo ls /sys/fs/bpf/w05/` ระหว่างรอบ และ `sudo rm -rf /sys/fs/bpf/w05` เมื่อเสร็จ (ต้องไม่เหลือ pin ค้าง)

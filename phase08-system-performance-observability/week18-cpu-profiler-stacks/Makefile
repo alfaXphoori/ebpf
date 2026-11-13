@@ -6,7 +6,7 @@ BIN_DIR := bin
 BINARY := $(BIN_DIR)/cpu-profiler
 WORKLOAD := $(BIN_DIR)/busy
 
-.PHONY: all generate build workload run clean
+.PHONY: all generate build workload run test clean
 
 all: generate build workload
 
@@ -27,6 +27,10 @@ workload:
 run: build
 	@echo "===> Running $(BINARY) with sudo..."
 	sudo ./$(BINARY)
+
+test: generate
+	@echo "===> Running Go + eBPF tests (requires sudo)..."
+	go test -exec sudo -v ./...
 
 clean:
 	@echo "===> Cleaning build artifacts..."

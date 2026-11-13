@@ -27,7 +27,7 @@ import (
 	"github.com/cilium/ebpf/rlimit"
 )
 
-// dropEvent ต้องมี layout ตรงกับ struct drop_event ใน dropwatch.c (48 ไบต์)
+// dropEvent ต้องมี layout ตรงกับ struct drop_event ใน dropwatch.c (40 ไบต์)
 type dropEvent struct {
 	Location uint64
 	Pid      uint32

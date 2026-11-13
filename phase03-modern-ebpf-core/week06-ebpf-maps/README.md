@@ -1,8 +1,8 @@
 # Week 06: eBPF Maps, Verifier Log & BPF_PROG_TEST_RUN Testing
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 6 ของหลักสูตร **eBPF: Zero-to-Hero** สัปดาห์นี้เราจะเจาะลึกกลไกการจัดเก็บสถานะและการสื่อสารข้อมูลระหว่าง Kernel Space และ Userspace ผ่านโครงสร้างข้อมูลหลักของ eBPF นั่นคือ **BPF Maps** โดยมุ่งเน้นที่การใช้งาน `BPF_MAP_TYPE_HASH` เพื่อสร้างเครื่องมือมอนิเตอร์ระดับระบบ: **Syscall Top Monitor** ที่ตรวจจับความถี่การเรียกใช้งาน System Call ของทุกโปรเซสแบบเรียลไทม์
+**Week 06** — ลองใช้ **BPF Maps** เพื่อเก็บสถานะและส่งข้อมูลระหว่าง Kernel Space กับ User Space โดยโฟกัสที่ `BPF_MAP_TYPE_HASH` สร้าง **Syscall Top Monitor** ดูความถี่ syscall ของแต่ละโปรเซสแบบเรียลไทม์
 
-นอกจากนี้สัปดาห์นี้ยังปูทักษะพื้นฐานสองอย่างที่จะใช้ไปตลอดหลักสูตร (ย้ายมาจาก Week 11 เดิม เพื่อให้ฝึกตั้งแต่ต้น):
+นอกจากนี้สัปดาห์นี้ยังปูทักษะพื้นฐานสองอย่างที่จะได้ใช้ต่อในแล็บถัดๆ ไป (ย้ายมาจาก Week 11 เดิม):
 - **การอ่าน Verifier Log** — แล็บ `verifier_fail/` ที่ตั้งใจเขียนโค้ดผิดให้ Verifier ปฏิเสธ แล้วฝึกไล่ Log ระดับ Instruction ว่าบรรทัดไหนคือสาเหตุ (หัวข้อ 5)
 - **การทดสอบด้วย `BPF_PROG_TEST_RUN`** — เขียน Go unit test ที่สั่งให้เคอร์เนลรันโปรแกรม eBPF กับข้อมูลปลอมโดยไม่ต้อง Attach กับ Hook จริง และใช้เปรียบเทียบพฤติกรรมของ `HASH` vs `PERCPU_HASH` vs `LRU_HASH` (หัวข้อ 6)
 
@@ -25,7 +25,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 สถาปัตยกรรมภายในของ BPF_MAP_TYPE_HASH
 
@@ -816,42 +816,42 @@ ok  	ebpf-noob-to-hero/phase03-modern-ebpf-core/week06-ebpf-maps/maps_testrun	0.
 
 ### ระดับพื้นฐาน
 1. **เปลี่ยนเป็น `BPF_MAP_TYPE_LRU_HASH`**: แก้ชนิด map แล้วลด `max_entries` เหลือ 256 เพื่อให้เห็นผลเร็ว
-   - **สิ่งที่ต้องส่ง**: diff + ผล `Tracking N` ที่ไม่เกิน 256 แต่โปรเซสใหม่ (เช่น `python3` วนลูป) ยังขึ้นตาราง
+   - **ผลที่ควรได้**: diff + ผล `Tracking N` ที่ไม่เกิน 256 แต่โปรเซสใหม่ (เช่น `python3` วนลูป) ยังขึ้นตาราง
    - **วิธีตรวจ**: `sudo bpftool map list name syscall_map` ต้องแสดง `lru_hash` และ `max_entries 256` และต้องแก้ `TestSyscallStatsLoads` ให้ตรงกับชนิด/ขนาดใหม่จน `make test` ผ่าน
 2. **นับเฉพาะ thread แทน process**: เปลี่ยน key เป็น 32 บิตล่างของ `pid_tgid` (TID) แล้วรันโปรแกรมที่มีหลาย thread
-   - **สิ่งที่ต้องส่ง**: ผลเปรียบเทียบ key แบบ TGID vs TID สำหรับโปรแกรมเดียวกัน
+   - **ผลที่ควรได้**: ผลเปรียบเทียบ key แบบ TGID vs TID สำหรับโปรแกรมเดียวกัน
    - **วิธีตรวจ**: `python3 -c "import threading,os; [threading.Thread(target=lambda: [os.getpid() for _ in range(20000)]).start() for _ in range(4)]"` — แบบ TID ต้องเห็น 4 แถว (ชื่อ `python3`) แต่ละแถว ~20,000
 3. **อ่าน Log แล้วแก้เอง**: แก้ `xdp_no_bounds_check` ใน `verifier_fail/verifier_fail.c` ให้โหลดผ่านโดยเพิ่ม Bounds Check เพียงบรรทัดเดียว
-   - **สิ่งที่ต้องส่ง**: Diff ของไฟล์ + ผลลัพธ์ `sudo ./bin/verifier_fail -case bounds` ที่ขึ้น `ACCEPTED`
+   - **ผลที่ควรได้**: Diff ของไฟล์ + ผลลัพธ์ `sudo ./bin/verifier_fail -case bounds` ที่ขึ้น `ACCEPTED`
    - **วิธีตรวจ**: `make test` จะ **FAIL** ที่ `TestVerifierRejectsBrokenPrograms/bounds` (เพราะเทสต์คาดว่าโปรแกรมต้องถูกปฏิเสธ) — อธิบายว่าทำไมนี่คือพฤติกรรมที่ถูกต้องของเทสต์ แล้ว Revert กลับ
 4. **ทำให้เทสต์พังโดยตั้งใจ**: ใน `maps_testrun/map_types.c` เปลี่ยน `lru_map` เป็น `BPF_MAP_TYPE_HASH` แล้วรัน `make test`
-   - **สิ่งที่ต้องส่ง**: Output ของ `TestFullMapHashVsLRU` ที่ FAIL + อธิบายว่า Assertion ข้อไหนจับความต่างของ LRU ได้
+   - **ผลที่ควรได้**: Output ของ `TestFullMapHashVsLRU` ที่ FAIL + อธิบายว่า Assertion ข้อไหนจับความต่างของ LRU ได้
    - **วิธีตรวจ**: ข้อความ FAIL ต้องมี `lru_map update errors` หรือ `want the newest key to be present` แล้ว Revert จน `make test` ผ่าน
 
 ### ระดับปานกลาง
 5. **แก้ Race ตอน insert ครั้งแรก**: ใช้ `bpf_map_update_elem(..., BPF_NOEXIST)` ถ้าคืนค่าไม่ใช่ 0 (มี CPU อื่น insert ไปก่อน) ให้ lookup ใหม่แล้ว `__sync_fetch_and_add`
-   - **สิ่งที่ต้องส่ง**: โค้ด + คำอธิบายว่าทำไมแบบเดิมนับหายได้ + ตรวจว่าผ่าน Verifier
+   - **ผลที่ควรได้**: โค้ด + คำอธิบายว่าทำไมแบบเดิมนับหายได้ + ตรวจว่าผ่าน Verifier
    - **วิธีตรวจ**: โปรแกรมโหลดได้ (`make generate build && sudo timeout -s INT 5 ./bin/syscall-top`) และยอดของ `python3` ในแบบฝึกหัดที่ 2 (แบบ TGID) ต้องไม่ต่ำกว่า 80,000 — ทำแบบเดียวกันใน `bump_shared()` ของ `map_types.c` และแยกนับ `-EEXIST` (-17) ออกจาก `-E2BIG`
 6. **ลบ PID ที่จบแล้ว**: เพิ่มโปรแกรมที่สองบน `tracepoint/sched/sched_process_exit` ที่ `bpf_map_delete_elem()` เมื่อ thread ที่จบคือ thread หลัก (`pid == tgid`)
-   - **สิ่งที่ต้องส่ง**: โค้ด C + Go (attach 2 tracepoint) + ผลที่ `Tracking N` คงที่แทนที่จะโตขึ้นเรื่อยๆ
+   - **ผลที่ควรได้**: โค้ด C + Go (attach 2 tracepoint) + ผลที่ `Tracking N` คงที่แทนที่จะโตขึ้นเรื่อยๆ
    - **วิธีตรวจ**: รัน `for i in $(seq 200); do /bin/true; done` แล้ว `Tracking N` ต้องไม่เพิ่มขึ้น ~200
 7. **บั๊กใหม่ของคุณเอง**: เพิ่มกรณีที่ 4 ใน `verifier_fail` เช่น อ่าน IPv4 Header ต่อจาก Ethernet โดยเช็ก `eth + 1` แต่ไม่เช็ก `iph + 1` หรือคำนวณ Offset จาก `iph->ihl * 4` แต่ไม่เช็ก `data_end` หลังบวก Offset
-   - **สิ่งที่ต้องส่ง**: โปรแกรม C + Entry ใหม่ใน `cases` + Verifier Log จริงพร้อมคำอธิบายว่าบรรทัดไหนบอกสาเหตุ (ค่า `r=` ของ Register ก่อนคำสั่งที่ผิด)
+   - **ผลที่ควรได้**: โปรแกรม C + Entry ใหม่ใน `cases` + Verifier Log จริงพร้อมคำอธิบายว่าบรรทัดไหนบอกสาเหตุ (ค่า `r=` ของ Register ก่อนคำสั่งที่ผิด)
    - **วิธีตรวจ**: เพิ่มกรณีใน `TestVerifierRejectsBrokenPrograms` ที่ตรวจข้อความ Error ของคุณ และ `make test` ผ่าน
 8. **ARRAY vs HASH NULL Elision**: เปลี่ยน `pkt_count` ใน `verifier_fail.c` เป็น `BPF_MAP_TYPE_ARRAY` และใช้ Key คงที่ `0` แล้วรัน `-case nullcheck`
-   - **สิ่งที่ต้องส่ง**: ผลลัพธ์จริงบนเครื่องของคุณ (ACCEPTED หรือ REJECTED) + ระบุเวอร์ชันเคอร์เนล (`uname -r`) + อธิบายว่าทำไมผลอาจต่างกันบนเคอร์เนลรุ่นเก่า
+   - **ผลที่ควรได้**: ผลลัพธ์จริงบนเครื่องของคุณ (ACCEPTED หรือ REJECTED) + ระบุเวอร์ชันเคอร์เนล (`uname -r`) + อธิบายว่าทำไมผลอาจต่างกันบนเคอร์เนลรุ่นเก่า
    - **วิธีตรวจ**: เทียบชนิดของ `R0` หลัง `call bpf_map_lookup_elem` ใน Log ระหว่างสองแบบ (`map_value` vs `map_value_or_null`)
 
 ### ระดับท้าทาย
 9. **นับแยกตามหมายเลข syscall**: เปลี่ยน key เป็น struct `{__u32 pid; __u32 syscall_id;}` (อ่าน `id` จาก context ของ `raw_syscalls/sys_enter`: struct `{__u64 pad; long id; unsigned long args[6];}` ตาม `/sys/kernel/tracing/events/raw_syscalls/sys_enter/format`) แล้วแสดง Top-3 syscall ของแต่ละโปรเซส
-   - **สิ่งที่ต้องส่ง**: โค้ด + ผลที่ `python3` ในขั้นตอนที่ 4 มี syscall 39 (`getpid` บน x86_64) เป็นอันดับ 1
+   - **ผลที่ควรได้**: โค้ด + ผลที่ `python3` ในขั้นตอนที่ 4 มี syscall 39 (`getpid` บน x86_64) เป็นอันดับ 1
    - **วิธีตรวจ**: เทียบกับ `sudo perf stat -e 'syscalls:sys_enter_getpid' python3 -c "import os; [os.getpid() for _ in range(50000)]"` ซึ่งต้องได้ 50,000
 10. **LRU จริงแค่ไหน**: เขียนเทสต์ใหม่ใน `maps_testrun/` ที่ Insert Key 1..20 แล้ว Dump Key ทั้งหมดที่เหลือใน `lru_map` เทียบกับ LRU ทางทฤษฎี (Key 13..20) จากนั้นทำซ้ำโดยล็อก Thread กับ CPU เดียว (`runtime.LockOSThread()` + `unix.SchedSetaffinity`) และทดลองใส่ Flag `BPF_F_NO_COMMON_LRU` ใน `map_flags`
-    - **สิ่งที่ต้องส่ง**: ตาราง Key ที่เหลือของแต่ละแบบ (รันอย่างน้อย 5 ครั้ง) + คำอธิบายว่าทำไมผลไม่ตรงทฤษฎี
+    - **ผลที่ควรได้**: ตาราง Key ที่เหลือของแต่ละแบบ (รันอย่างน้อย 5 ครั้ง) + คำอธิบายว่าทำไมผลไม่ตรงทฤษฎี
     - **วิธีตรวจ**: เทสต์ของคุณต้องผ่านด้วย `go test -exec sudo -count=50` (ห้าม Assert ค่าที่ไม่ Deterministic)
 11. **อ่านแบบ Batch และวัดผล**: เปลี่ยน `Iterate()` เป็น `BatchLookup` ของ cilium/ebpf แล้ววัดจำนวน `bpf()` syscall ที่ `syscall-top` เรียกต่อรอบ ก่อน/หลัง
-    - **สิ่งที่ต้องส่ง**: diff + ตารางจำนวน syscall ต่อรอบ (วัดจริงอย่างน้อย 3 รอบ) เมื่อ map มี ~1,000 entries
+    - **ผลที่ควรได้**: diff + ตารางจำนวน syscall ต่อรอบ (วัดจริงอย่างน้อย 3 รอบ) เมื่อ map มี ~1,000 entries
     - **วิธีตรวจ**: `sudo strace -c -e trace=bpf -p $(pgrep -f bin/syscall-top) ` ประมาณ 10 วินาที แล้วเทียบ `calls`
 12. **ชน Instruction Limit**: เขียนโปรแกรมใน `verifier_fail` ที่วนลูปโดยใช้ขอบเขตเป็นค่า `__u32` ที่อ่านจาก Packet (ไม่มีขอบเขตบนที่ Verifier พิสูจน์ได้) แล้วสังเกตว่า Verifier ตอบอย่างไร จากนั้นเปรียบเทียบกับการใช้ขอบเขตเป็น `__u8` (สูงสุด 255 รอบ), ขอบเขตคงที่ และ `bpf_loop()`
-    - **สิ่งที่ต้องส่ง**: Log ก่อน/หลังแก้ (ใช้ `-lines 20`) + ค่า `processed N insns` ของเวอร์ชันที่ผ่าน
+    - **ผลที่ควรได้**: Log ก่อน/หลังแก้ (ใช้ `-lines 20`) + ค่า `processed N insns` ของเวอร์ชันที่ผ่าน
     - **วิธีตรวจ**: อธิบายความสัมพันธ์ระหว่างจำนวน Path ที่ Verifier ต้องจำลองกับค่า `processed` และ `total_states`

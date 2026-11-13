@@ -1,6 +1,6 @@
 # Week 19: Memory Page Faults & OOM Killer Forensics ด้วย CO-RE Tracepoints
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 19 ของหลักสูตร **eBPF: Zero-to-Hero** ในระบบ Cloud Native ปัญหา **OOM (Out-Of-Memory) Kill** เป็นหนึ่งในเหตุการณ์ที่พบบ่อยที่สุด — คอนเทนเนอร์ใช้หน่วยความจำเกิน limit แล้วถูกเคอร์เนลฆ่าทิ้งทันทีด้วย `SIGKILL` โดยแอปพลิเคชันไม่มีโอกาสเขียน log ใด ๆ เลย สิ่งที่เหลืออยู่มักมีแค่ `exit code 137` และบรรทัดเดียวใน `dmesg`
+**Week 19** — ในระบบ Cloud Native ปัญหา **OOM (Out-Of-Memory) Kill** เป็นหนึ่งในเหตุการณ์ที่พบบ่อยที่สุด — คอนเทนเนอร์ใช้หน่วยความจำเกิน limit แล้วถูกเคอร์เนลฆ่าทิ้งทันทีด้วย `SIGKILL` โดยแอปพลิเคชันไม่มีโอกาสเขียน log ใด ๆ เลย สิ่งที่เหลืออยู่มักมีแค่ `exit code 137` และบรรทัดเดียวใน `dmesg`
 
 ในบทนี้เราจะสร้าง **Memory & OOM Watcher** ที่:
 1. นับ **User-space Page Faults** ต่อโปรเซส (แยก fault จากการ "เขียน") ผ่าน `tracepoint/exceptions/page_fault_user`
@@ -20,7 +20,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 Page Fault: แรมไม่ได้ถูกจองตอน `malloc()`
 
@@ -416,6 +416,17 @@ Oct 28 22:08:03 ce-desk kernel: Memory cgroup out of memory: Killed process 4124
 - [x] ถอดรหัสฟิลด์ `__data_loc` ของ tracepoint
 - [x] อ่านชื่อ cgroup ด้วย `BPF_CORE_READ(task, cgroups, dfl_cgrp, kn, name)`
 - [x] กระตุ้น OOM อย่างปลอดภัยใน transient scope (`MemoryMax` + `MemorySwapMax=0`) และยืนยันผลกับ kernel log
+
+---
+
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `systemd-run --user --scope -p MemoryMax=50M` แจ้งว่าตั้ง `MemoryMax` ไม่ได้หรือ OOM ไม่เกิด | systemd user manager ยังไม่ได้รับ delegation ของ `memory` controller (ตรวจ `/sys/fs/cgroup/user.slice/.../cgroup.controllers`) — เปลี่ยนไปรันด้วย `sudo systemd-run --scope -p MemoryMax=50M -p MemorySwapMax=0 ...` |
+| สคริปต์ Python จบด้วย `exit status: 0` (`allocated 200 MB without OOM`) | ลืมใส่ `-p MemorySwapMax=0` ทำให้เคอร์เนลสลับหน้าแรมลง swap แทนการเรียก OOM killer หรือใช้ `bytearray` ที่ยังไม่ได้เขียนแตะหน้าจริง |
+| คอมไพล์ `oom_watcher.c` ไม่ผ่านเรื่อง `trace_event_raw_exceptions` หรือ `page_fault_user` | รันบนสถาปัตยกรรมที่ไม่ใช่ x86_64 (`exceptions:page_fault_user` เป็น tracepoint ของ x86) หรือ `../../vmlinux.h` เก่าเกินไป — สร้าง `vmlinux.h` ใหม่จาก `/sys/kernel/btf/vmlinux` |
+| watcher รายงานขนาดหน่วยความจำของเหยื่อเป็น `n/a` | เคอร์เนลรุ่นเก่าไม่มีฟิลด์ขยาย (`total_vm`, `anon_rss`) ใน `mark_victim`; ให้เทียบค่าจาก `journalctl -k \| grep -i "Killed process"` |
 
 ---
 

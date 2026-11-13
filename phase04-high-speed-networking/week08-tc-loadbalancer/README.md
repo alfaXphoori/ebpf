@@ -1,6 +1,6 @@
 # Week 08: Layer-4 Load Balancer with XDP & TC Egress Marker
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 8 ของหลักสูตร **eBPF: Zero-to-Hero** ในสัปดาห์นี้ เราจะผสมผสานสองเสาหลักของระบบเครือข่ายความเร็วสูงในลินุกซ์เข้าด้วยกัน ได้แก่ **XDP (eXpress Data Path)** และ **TC (Traffic Control)** เพื่อสร้าง Layer-4 Load Balancer ที่ทำงานได้จริงแบบ End-to-End:
+**Week 08** — จับคู่ **XDP** กับ **TC (Traffic Control)** มาสร้าง Layer-4 Load Balancer ที่รับส่งแพ็กเก็ตได้ครบทั้งขาไป-ขากลับ:
 1. **L4 Load Balancer ขาไป (XDP, Forward Path):** ดักจับทราฟฟิก TCP ที่ส่งมายัง Virtual IP (VIP), เลือก Backend ด้วย Flow Hash, บันทึก Flow ลง Connection Tracking Map, ทำ DNAT (Rewrite MAC/Destination IP), คำนวณ Checksum ใหม่แบบ Incremental และสะท้อนแพ็กเก็ตออกทางเดิมด้วย `XDP_TX` (Hairpin) โดยไม่ผ่าน Routing ของเคอร์เนล
 2. **Reverse NAT ขากลับ (TC Ingress, Return Path):** คำตอบจาก Backend ที่วิ่งกลับผ่าน LB จะถูกโปรแกรม TC เปลี่ยน Source IP จาก IP ของ Backend กลับเป็น VIP (SNAT) พร้อมแก้ Checksum ด้วย Helper ของ TC เพื่อให้ Client ยอมรับคำตอบ
 3. **TC Egress QoS Classifier & Marker:** ติดตามทราฟฟิกขาออก (Outbound / Egress) จำแนกตาม Destination Port และประทับตรา Packet Priority/Mark (`skb->mark = 0x42`) สำหรับระบบ Traffic Shaping / QoS
@@ -23,7 +23,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 เปรียบเทียบเชิงลึก: XDP vs TC (Traffic Control)
 
@@ -686,6 +686,18 @@ Cleanup complete. Load Balancer and TC Egress stopped.
 - [x] ใช้งาน `bpf2go` เพื่อคอมไพล์โปรแกรม eBPF หลายตัวในโปรเจกต์เดียว และแนบผ่าน TCX
 - [x] เขียน Unit Test ด้วย `BPF_PROG_TEST_RUN` ตรวจทั้ง Verdict, การ Rewrite และ Checksum (`make test`)
 - [x] ทดสอบ Load Balancer แบบ End-to-End (`curl` สำเร็จทุกครั้ง) ในเครือข่ายจำลอง 5 Namespaces
+
+---
+
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `curl http://10.10.1.100/` timeout ทั้งที่มี `XDP_TX` | ลืมปิด TX checksum offload (`ethtool -K eth0 tx off`) ใน namespace หรือลืมตั้ง `net.ipv4.ip_forward=1` / route ของ `w08-b0`, `w08-b1` ให้ชี้ `10.10.2.0/24 via 10.10.1.1` (คำตอบต้องวิ่งกลับผ่าน `w08-lb` เพื่อให้ `tc_reverse_nat` ทำ SNAT) |
+| `attach XDP: operation not supported` เมื่อไม่ใส่ `-xdp-mode generic` | veth ใน container/VM บางตัวหรือเมื่อไม่ได้โหลดโปรแกรม XDP ที่ฝั่ง peer ไม่รองรับ Native XDP หรือไดรเวอร์ปฏิเสธ `XDP_TX` — ใช้ `-xdp-mode generic` ตามขั้นตอนที่ 5 |
+| แพ็กเก็ตไป `Backend 0` ตลอดหรือ `tcpdump` เห็น Backend ตอบ Client ตรง | ลืมปิด `send_redirects` ใน `w08-lb` (`net.ipv4.conf.eth0.send_redirects=0`) ทำให้เคอร์เนลส่ง ICMP Redirect หรือ Backend มี route ตรงไปหา Client |
+| `bpftool net show dev eth0` ไม่เห็น `tcx/ingress` และ `tcx/egress` | ลืมรัน `bpftool` ภายใต้ `sudo ip netns exec w08-lb` (ไปตรวจผิด namespace) หรือเคอร์เนลเก่ากว่า 6.6 ที่ยังไม่รองรับ `TCX` |
+| รันซ้ำแล้ว error สร้าง `w08-*` namespace ซ้ำ | ยังมีโปรเซส `python3 -m http.server` หรือ namespace เก่าค้าง — ล้างตามขั้นตอนที่ 7 (`ip netns pids ... \| xargs -r sudo kill` แล้ว `ip netns del`) |
 
 ---
 

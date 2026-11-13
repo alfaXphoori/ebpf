@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 15: ตรวจจับ Reverse Shell และ Shell ที่ถูก Spawn จาก Daemon ด้วย eBPF CO-RE
 
-ยินดีต้อนรับสู่ **Week 15** ของหลักสูตร eBPF Zero to Hero!
+**Week 15** — สร้างตัวตรวจจับ Reverse Shell จากสัญญาณพฤติกรรมจริงในเคอร์เนล
 เมื่อเซิร์ฟเวอร์ถูกเจาะผ่านช่องโหว่ประเภท **Remote Code Execution (RCE)** หรือ command injection ขั้นตอนถัดไปที่ผู้โจมตีมักทำคือเปิด **interactive shell** กลับมาหาตัวเอง (reverse shell) หรือสั่ง shell ผ่าน process ของ web service (`nginx`, `php-fpm`, `node`, `java`)
 
 สัปดาห์นี้เราจะสร้าง **Threat Guard** ที่เกาะ tracepoint `sched/sched_process_exec` และใช้ **CO-RE** อ่านโครงสร้างภายในเคอร์เนล (`task_struct → real_parent`, `task_struct → files → fdtable → file → socket`) เพื่อตอบคำถาม 3 ข้อทุกครั้งที่มีการ `execve()`:
@@ -22,7 +22,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 Reverse shell ทำงานอย่างไร
 
@@ -387,28 +387,39 @@ TIME      SEVERITY           PID      PPID     STDIO PROCESS    PARENT       EXE
 
 ---
 
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `CRITICAL-REVSHELL` ไม่ขึ้นแม้รันคำสั่งทดสอบ (d) ด้วย `pty.spawn` | เป็นพฤติกรรมตามการออกแบบ (stdio ของ shell เป็น pty `/dev/pts/*` ไม่ใช่ socket จึงขึ้นเป็น `INFO-SHELL` เมื่อใส่ `-all`) — หากต้องการจับจุดเชื่อม socket ให้ใช้กรณี (b) หรือติดตาม `dup2` (แบบฝึกหัด) |
+| รันโดยไม่ใส่ `-all` แล้วไม่เห็น `INFO-SHELL` หรือเหตุการณ์ระดับ `WARN` | ค่าเริ่มต้นซ่อนเหตุการณ์ `INFO` เพื่อลด noise — เพิ่มแฟล็ก `-all` เพื่อดูทุก severity |
+| `bash -c 'exec 3<>/dev/tcp/127.0.0.1/4444 ...'` ล้มเหลว `Connection refused` | ยังไม่ได้เปิด `listener.py` ใน Terminal 1 หรือ `listener.py` รับครบ 3 ครั้งแล้วจบตามลูป `range(3)` — รัน `python3 listener.py` ใหม่ |
+| รัน `bpftool map dump name daemon_names` ด้วย hex key แล้วโปรแกรมไม่ match | key ใน `watch_names`/`daemon_names` เป็น `char[16]` ที่ pad ด้วย `\x00` ครบ 16 ไบต์ — ต้องส่ง hex ครบ 16 ไบต์พอดี และอย่าใส่ newline (`0a`) |
+
+---
+
 ## 7. แบบฝึกหัดท้ายบท (Exercises)
 
 ### ระดับพื้นฐาน
 1. **ปรับรายชื่อขณะรัน:** ขณะ `threat-guard` ทำงาน ใช้ `bpftool map update name daemon_names key ... value 1` เพิ่มชื่อ `python3` (key เป็น 16 ไบต์ hex) โดยไม่ต้องรีสตาร์ทโปรแกรม
-   - *ส่งงาน:* คำสั่ง `bpftool` ที่ใช้ + alert `CRITICAL-RCE` จาก `python3 -c 'import os; os.system("true")'`
+   - *ผลที่ควรได้:* คำสั่ง `bpftool` ที่ใช้ + alert `CRITICAL-RCE` จาก `python3 -c 'import os; os.system("true")'`
    - *ตรวจ:* `bpftool map dump name daemon_names` ต้องมี key ใหม่
 2. **วัด noise ของระบบ:** รัน `sudo ./bin/threat-guard -all` 5 นาทีบนเครื่องของตนเองขณะใช้งานปกติ แล้วนับจำนวน alert แยกตาม severity
-   - *ส่งงาน:* ตารางจำนวน alert + parent ที่พบบ่อยที่สุด 3 อันดับ
+   - *ผลที่ควรได้:* ตารางจำนวน alert + parent ที่พบบ่อยที่สุด 3 อันดับ
    - *ตรวจ:* ต้องไม่มี `CRITICAL-*` ในการใช้งานปกติ หากมี ให้อธิบายสาเหตุ (false positive)
 
 ### ระดับปานกลาง
 1. **ตรวจ executable จริง:** อ่าน `task->mm->exe_file->f_inode->i_ino` และ `i_sb->s_dev` ส่งขึ้น User Space แล้วให้ Go เทียบกับ inode ของ `/bin/bash`, `/bin/dash` (`os.Stat`) เพื่อติดป้าย `RENAMED-SHELL` เมื่อ inode ตรงแต่ `comm` ไม่ตรง
-   - *ส่งงาน:* โค้ด + ผลการรันกรณี `ln /bin/dash /tmp/y` (hard link ชื่ออื่น)
+   - *ผลที่ควรได้:* โค้ด + ผลการรันกรณี `ln /bin/dash /tmp/y` (hard link ชื่ออื่น)
    - *ตรวจ:* อธิบายว่าทำไม `cp` (สำเนา) จึงจับไม่ได้ด้วยวิธีนี้ และควรใช้ hash ของไฟล์ (เช่น IMA) แทน
 2. **จับ dup2 ไปยัง stdio:** เพิ่มโปรแกรมที่แจ้งเตือนเมื่อ `newfd` เป็น 0/1/2 และ `oldfd` เป็น network socket (แนะนำ `tracepoint/raw_syscalls/sys_enter` กรองหมายเลข `dup2`/`dup3` หรือ `fentry` ที่ฟังก์ชันภายในของ dup แทน `syscalls/sys_enter_dup3` เพราะบน Linux 7.0.0-38 พบว่า `syscalls:sys_enter_*` บางตัวไม่ทำงานทุก CPU; ทดสอบด้วย `taskset -c N` ทุก CPU)
-   - *ส่งงาน:* โค้ด + ผลการรันกรณี (d) pty reverse shell ที่ตอนนี้ถูกจับได้ที่ขั้น `os.dup2`
+   - *ผลที่ควรได้:* โค้ด + ผลการรันกรณี (d) pty reverse shell ที่ตอนนี้ถูกจับได้ที่ขั้น `os.dup2`
    - *ตรวจ:* การใช้งานปกติอย่าง `bash -c "echo hi > /tmp/f"` ต้องไม่ถูกแจ้งเตือน
 
 ### ระดับท้าทาย
 1. **จาก detect สู่ prevent ด้วย BPF LSM:** บนเครื่องที่เปิด BPF LSM (`lsm=...,bpf` ใน kernel cmdline; ตรวจด้วย `cat /sys/kernel/security/lsm`) เขียน `SEC("lsm/bprm_check_security")` ที่ปฏิเสธ (`-EPERM`) การ exec shell เมื่อ fd 0 เป็น network socket
-   - *ส่งงาน:* โค้ด + ผลการทดสอบกรณี (b) ที่ `exec sh` ล้มเหลว
+   - *ผลที่ควรได้:* โค้ด + ผลการทดสอบกรณี (b) ที่ `exec sh` ล้มเหลว
    - *ตรวจ:* ทดลองใน VM เท่านั้น และแสดงว่า shell ปกติยังใช้งานได้
 2. **Process lineage:** เก็บ ancestry ย้อนขึ้นไป 4 ระดับ (`real_parent` ซ้อนกันด้วย loop ที่มีขอบเขต) แล้วตรวจว่า shell มีบรรพบุรุษเป็น daemon หรือไม่ แม้จะคั่นด้วย `sh -c` หลายชั้น
-   - *ส่งงาน:* โค้ด + ผลการรันกรณี `python3 -c 'import os; os.system("sh -c \"sh -c id\"")'`
+   - *ผลที่ควรได้:* โค้ด + ผลการรันกรณี `python3 -c 'import os; os.system("sh -c \"sh -c id\"")'`
    - *ตรวจ:* โปรแกรมต้องผ่าน verifier และแสดง lineage ครบทุกระดับ

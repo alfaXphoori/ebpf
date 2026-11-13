@@ -1,6 +1,6 @@
-# 📖 อภิธานศัพท์ eBPF (Glossary)
+# 📖 รวมคำศัพท์ eBPF (Glossary)
 
-รวม **86 คำศัพท์** ที่ใช้ในหลักสูตร **eBPF Zero to Hero** พร้อมความหมายภาษาไทย คอลัมน์ "เรียนใน" ลิงก์ไปยังแล็บที่สอนหรือใช้คำนั้นเป็นหลัก ส่วนทฤษฎีเชิงลึกดูได้ใน [`MASTER_STUDY_GUIDE.md`](MASTER_STUDY_GUIDE.md)
+รวม **86 คำศัพท์** ที่เจอบ่อยใน **eBPF Zero to Hero** พร้อมคำอธิบายภาษาไทยแบบเข้าใจง่าย คอลัมน์ด้านขวาจะลิงก์ไปยังแล็บที่ใช้คำนั้นเป็นหลัก ถ้าอยากอ่านแบบละเอียดดูต่อได้ที่ [`MASTER_STUDY_GUIDE.md`](MASTER_STUDY_GUIDE.md)
 
 > ค้นหาคำที่ต้องการได้เร็วด้วย Ctrl+F ชื่อคำศัพท์ใช้ภาษาอังกฤษตามที่พบในโค้ดและเอกสารของเคอร์เนล
 
@@ -27,7 +27,7 @@
 
 พื้นฐานที่ต้องรู้ก่อนเขียนโปรแกรม XDP/TC
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **Network Namespace (netns)** | สำเนาแยกของ network stack ทั้งชุด (interface, route, ARP, iptables, socket) ใช้จำลองหลายเครื่องในเครื่องเดียว ทุกแล็บเครือข่ายรันใน netns เพื่อไม่กระทบเครื่องจริง | [W01](../phase01-network-foundation/week01-packet-netns/README.md) |
 | **veth pair** | interface เสมือนที่มาเป็นคู่ แพ็กเก็ตที่ส่งเข้าปลายหนึ่งจะออกอีกปลายหนึ่ง ใช้เชื่อม netns เข้าด้วยกันหรือเข้ากับ bridge | [W01](../phase01-network-foundation/week01-packet-netns/README.md) |
@@ -47,7 +47,7 @@
 
 แนวคิดที่ใช้ในทุกแล็บ
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **eBPF** | virtual machine ในเคอร์เนลที่รันโปรแกรมขนาดเล็กซึ่งผ่านการตรวจแล้ว ณ จุด hook ต่าง ๆ ขยายความสามารถเคอร์เนลได้โดยไม่ต้องแก้ซอร์สหรือโหลด kernel module | [W03](../phase02-first-step-ebpf/week03-bpftool-bpftrace/README.md) |
 | **bpf() syscall** | ช่องทางที่ user space ใช้คุยกับระบบย่อย BPF ทั้งหมด: โหลดโปรแกรม สร้าง/อ่าน map และ attach | [W03](../phase02-first-step-ebpf/week03-bpftool-bpftrace/README.md) |
@@ -72,7 +72,7 @@
 
 ## 🧰 เครื่องมือและไลบรารี (Toolchain)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **bpftool** | เครื่องมือมาตรฐานสำหรับดูและจัดการ BPF: `prog show`, `map dump`, `btf dump`, `prog load` และดูโค้ดที่ JIT แล้ว | [W03](../phase02-first-step-ebpf/week03-bpftool-bpftrace/README.md) |
 | **bpftrace** | ภาษาสคริปต์ระดับสูงสำหรับ tracing แบบ one-liner คอมไพล์เป็น BPF ให้อัตโนมัติ มี map ในตัว (`@name`) และฟังก์ชันสรุปผลอย่าง `count()`, `hist()` | [W03](../phase02-first-step-ebpf/week03-bpftool-bpftrace/README.md) |
@@ -88,7 +88,7 @@
 
 ## 🪝 จุด Hook และชนิดโปรแกรม (Hooks & Program Types)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **kprobe / kretprobe** | แทรก probe ที่ต้นหรือตอนคืนค่าของฟังก์ชันเคอร์เนลเกือบทุกตัวแบบ dynamic ยืดหยุ่นแต่ไม่มี ABI คงที่ ชื่อหรืออาร์กิวเมนต์ของฟังก์ชันอาจเปลี่ยนข้ามเวอร์ชัน | [W03](../phase02-first-step-ebpf/week03-bpftool-bpftrace/README.md) [W04](../phase02-first-step-ebpf/week04-bcc-python/README.md) |
 | **Tracepoint** | จุดที่นักพัฒนาเคอร์เนลวางไว้ล่วงหน้า รูปแบบข้อมูลค่อนข้างคงที่ เช่น `sched:sched_process_exec`, `skb:kfree_skb` | [W03](../phase02-first-step-ebpf/week03-bpftool-bpftrace/README.md) [W05](../phase03-modern-ebpf-core/week05-libbpf-cilium-go/README.md) |
@@ -116,7 +116,7 @@
 
 ## 🗃️ ชนิดของ Map (Map Types)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **HASH / ARRAY** | map พื้นฐาน HASH ใช้ key อะไรก็ได้ ARRAY ใช้ index 0..N-1 จองไว้ครบตั้งแต่สร้าง | [W06](../phase03-modern-ebpf-core/week06-ebpf-maps/README.md) |
 | **PERCPU_HASH / PERCPU_ARRAY** | แต่ละ CPU มีสำเนาค่าของตัวเอง เขียนได้โดยไม่ต้อง atomic ฝั่ง user space ต้องรวมค่าจากทุก CPU เอง | [W06](../phase03-modern-ebpf-core/week06-ebpf-maps/README.md) |
@@ -134,7 +134,7 @@
 
 ## 🛡️ ความปลอดภัย (Security)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **LSM (Linux Security Module)** | กรอบของเคอร์เนลที่วาง hook ไว้ก่อนการกระทำสำคัญ (เปิดไฟล์, exec, socket) ให้โมดูลความปลอดภัยตัดสิน เช่น SELinux, AppArmor และ BPF LSM | [W10](../phase05-security-observability/week10-bpf-lsm/README.md) |
 | **unprivileged_bpf_disabled** | sysctl ที่กำหนดว่าผู้ใช้ทั่วไปใช้ `bpf()` ได้หรือไม่ หนึ่งในค่าที่ W16 ตรวจเพื่อประเมินความแข็งแรงของระบบ | [W16](../phase07-advanced-security-observability/week16-ebpf-integrity-audit/README.md) |
@@ -147,7 +147,7 @@
 
 ## 📈 ประสิทธิภาพและ Observability
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **kfree_skb และ Drop Reason** | tracepoint `skb:kfree_skb` เกิดทุกครั้งที่เคอร์เนลทิ้งแพ็กเก็ต พร้อมรหัสเหตุผล (`enum skb_drop_reason`) เช่น `NO_SOCKET` ซึ่งแปลงเป็นชื่อได้จาก BTF | [W13](../phase07-advanced-security-observability/week13-kfree-skb-dropwatch/README.md) |
 | **Log2 Histogram** | เก็บค่าเป็นช่วงกำลังสอง (1, 2–3, 4–7, ...) ด้วยการนับ slot = log2(ค่า) ประหยัดที่และเห็นการกระจายของ latency ได้ทันที | [W17](../phase08-system-performance-observability/week17-block-io-biolatency/README.md) |
@@ -163,7 +163,7 @@
 
 ## ⚡ เร่งความเร็ว Socket (Socket Acceleration)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **AF_XDP** | socket family ที่รับส่งแพ็กเก็ตระหว่าง XDP กับ user space ผ่าน ring ในหน่วยความจำร่วม ข้าม TCP/IP stack ของเคอร์เนล | [W21](../phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/README.md) |
 | **UMEM** | พื้นที่หน่วยความจำที่ user space จองแล้วลงทะเบียนกับ AF_XDP socket แบ่งเป็น frame ขนาดเท่ากันไว้เก็บแพ็กเก็ต | [W21](../phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect/README.md) |
@@ -176,7 +176,7 @@
 
 ## 🚀 eBPF ยุคใหม่ (Modern Extensibility)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **KF_ACQUIRE / KF_RELEASE** | flag ของ kfunc: ตัวที่เป็น `KF_ACQUIRE` คืน reference ที่โปรแกรมต้องส่งให้ kfunc แบบ `KF_RELEASE` ก่อนจบทุกเส้นทาง ไม่อย่างนั้น verifier ปฏิเสธด้วย `Unreleased reference` | [W24](../phase11-modern-ebpf-extensibility/week24-kfuncs-arena/README.md) |
 | **RCU (Read-Copy-Update)** | กลไก synchronization ที่ให้อ่านข้อมูลร่วมได้โดยไม่ล็อก ใน BPF ใช้ `bpf_rcu_read_lock()` / `bpf_rcu_read_unlock()` ครอบการอ่าน pointer ที่ RCU ปกป้อง | [W24](../phase11-modern-ebpf-extensibility/week24-kfuncs-arena/README.md) |
@@ -191,7 +191,7 @@
 
 ## 🌍 ระบบนิเวศ (Ecosystem)
 
-| คำศัพท์ | ความหมาย | เรียนใน |
+| คำศัพท์ | ความหมาย | ดูในแล็บ |
 |---|---|---|
 | **Tetragon** | เครื่องมือ security observability และ runtime enforcement ของ Cilium กำหนดสิ่งที่จะเฝ้าด้วย TracingPolicy แล้วสร้างโปรแกรม BPF ให้อัตโนมัติ | [W26](../phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/README.md) |
 | **TracingPolicy** | ไฟล์ YAML ของ Tetragon ระบุ hook (kprobe, tracepoint, LSM), เงื่อนไขอย่าง `matchArgs` / `matchBinaries` และ action เช่น `Sigkill`, `Override` | [W26](../phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/README.md) |

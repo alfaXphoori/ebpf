@@ -5,7 +5,7 @@
 BIN_DIR := bin
 BINARY := $(BIN_DIR)/dropwatch
 
-.PHONY: all generate build run clean
+.PHONY: all generate build test run clean
 
 all: generate build
 
@@ -17,6 +17,10 @@ build:
 	@echo "===> Building userspace binary $(BINARY)..."
 	mkdir -p $(BIN_DIR)
 	go build -v -o $(BINARY) .
+
+test: generate
+	@echo "===> Running eBPF tests with sudo..."
+	go test -exec sudo -v ./...
 
 run: build
 	@echo "===> Running $(BINARY) with sudo..."

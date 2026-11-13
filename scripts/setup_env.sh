@@ -99,6 +99,7 @@ BASE_PACKAGES=(
     netcat-openbsd
     curl
     jq
+    python3-yaml
     strace
     make
     git
@@ -152,8 +153,8 @@ else
     exit 1
 fi
 
-# 6. Verify BPF LSM Support
-log_info "6. Checking Linux Security Module (LSM) configuration for BPF..."
+# 6. Verify BPF LSM & Phase 11 Kernel Features
+log_info "6. Checking Linux Security Module (LSM) & Phase 11 kernel features..."
 LSM_PATH="/sys/kernel/security/lsm"
 if [[ -f "${LSM_PATH}" ]]; then
     ACTIVE_LSMS=$(cat "${LSM_PATH}")
@@ -163,7 +164,7 @@ if [[ -f "${LSM_PATH}" ]]; then
     else
         log_warn "BPF LSM is NOT active in /sys/kernel/security/lsm."
         echo -e "${YELLOW}----------------------------------------------------------------------"
-        echo "To enable BPF LSM for Chapter 5 / Week 10 exercises, execute:"
+        echo "To enable BPF LSM for Week 10 / Week 26 (Override) exercises, execute:"
         echo "1. Edit /etc/default/grub:"
         echo '   GRUB_CMDLINE_LINUX="lsm=landlock,lockdown,yama,integrity,apparmor,bpf"'
         echo "2. Update GRUB and reboot:"
@@ -173,6 +174,25 @@ if [[ -f "${LSM_PATH}" ]]; then
     fi
 else
     log_warn "/sys/kernel/security/lsm not found. SecurityFS may not be mounted."
+fi
+
+if (( KERNEL_MAJOR > 6 || (KERNEL_MAJOR == 6 && KERNEL_MINOR >= 9) )); then
+    log_success "Kernel $(uname -r) supports BPF Arena (6.9+, Week 24)."
+else
+    log_warn "Kernel $(uname -r) is < 6.9: BPF Arena lab (Week 24) requires Linux 6.9+."
+fi
+
+if [[ -d "/sys/kernel/sched_ext" ]]; then
+    log_success "sched_ext sysfs found at /sys/kernel/sched_ext (Week 25)."
+else
+    log_warn "/sys/kernel/sched_ext not found: CONFIG_SCHED_CLASS_EXT=y is required for Week 25."
+fi
+
+if command -v docker &> /dev/null; then
+    log_success "Docker found ($(docker --version | head -n 1)) — ready for Week 26 and 'make diagrams'."
+else
+    log_warn "Docker not found: optional for Week 26 (Tetragon/kind) and 'make diagrams'."
+    log_info "For 'make diagrams', also install: sudo apt-get install -y fonts-noto-core fonts-dejavu-core libharfbuzz-subset0"
 fi
 
 # 7. Environment Verification Summary

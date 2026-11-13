@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 14: ควบคุมการเชื่อมต่อขาออกระดับ Socket ด้วย cgroup/connect4 (Socket Egress Enforcer)
 
-ยินดีต้อนรับสู่ **Week 14** ของหลักสูตร eBPF Zero to Hero!
+**Week 14** — คุมการเชื่อมต่อขาออกระดับโปรเซสและคอนเทนเนอร์ด้วย cgroup socket hooks
 ในสถาปัตยกรรมคลาวด์เนทีฟ (เช่น Kubernetes + Cilium) เรามักต้องการกำหนดว่า "workload กลุ่มนี้ห้ามเชื่อมต่อไปปลายทางนั้น" วิธีดั้งเดิมคือกรองแพ็กเก็ตด้วย iptables/nftables ซึ่งทำงานกับ **ทุกแพ็กเก็ต** และต้องอาศัย IP ของ workload ที่เปลี่ยนไปเรื่อย ๆ
 
 สัปดาห์นี้เราจะใช้โปรแกรม eBPF ชนิด **`BPF_PROG_TYPE_CGROUP_SOCK_ADDR`** แบบ `cgroup/connect4` เพื่อตัดสินใจ **ณ จังหวะ system call `connect()`** ของโปรเซสใน **cgroup v2 ที่กำหนด** หากปลายทางอยู่ใน blocklist ระบบจะคืน `EPERM` ให้แอปพลิเคชันทันที **ก่อนที่เคอร์เนลจะสร้างแพ็กเก็ต SYN** และเราจะทดสอบช่องโหว่ (bypass) ของนโยบายแบบนี้ไปพร้อมกัน
@@ -17,7 +17,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 cgroup v2 กับการผูกโปรแกรม eBPF
 
@@ -366,28 +366,39 @@ $ sudo ./bin/sock-enforce -cgroup /sys/fs/cgroup
 
 ---
 
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `attach cgroup/connect4: invalid argument` หรือหา `/sys/fs/cgroup/w14-sock-enforce` ไม่เจอ | ระบบยังไม่ได้เมานต์ cgroup v2 แบบ unified ที่ `/sys/fs/cgroup` — ตรวจด้วย `mount \| grep cgroup2` (Ubuntu 24.04/26.04 ใช้ cgroup v2 เป็นค่าเริ่มต้น) |
+| ไคลเอนต์ที่รันตามขั้นตอนที่ 4 ไม่ถูกบล็อก (`OK (not blocked)`) | เชลล์หรือคำสั่ง `python3` ไม่ได้ย้ายเข้า `/sys/fs/cgroup/w14-sock-enforce/cgroup.procs` ก่อน `exec` — ตรวจผลบรรทัด `cgroup of client:` ที่พิมพ์ออกมา |
+| กด `Ctrl+C` ไม่ออกหรือโปรแกรม crash แล้วลบ cgroup ไม่ได้ (`rmdir: Device or resource busy`) | ยังมีโปรเซสเหลืออยู่ใน `/sys/fs/cgroup/w14-sock-enforce/cgroup.procs` — ย้ายหรือจบโปรเซสนั้นก่อน แล้วค่อย `sudo rmdir /sys/fs/cgroup/w14-sock-enforce` |
+| เผลอส่ง `-cgroup /sys/fs/cgroup` (root cgroup) | **อันตราย:** จะบล็อกพอร์ต/IP ที่กำหนดทั้งเครื่องทันที — หยุดโปรแกรมด้วย `Ctrl+C` (เพราะไม่ได้ pin link ระบบจะคืนสู่ปกติทันที) และใช้เฉพาะ sub-cgroup `w14-*` เท่านั้น |
+
+---
+
 ## 7. แบบฝึกหัดท้ายบท (Exercises)
 
 ### ระดับพื้นฐาน
 1. **บล็อกหลายพอร์ต:** เปลี่ยน `-block-port` ให้รับหลายค่า (เช่น `-block-ports 23,2323,4444`)
-   - *ส่งงาน:* โค้ด `main.go` ที่แก้ + ผลการทดสอบที่ทุกพอร์ตได้ `EPERM`
+   - *ผลที่ควรได้:* โค้ด `main.go` ที่แก้ + ผลการทดสอบที่ทุกพอร์ตได้ `EPERM`
    - *ตรวจ:* `sudo bpftool map dump name blocked_ports` ต้องแสดงครบทุกพอร์ตพร้อมตัวนับ
 2. **วัดต้นทุนจริง:** เปิด `sudo sysctl kernel.bpf_stats_enabled=1` รันไคลเอนต์ใน cgroup ที่ `connect()` 1,000 ครั้ง แล้วอ่าน `run_time_ns`/`run_cnt` จาก `bpftool prog show name sock4_connect`
-   - *ส่งงาน:* ค่าเฉลี่ย ns ต่อการเรียก 1 ครั้ง
+   - *ผลที่ควรได้:* ค่าเฉลี่ย ns ต่อการเรียก 1 ครั้ง
    - *ตรวจ:* `run_cnt` ต้องเท่ากับจำนวน `connect()` (ไม่ใช่จำนวนแพ็กเก็ต) และปิด `bpf_stats_enabled` กลับหลังทดลอง
 
 ### ระดับปานกลาง
 1. **ปิด bypass ทาง UDP:** เพิ่มโปรแกรม `SEC("cgroup/sendmsg4")` ที่ใช้ map ชุดเดียวกัน
-   - *ส่งงาน:* โค้ด + ผลลัพธ์ที่ `UDP sendto ... without connect()` เปลี่ยนเป็น `EPERM`
+   - *ผลที่ควรได้:* โค้ด + ผลลัพธ์ที่ `UDP sendto ... without connect()` เปลี่ยนเป็น `EPERM`
    - *ตรวจ:* รัน `client.py --in-cgroup --bypass` อีกครั้ง
 2. **ปิด bypass ทาง IPv4-mapped:** เพิ่ม `SEC("cgroup/connect6")` ที่ตรวจว่า `user_ip6` อยู่ในรูป `::ffff:a.b.c.d` แล้วนำ IPv4 ส่วนท้ายไปเทียบกับ `blocked_ips`/`blocked_ports`
-   - *ส่งงาน:* โค้ด + ผลลัพธ์ที่บรรทัด `TCP6 connect [::ffff:127.0.0.1]:2323` ได้ `EPERM`
+   - *ผลที่ควรได้:* โค้ด + ผลลัพธ์ที่บรรทัด `TCP6 connect [::ffff:127.0.0.1]:2323` ได้ `EPERM`
    - *ตรวจ:* การเชื่อมต่อ IPv6 ปกติไปยัง `[::1]:8080` ยังต้องใช้ได้
 
 ### ระดับท้าทาย
 1. **Transparent redirect (socket-LB):** แทนการปฏิเสธ ให้เขียนทับ `ctx->user_ip4`/`ctx->user_port` เพื่อพาการเชื่อมต่อไป `127.0.0.1:2323` ไปยัง `127.0.0.1:8080` แทน (หลักการเดียวกับ kube-proxy replacement)
-   - *ส่งงาน:* โค้ด + หลักฐานจาก listener ว่าได้รับการเชื่อมต่อที่พอร์ต 8080
+   - *ผลที่ควรได้:* โค้ด + หลักฐานจาก listener ว่าได้รับการเชื่อมต่อที่พอร์ต 8080
    - *ตรวจ:* อธิบายได้ว่าทำไม `getpeername()` ฝั่งไคลเอนต์อาจคืนพอร์ต 8080 และ hook `cgroup/getpeername4` ช่วยแก้อย่างไร
 2. **Allowlist แบบ default-deny:** เปลี่ยนนโยบายเป็น "อนุญาตเฉพาะปลายทางในรายการ" สำหรับ cgroup ทดลอง และทดสอบว่าการ resolve DNS (UDP 53) ได้รับผลกระทบอย่างไร
-   - *ส่งงาน:* โค้ด + ตารางผลการทดสอบ (ปลายทางในรายการ / นอกรายการ / DNS)
+   - *ผลที่ควรได้:* โค้ด + ตารางผลการทดสอบ (ปลายทางในรายการ / นอกรายการ / DNS)
    - *ตรวจ:* ยืนยันว่ามีผลเฉพาะโปรเซสใน `w14-*` cgroup และ cgroup ถูกลบหลังทดลอง

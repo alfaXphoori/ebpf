@@ -1,5 +1,3 @@
-CLANG ?= clang
-CFLAGS ?= -O2 -g -Wall -target bpf -D__TARGET_ARCH_x86
 IFACE ?= lo
 
 .PHONY: all generate build run test clean

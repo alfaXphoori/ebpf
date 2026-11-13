@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 13: ตรวจจับและวิเคราะห์แพ็กเก็ตสูญหายในเคอร์เนลด้วย eBPF Dropwatch (kfree_skb)
 
-ยินดีต้อนรับสู่ **Week 13** ของหลักสูตร eBPF Zero to Hero และเป็นสัปดาห์แรกของ **Phase 7: Advanced Security & Observability**
+**Week 13** (เริ่มต้นเฟส Advanced Security & Observability) — แกะรอยแพ็กเก็ตที่ถูกเคอร์เนลดรอปด้วย `kfree_skb`
 ในระบบเครือข่ายโปรดักชัน คำถามที่ตอบยากที่สุดข้อหนึ่งคือ **"แพ็กเก็ตหายไปไหน เคอร์เนลทิ้งมันที่ฟังก์ชันใด และด้วยเหตุผลอะไร?"** ตัวนับอย่าง `netstat -s` หรือ `ip -s link` บอกได้เพียงว่า "มีการดรอป" แต่ไม่บอกว่าดรอปที่ไหน
 
 สัปดาห์นี้เราจะสร้างเครื่องมือ **Kernel Dropwatch** ด้วย eBPF แบบ **CO-RE (Compile Once – Run Everywhere)** ที่เกาะ Tracepoint `skb:kfree_skb` เพื่อดึง **`enum skb_drop_reason`** และตำแหน่งในโค้ดเคอร์เนล (`location`) ของทุกแพ็กเก็ตที่ถูกทิ้ง แล้วส่งขึ้น User Space ผ่าน BPF Ring Buffer โดยโค้ดชุดเดียวกันโหลดได้ทั้งบน Linux 6.8 (Ubuntu 24.04) และ Linux 7.0 (Ubuntu 26.04) แม้ layout ของ tracepoint จะต่างกัน
@@ -17,7 +17,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 วงจรชีวิตของ `sk_buff` และจุดที่แพ็กเก็ต "ตาย"
 
@@ -388,28 +388,39 @@ Per-reason totals from BPF hash map drop_reason_stats:
 
 ---
 
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `verifier error: access outside ctx` หรือฟิลด์ `rx_sk` อ่านไม่ได้ | `../../vmlinux.h` ไม่ตรงกับเคอร์เนลที่รันอยู่ — สร้าง `vmlinux.h` ใหม่ด้วย `bpftool btf dump file /sys/kernel/btf/vmlinux format c > ../../vmlinux.h` แล้วรัน `make clean && make all` |
+| คอลัมน์ `DROP LOCATION` แสดงแต่เลข hex (`0xffffffff...`) แทนชื่อฟังก์ชัน | ไม่ได้รันด้วย `sudo` ทำให้ `/proc/kallsyms` ซ่อน address เป็น `0` (ติด `kptr_restrict`) หรือขาดสิทธิ์ `CAP_SYSLOG` — รันด้วย `sudo ./bin/dropwatch` |
+| เห็นแต่ `reason=SKB_DROP_REASON_NOT_SPECIFIED` หรือไม่เห็น event จาก `nc` | ถ้าไม่ใส่ `-ip-only` จะเห็น traffic พื้นหลัง (เช่น unix/netlink) จำนวนมาก — ใช้ `-ip-only` หรือ `-comm nc` เพื่อกรองให้ตรงเป้า |
+| เคอร์เนลรุ่นเก่าแสดง `rx_sk: n/a` หรือไม่แยก subsystem bit | เคอร์เนลต่ำกว่า ~6.9 ไม่มี `rx_sk` ใน `trace_event_raw_kfree_skb`; โค้ดใช้ `bpf_core_field_exists()` จึงยังโหลดและทำงานได้ตามปกติ |
+
+---
+
 ## 7. แบบฝึกหัดท้ายบท (Exercises)
 
 ### ระดับพื้นฐาน
 1. **ดรอปด้วย Netfilter ใน namespace ทดลอง:** สร้าง network namespace (`sudo ip netns add w13`) ตั้ง `lo up` แล้วเพิ่มกฎ `nft`/`iptables` ให้ DROP พอร์ต 8080 **ภายใน namespace นั้นเท่านั้น** จากนั้นรัน `nc` ใน namespace เดียวกัน
-   - *ส่งงาน:* ผลลัพธ์ dropwatch ที่มี reason `NETFILTER_DROP` พร้อมคอลัมน์ `DROP LOCATION`
+   - *ผลที่ควรได้:* ผลลัพธ์ dropwatch ที่มี reason `NETFILTER_DROP` พร้อมคอลัมน์ `DROP LOCATION`
    - *ตรวจ:* reason ต้องเป็น `NETFILTER_DROP` (ไม่ใช่ `NO_SOCKET`) และลบ namespace หลังทดลอง
 2. **อ่าน layout เอง:** เขียนคำสั่ง `bpftool btf dump file /sys/kernel/btf/vmlinux | grep -A8 'STRUCT .trace_event_raw_kfree_skb'` แล้วเทียบ offset กับไฟล์ `format`
-   - *ส่งงาน:* ตาราง offset ของทุกฟิลด์จากทั้งสองแหล่ง
+   - *ผลที่ควรได้:* ตาราง offset ของทุกฟิลด์จากทั้งสองแหล่ง
    - *ตรวจ:* offset ต้องตรงกันทุกฟิลด์
 
 ### ระดับปานกลาง
 1. **ย้ายตัวกรองเข้าเคอร์เนล:** เพิ่ม `volatile const __u32 filter_reason` ใน `dropwatch.c` (ตั้งค่าจาก Go ด้วย `spec.RewriteConstants`) ให้ส่ง event ขึ้น ring buffer เฉพาะ reason ที่กำหนด แต่ยังนับทุก reason ใน map
-   - *ส่งงาน:* โค้ด + ผลการรันที่ `Total Captured` ลดลงชัดเจนเมื่อเทียบกับไม่กรอง
+   - *ผลที่ควรได้:* โค้ด + ผลการรันที่ `Total Captured` ลดลงชัดเจนเมื่อเทียบกับไม่กรอง
    - *ตรวจ:* ยอดใน `drop_reason_stats` ยังเท่าเดิม (ไม่ได้ลดตามตัวกรอง)
 2. **ดึง 5-tuple จาก skb:** ใช้ `BPF_CORE_READ` อ่าน `skb->head`, `skb->network_header` แล้วอ่าน IPv4 header ด้วย `bpf_probe_read_kernel` เพื่อแสดง src/dst IP และพอร์ต
-   - *ส่งงาน:* คอลัมน์ `SRC -> DST` ในผลลัพธ์
+   - *ผลที่ควรได้:* คอลัมน์ `SRC -> DST` ในผลลัพธ์
    - *ตรวจ:* ทดสอบด้วย `nc -z 127.0.0.1 9999` แล้วต้องเห็น `127.0.0.1:xxxxx -> 127.0.0.1:9999`
 
 ### ระดับท้าทาย
 1. **พิสูจน์ CO-RE ข้ามเวอร์ชันด้วยตัวเอง:** เขียนโปรแกรม Go ที่โหลด `bpf_bpfel.o` พร้อม `ebpf.ProgramOptions{KernelTypes: ...}` ที่ดัดแปลง `trace_event_raw_kfree_skb` ให้เป็น layout 6.8 (แบบในข้อ 1.4) แล้วพิมพ์คำสั่งที่ถูก relocate
-   - *ส่งงาน:* โค้ดและผลลัพธ์ที่แสดง offset 36 -> 28
+   - *ผลที่ควรได้:* โค้ดและผลลัพธ์ที่แสดง offset 36 -> 28
    - *ตรวจ:* จำนวนคำสั่งต้องลดลงเพราะบล็อก `rx_sk` ถูกตัดทิ้ง; คะแนนพิเศษถ้ารันบน Ubuntu 24.04 จริงได้
 2. **เปลี่ยนไปใช้ `tp_btf/kfree_skb`:** เขียนโปรแกรมแบบ BTF-enabled tracepoint (`SEC("tp_btf/kfree_skb")` + `BPF_PROG(...)`) ซึ่งได้ argument ของฟังก์ชันโดยตรง (`struct sk_buff *skb, void *location, enum skb_drop_reason reason, ...`) แล้วเปรียบเทียบข้อดีข้อเสียกับ tracepoint แบบเดิม
-   - *ส่งงาน:* โค้ด + ตารางเปรียบเทียบ (การเข้าถึง `skb` โดยตรง, ความเข้ากันได้ข้ามเวอร์ชันเมื่อ signature ของ tracepoint เปลี่ยน, overhead)
+   - *ผลที่ควรได้:* โค้ด + ตารางเปรียบเทียบ (การเข้าถึง `skb` โดยตรง, ความเข้ากันได้ข้ามเวอร์ชันเมื่อ signature ของ tracepoint เปลี่ยน, overhead)
    - *ตรวจ:* ผลลัพธ์ของสองเวอร์ชันต้องได้ reason เดียวกันสำหรับแพ็กเก็ตทดสอบชุดเดียวกัน

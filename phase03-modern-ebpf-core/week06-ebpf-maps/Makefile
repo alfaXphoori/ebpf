@@ -4,7 +4,6 @@
 
 BIN_DIR := bin
 BINARY := $(BIN_DIR)/syscall-top
-CLANG ?= clang
 
 .PHONY: all generate build run verifier-demo test clean
 

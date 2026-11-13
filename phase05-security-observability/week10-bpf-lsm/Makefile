@@ -1,7 +1,4 @@
-CLANG ?= clang
-CFLAGS ?= -O2 -g -Wall -target bpf -D__TARGET_ARCH_x86
-
-.PHONY: all generate build run clean
+.PHONY: all generate build test run clean
 
 all: generate build
 
@@ -11,6 +8,9 @@ generate:
 build:
 	mkdir -p bin
 	go build -v -o bin/lsm_file_guard .
+
+test: generate
+	go test -exec sudo -v ./...
 
 run: build
 	sudo ./bin/lsm_file_guard

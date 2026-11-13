@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 22: สถาปัตยกรรม BPF Trampoline (fentry & fexit) และการวัด Overhead ของ Tracing อย่างเป็นธรรม
 
-ยินดีต้อนรับสู่ **Week 22** ของหลักสูตร eBPF Zero to Hero! และเป็นสัปดาห์แรกของ **Phase 10: Cutting-Edge eBPF Technologies**
+**Week 22** (เริ่มต้นเฟส Cutting-Edge eBPF) — เทียบความเร็วของ `fentry`/`fexit` Trampoline กับ `kprobe`
 
 ในสัปดาห์ก่อน ๆ เราใช้ `kprobe` / `kretprobe` เป็นหลักในการแอบดูฟังก์ชันในเคอร์เนล สัปดาห์นี้เราจะเปลี่ยนมาใช้ **BPF Trampoline (`fentry` และ `fexit`)** ซึ่งเป็นกลไกรุ่นใหม่ (Linux 5.5+) ที่:
 1. ให้เคอร์เนล **patch จุด ftrace ที่ต้นฟังก์ชันให้เป็นคำสั่ง `call` ตรงไปยัง trampoline** ที่ JIT สร้างขึ้นเฉพาะ แทนการผ่าน `pt_regs` และ handler กลางของ kprobe
@@ -27,11 +27,11 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 kprobe ทำงานอย่างไรบนเคอร์เนลสมัยใหม่
 
-ตำราเก่ามักอธิบายว่า kprobe ทำงานโดยเขียนคำสั่ง breakpoint `int3` ทับคำสั่งแรกของฟังก์ชัน เมื่อ CPU วิ่งมาถึงก็เกิด trap → kprobe handler → เรียกโปรแกรม eBPF นั่นยังจริงอยู่ **ถ้า probe อยู่กลางฟังก์ชัน** (`kprobe:func+offset`) แต่สำหรับ probe ที่ **ต้นฟังก์ชัน** (offset 0) บนเคอร์เนลที่เปิด `CONFIG_KPROBES_ON_FTRACE=y` (Ubuntu เปิดไว้) เคอร์เนลจะใช้จุด ftrace แทน `int3`:
+เอกสารเก่าๆ มักอธิบายว่า kprobe ทำงานโดยเขียนคำสั่ง breakpoint `int3` ทับคำสั่งแรกของฟังก์ชัน เมื่อ CPU วิ่งมาถึงก็เกิด trap → kprobe handler → เรียกโปรแกรม eBPF นั่นยังจริงอยู่ **ถ้า probe อยู่กลางฟังก์ชัน** (`kprobe:func+offset`) แต่สำหรับ probe ที่ **ต้นฟังก์ชัน** (offset 0) บนเคอร์เนลที่เปิด `CONFIG_KPROBES_ON_FTRACE=y` (Ubuntu เปิดไว้) เคอร์เนลจะใช้จุด ftrace แทน `int3`:
 
 ```bash
 # ขณะมี kprobe + kretprobe ติดอยู่บน do_sys_openat2 (Linux 7.0.0-38-generic)

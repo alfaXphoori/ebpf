@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 26: ระบบนิเวศ eBPF ในงาน Production — Tetragon และ Cilium (The eBPF Ecosystem: Tetragon & Cilium)
 
-ยินดีต้อนรับสู่ **Week 26** ของหลักสูตร eBPF Zero to Hero!
+**Week 26** — ลองใช้งานจริงกับ Tetragon และ Cilium ในระดับ Production
 
 ตลอด 25 สัปดาห์ที่ผ่านมา เราเขียนโปรแกรม eBPF ด้วยมือทุกชิ้น ตั้งแต่ tracepoint ดู `execve` (Week 09), BPF LSM บล็อกไฟล์ (Week 10), cgroup/connect4 คุมการเชื่อมต่อ (Week 14), ไปจนถึง fentry/fexit (Week 22) สัปดาห์สุดท้ายนี้เราจะดูว่า **เครื่องมือ production** ของจริงเอากลไกเดียวกันนี้ไป "แพ็ก" อย่างไร:
 
@@ -24,7 +24,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 จาก "โค้ดที่เราเขียนเอง" สู่ "นโยบายที่เครื่องมือโหลดให้"
 
@@ -112,7 +112,7 @@ spec:
 
 ## 2. อธิบาย Policy และสคริปต์ทีละบรรทัด (Line-by-Line Breakdown)
 
-ทุก policy อยู่ใน `policies/` และใช้ `operator: "Postfix"` กับ path ที่ลงท้ายด้วย `week26-ecosystem-tetragon-cilium/lab-files/...` เหตุผลคือ path เต็มขึ้นกับว่านักศึกษา clone repo ไว้ที่ไหน (เครื่องนี้คือ `/mnt/sda/ebpf/...`) การจับ "ส่วนท้าย" ทำให้ YAML ใช้ได้ทุกเครื่องโดยไม่ต้องแก้ และยังแคบพอที่จะไม่ไปโดนไฟล์ระบบ
+ทุก policy อยู่ใน `policies/` และใช้ `operator: "Postfix"` กับ path ที่ลงท้ายด้วย `week26-ecosystem-tetragon-cilium/lab-files/...` เหตุผลคือ path เต็มขึ้นกับว่าคุณ clone repo ไว้ที่ไหน (เครื่องนี้คือ `/mnt/sda/ebpf/...`) การจับ "ส่วนท้าย" ทำให้ YAML ใช้ได้ทุกเครื่องโดยไม่ต้องแก้ และยังแคบพอที่จะไม่ไปโดนไฟล์ระบบ
 
 ### 2.1 `01-process-exec-lsm.yaml` — exec/exit + มุมมองจาก LSM
 

@@ -1,6 +1,6 @@
 # Week 20: TCP Socket-to-Socket Bypass ด้วย sockops + sk_msg (SOCKHASH Redirect)
 
-ยินดีต้อนรับสู่สัปดาห์ที่ 20 ของหลักสูตร **eBPF: Zero-to-Hero** และเป็นสัปดาห์แรกของ **Phase 9: High-Throughput Socket Acceleration**
+**Week 20** (เริ่มต้นเฟส Socket Acceleration) — เร่งความเร็ว TCP ภายในเครื่องด้วย SOCKOPS + `sk_msg`
 
 ในระบบ Microservices / Service Mesh ทราฟฟิกจำนวนมากวิ่งอยู่ **บนเครื่องเดียวกัน** (เช่น Application ↔ Sidecar Proxy อย่าง Envoy หรือ Pod ↔ Pod บน Node เดียวกัน) แต่ทุก `send()` ยังต้องเดินผ่าน TCP/IP Stack เต็มรูปแบบ: สร้าง TCP/IP Header, คำนวณ Checksum (บน loopback ถูกข้ามได้บางส่วน), ผ่าน Netfilter Hooks, ส่งผ่าน `lo` แล้ววนกลับขึ้นมาใน softirq ฝั่งรับ และสร้าง ACK กลับ
 
@@ -27,7 +27,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 เส้นทางข้อมูล Localhost TCP: ปกติ vs SOCKHASH Redirect
 
@@ -420,6 +420,17 @@ accelerated: 114  / 110  / 105  Gbits/sec
 - [x] นับสถิติเฉพาะเมื่อ Redirect สำเร็จ และแยกตัวนับ Fallback
 - [x] พิสูจน์ด้วย `bpftool`, `tcpdump` และ Test อัตโนมัติว่า Redirect เกิดขึ้นจริงและข้อมูลครบถ้วน
 - [x] วัด Throughput/Latency แบบมี Baseline และรายงานตัวเลขพร้อมข้อจำกัด
+
+---
+
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `bpftool map dump name sock_hash` ว่างหรือ `fallback` เพิ่มขึ้นและ `redirected = 0` | ไคลเอนต์หรือเซิร์ฟเวอร์ไม่ได้รันอยู่ใน cgroup `/sys/fs/cgroup/w20-sockops-lab`, เชื่อมต่อก่อนเปิด `sockops-accelerator`, หรือใช้ IPv6 (`[::1]`) แทน IPv4 (`127.0.0.1`) |
+| `tcpdump -i lo` ไม่เห็นข้อความจาก `nc` แล้วคิดว่าโปรแกรมเสีย | **นี่คือผลที่ถูกต้อง:** `sk_msg` ทำ `BPF_F_INGRESS` redirect ข้าม TCP/IP stack และ loopback driver จึงไม่ผ่านจุดดักของ `tcpdump` |
+| `make test` ล้มเหลว `permission denied` | โปรแกรม `SOCK_OPS` และ `SK_MSG` ต้องใช้ root/`CAP_BPF`+`CAP_NET_ADMIN` — รันผ่าน `make test` (ซึ่งใช้ `go test -exec sudo`) ไม่ใช่ `go test ./...` ตรงๆ |
+| `sudo rmdir /sys/fs/cgroup/w20-sockops-lab` ล้มเหลว `Device or resource busy` | ยังมี shell หรือโปรเซส (เช่น `nc &` หรือ `iperf3 -s`) อยู่ใน `cgroup.procs` — ปิดโปรเซสเหล่านั้นหรือพิมพ์ `exit` ออกจาก sub-shell ก่อนลบ |
 
 ---
 

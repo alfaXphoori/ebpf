@@ -1,6 +1,6 @@
 # Week 09: Ring Buffer & Uprobes Security Observability
 
-คู่มือการศึกษาเชิงลึกเกี่ยวกับการสตรีมข้อมูลความเร็วสูงผ่าน **eBPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)** และการดักจับพฤติกรรมในระดับ User-space ด้วย **Uprobes (`SSL_write`)** ร่วมกับ Tracepoint (`sched_process_exec` / `sys_enter_execve`) โดยใช้ **CO-RE** (`vmlinux.h` + `BPF_CORE_READ`)
+แล็บนี้จะพาไปลงมือทำเรื่องการสตรีมข้อมูลความเร็วสูงผ่าน **eBPF Ring Buffer (`BPF_MAP_TYPE_RINGBUF`)** และการดักจับพฤติกรรมในระดับ User-space ด้วย **Uprobes (`SSL_write`)** ร่วมกับ Tracepoint (`sched_process_exec` / `sys_enter_execve`) โดยใช้ **CO-RE** (`vmlinux.h` + `BPF_CORE_READ`)
 
 ---
 
@@ -14,7 +14,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 วิวัฒนาการจาก BPF Perf Buffer สู่ BPF Ring Buffer
 ในยุคแรกเริ่มของ eBPF การส่งข้อมูล Event จาก Kernel space กลับมายัง User space มักพึ่งพา `BPF_MAP_TYPE_PERF_EVENT_ARRAY` (Perf Buffer) ซึ่งออกแบบมาบนโครงสร้างแบบ **Per-CPU Circular Buffer** โดยแต่ละ CPU Core จะมี Memory Buffer แยกอิสระจากกัน
@@ -360,11 +360,23 @@ EVENT_TYPE      PID     PPID    UID    COMM             DETAILS
 
 ---
 
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| `compile: fatal error: 'vmlinux.h' file not found` | ยังไม่ได้สร้าง `vmlinux.h` ที่รากของ repo — รัน `bpftool btf dump file /sys/kernel/btf/vmlinux format c > ../../vmlinux.h` หรือ `sudo ../../scripts/setup_env.sh` |
+| ไม่พบ `TLS_PLAINTEXT` จาก `curl` / `python3` แต่โปรแกรมยังรันได้ | โปรแกรมนั้นไม่ได้ลิงก์กับ `libssl.so.3` (เช่น `wget` ใช้ GnuTLS หรือ Go/Rust TLS), ใช้ static OpenSSL, หรือ path ของ `libssl` ไม่ตรงค่าเริ่มต้น — ตรวจด้วย `ldd $(which curl) \| grep libssl` แล้วระบุ `-libssl /path/to/libssl.so.3` |
+| เห็นข้อความ `[EXECVE]` ขาดหายบาง CPU เมื่อใช้ `-exec-hook=syscall` | ข้อจำกัดของ `syscalls:sys_enter_execve` บนบางรุ่นเคอร์เนล (ดูหัวข้อ 1.7) — ใช้ค่าเริ่มต้น `-exec-hook=sched` (`sched_process_exec`) เพื่อจับครบทุก CPU |
+| ข้อความ `TLS_PLAINTEXT` อ่านเป็นตัวอักษรประหลาดเมื่อยิง HTTPS ด้วย `curl` | `curl` เจรจา HTTP/2 ผ่าน ALPN ซึ่งบีบอัด header ด้วย HPACK — เพิ่ม `--http1.1` ตามขั้นตอนที่ 4 เพื่อดูข้อความ HTTP/1.1 |
+| `bpf_ringbuf_reserve` พลาดบาง event ระหว่างมี exec จำนวนมาก | โปรแกรมยังไม่ได้รันด้วย `sudo` (`CAP_BPF`+`CAP_PERFMON`) หรือเกิด exec storm จน buffer เต็ม — ปิดงานพื้นหลังหรือเพิ่มขนาด `max_entries` ของ `events` |
+
+---
+
 ## 7. แบบฝึกหัดท้ายบท (Exercises)
 
 ### ระดับพื้นฐาน
 **7.1 นับ event ที่หาย**: เพิ่ม `BPF_MAP_TYPE_ARRAY` (หรือ `PERCPU_ARRAY`) ชื่อ `drops` แล้วเพิ่มค่าทุกครั้งที่ `bpf_ringbuf_reserve()` คืน `NULL` ให้ `main.go` พิมพ์ค่านี้ตอนปิดโปรแกรม
-- *ส่งงาน*: diff ของ `ringbuf_events.c` / `main.go` + output
+- *ผลที่ควรได้*: diff ของ `ringbuf_events.c` / `main.go` + output
 - *ตรวจสอบ*: ลดขนาด ring buffer เหลือ `1 << 12` (4 KB) แล้วรัน `for i in $(seq 1 2000); do /bin/true; done` ค่า drop ต้องมากกว่า 0 และเมื่อคืนเป็น 16 MB ต้องเป็น 0
 
 **7.2 Filter ด้วย UID/COMM**: เพิ่ม flag `-uid` ใน `main.go` ที่เขียนค่าลง map (หรือ `const volatile` global ที่ตั้งค่าก่อนโหลดด้วย `spec.RewriteConstants()`) แล้วให้ eBPF ส่งเฉพาะ event ของ UID นั้น
@@ -378,7 +390,7 @@ sudo bpftrace -e 'tracepoint:syscalls:sys_enter_execve /str(args.filename) == "/
 # อีกหน้าต่าง:
 for c in $(seq 0 $(($(nproc)-1))); do for i in $(seq 1 10); do taskset -c $c /usr/bin/true; done; done
 ```
-- *ส่งงาน*: ตาราง count ต่อ CPU ของทั้งสอง tracepoint + `uname -r` และสรุปว่าเคอร์เนลของคุณมีพฤติกรรม "เฉพาะ CPU 0" หรือไม่
+- *ผลที่ควรได้*: ตาราง count ต่อ CPU ของทั้งสอง tracepoint + `uname -r` และสรุปว่าเคอร์เนลของคุณมีพฤติกรรม "เฉพาะ CPU 0" หรือไม่
 - *ตรวจสอบ*: `@sched` ต้องได้ 10 ต่อ CPU; ถ้า `@tp` ได้ไม่ครบ ให้ลองเปลี่ยนเป็น `tracepoint:raw_syscalls:sys_enter` (กรอง `args.id == 59`) แล้วเปรียบเทียบ
 
 **7.4 ดักขาเข้า `SSL_read`**: เพิ่ม `uprobe` ที่ `SSL_read` เก็บ `buf` ไว้ใน `BPF_MAP_TYPE_HASH` (key = `pid_tgid`) และ `uretprobe` ที่อ่านค่า return (จำนวนไบต์ที่อ่านได้จริง) แล้วคัดลอก plaintext ของ response ส่งเข้า ring buffer เป็น event type ใหม่ `TLS_READ`
@@ -389,5 +401,5 @@ for c in $(seq 0 $(($(nproc)-1))); do for i in $(seq 1 10); do taskset -c $c /us
 - *ตรวจสอบ*: `cp /usr/lib/x86_64-linux-gnu/libssl.so.3 /tmp/myssl/ && LD_LIBRARY_PATH=/tmp/myssl curl -s --http1.1 -o /dev/null https://example.com` -- เวอร์ชันเดิมต้องไม่เห็น เวอร์ชันใหม่ต้องเห็น (ข้อควรระวัง: uprobe ที่ attach หลัง process เริ่มส่งข้อมูลไปแล้วจะพลาด request แรก ให้อธิบายใน report)
 
 **7.6 ดัก Go `crypto/tls`**: เขียน HTTPS client ด้วย Go (`net/http`) build แบบมี symbol แล้ว attach uprobe ที่ `crypto/tls.(*Conn).Write` ของ binary นั้น ศึกษาว่า Go ABIInternal (Go ≥ 1.17) ส่ง argument ผ่าน register ใด (`RAX`, `RBX`, `RCX`, ...) และสร้าง slice `[]byte` (ptr, len) จาก register
-- *ส่งงาน*: C program ใหม่ + อธิบาย register mapping พร้อมแหล่งอ้างอิง (Go internal ABI spec)
+- *ผลที่ควรได้*: C program ใหม่ + อธิบาย register mapping พร้อมแหล่งอ้างอิง (Go internal ABI spec)
 - *ตรวจสอบ*: เห็น `GET / HTTP/1.1` จาก Go client ของคุณ; อธิบายว่าทำไม **ห้าม** ใช้ `uretprobe` กับฟังก์ชัน Go (goroutine stack ถูกย้ายได้)

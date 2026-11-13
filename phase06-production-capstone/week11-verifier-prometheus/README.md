@@ -1,6 +1,6 @@
 # Week 11: Prometheus Exporter & Performance Tuning
 
-คู่มือการศึกษาเชิงลึกเกี่ยวกับการเลือกใช้ **`BPF_MAP_TYPE_PERCPU_ARRAY`** เพื่อหลีกเลี่ยง Lock Contention ระหว่าง CPU Core (Performance Tuning ของ Map ในเส้นทางที่ร้อนที่สุดของระบบ), การรวมผลข้ามคอร์ใน User space และการสร้างระบบ Network Telemetry ส่งข้อมูลเข้าสู่ **Prometheus & Grafana** พร้อม Unit Test ด้วย `BPF_PROG_TEST_RUN`
+แล็บนี้จะพาไปลงมือทำเรื่องการเลือกใช้ **`BPF_MAP_TYPE_PERCPU_ARRAY`** เพื่อหลีกเลี่ยง Lock Contention ระหว่าง CPU Core (Performance Tuning ของ Map ในเส้นทางที่ร้อนที่สุดของระบบ), การรวมผลข้ามคอร์ใน User space และการสร้างระบบ Network Telemetry ส่งข้อมูลเข้าสู่ **Prometheus & Grafana** พร้อม Unit Test ด้วย `BPF_PROG_TEST_RUN`
 
 > **ย้ายไป Week 06 แล้ว**: เนื้อหาการทำงานของ eBPF Verifier, Error ยอดนิยม, การอ่าน Verifier Log (`ebpf.VerifierError`, `bpftool -d`), แล็บ `verifier_fail/` (`make verifier-demo`) และพื้นฐาน `BPF_PROG_TEST_RUN` ถูกย้ายไปสอนตั้งแต่ **Week 06** (`phase03-modern-ebpf-core/week06-ebpf-maps` หัวข้อ 5–6) สัปดาห์นี้ถือว่าผู้เรียนอ่าน Verifier Log และเขียนเทสต์ด้วย `Program.Run()` เป็นแล้ว (ชื่อโฟลเดอร์ `week11-verifier-prometheus` คงไว้เพื่อไม่ให้ลิงก์เดิมเสีย)
 
@@ -16,7 +16,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 ทบทวน: Verifier กับโปรแกรม XDP ของสัปดาห์นี้
 `metrics_exporter.c` อ่าน Ethernet และ IPv4 Header จาก Packet จึงต้องมี Bounds Check (`(void *)(eth + 1) > data_end`, `(void *)(iph + 1) > data_end`) และเช็ก NULL หลัง `bpf_map_lookup_elem()` ทุกครั้ง มิฉะนั้น Verifier จะปฏิเสธด้วย `invalid access to packet` หรือ `R0 invalid mem access 'map_value_or_null'` — วิธีอ่าน Log และตัวอย่าง Log จริงบน Linux 7.0 ดู **Week 06 หัวข้อ 5**
@@ -261,21 +261,21 @@ Log ของ Exporter (กด `Ctrl+C` / ส่ง `SIGINT` ตอนท้า�
 
 ### ระดับพื้นฐาน
 1. **เพิ่มโปรโตคอล**: เพิ่มช่อง `PROTO_INDEX_GRE` (IP Protocol 47) ใน `traffic_metrics` และ `protocolNames`
-   - **ส่งงาน**: โค้ดที่แก้ + Output ของ `/metrics` ที่มี `protocol="gre"`
+   - **ผลที่ควรได้**: โค้ดที่แก้ + Output ของ `/metrics` ที่มี `protocol="gre"`
    - **ตรวจสอบ**: แก้ `metrics_test.go` ให้แพ็กเก็ต GRE ถูกนับเป็น `gre` (ไม่ใช่ `other`) และ `make test` ผ่าน
 2. **ปิด Endpoint จากภายนอก**: รัน Exporter ด้วย `-addr 127.0.0.1:2112` ใน Namespace `w11srv` แล้วพิสูจน์ว่าเครื่องฝั่ง `w11cli` Scrape ไม่ได้อีก แต่ภายใน `w11srv` ยังได้
-   - **ส่งงาน**: Output ของ `sudo ip netns exec w11srv ss -ltn` + ผล `curl` จากทั้งสองฝั่ง
+   - **ผลที่ควรได้**: Output ของ `sudo ip netns exec w11srv ss -ltn` + ผล `curl` จากทั้งสองฝั่ง
    - **ตรวจสอบ**: `curl` จาก `w11cli` ต้องล้มเหลว (connection refused) และจาก `w11srv` ต้องได้ `ebpf_xdp_packets_total`
 
 ### ระดับปานกลาง
 3. **วัด ARRAY vs PERCPU_ARRAY ด้วยตัวเอง**: สร้างสำเนาของ `xdp_metrics_prog` ที่ใช้ `BPF_MAP_TYPE_ARRAY` + `__sync_fetch_and_add` แล้วเขียน Go Benchmark ที่เรียก `Program.Benchmark(pkt, repeat, nil)` (ใช้ `BPF_PROG_TEST_RUN` ที่คืนเวลาเฉลี่ยต่อรอบ) จาก Goroutine 1, 2, 4, 8 ตัวพร้อมกัน (แต่ละตัว `runtime.LockOSThread()` และ Pin คนละ CPU)
-   - **ส่งงาน**: ตาราง ns/run ของทั้งสองแบบ × จำนวน Goroutine (วัดอย่างน้อย 5 รอบ, รายงานค่ากลางและช่วง) + สเปก CPU + `uname -r`
+   - **ผลที่ควรได้**: ตาราง ns/run ของทั้งสองแบบ × จำนวน Goroutine (วัดอย่างน้อย 5 รอบ, รายงานค่ากลางและช่วง) + สเปก CPU + `uname -r`
    - **ตรวจสอบ**: อธิบายผลด้วยหลัก Cache-line Contention ในหัวข้อ 1.2 — ถ้าผลไม่ต่างกันอย่างมีนัยสำคัญ ให้อธิบายว่าทำไม (เช่นทำงานบน CPU เดียว, Overhead ของ test_run กลบผล) แทนการปรับตัวเลข
 
 ### ระดับท้าทาย
 4. **Packet-Size Histogram**: เพิ่ม Per-CPU Map ที่นับแพ็กเก็ตตามช่วงขนาด (เช่น ≤64, ≤128, ≤256, ≤512, ≤1024, ≤1518, >1518 ไบต์) และ Export เป็น Prometheus Histogram (`prometheus.MustNewConstHistogram`)
-   - **ส่งงาน**: โค้ด C/Go + ภาพ Grafana หรือ Output `/metrics` ที่มี `_bucket{le="..."}`
+   - **ผลที่ควรได้**: โค้ด C/Go + ภาพ Grafana หรือ Output `/metrics` ที่มี `_bucket{le="..."}`
    - **ตรวจสอบ**: เขียน Test ด้วย `BPF_PROG_TEST_RUN` ที่ป้อนแพ็กเก็ตหลายขนาดแล้วตรวจจำนวนในแต่ละ Bucket
 5. **ต้นทุนของการ Scrape**: เพิ่ม `max_entries` ของ Map เป็น Per-Flow (เช่น `PERCPU_HASH` คีย์ 5-tuple ขนาด 10,000) แล้ววัดเวลา `Collect()` ต่อการ Scrape เทียบระหว่างการอ่านทีละ Key (`Lookup`/`Iterate`) กับ `BatchLookup`
-   - **ส่งงาน**: Go Benchmark (`testing.B`) + ตารางเวลาต่อ Scrape และจำนวน `bpf()` Syscall (`strace -c -e trace=bpf`) ของทั้งสองแบบ
+   - **ผลที่ควรได้**: Go Benchmark (`testing.B`) + ตารางเวลาต่อ Scrape และจำนวน `bpf()` Syscall (`strace -c -e trace=bpf`) ของทั้งสองแบบ
    - **ตรวจสอบ**: อธิบายว่าทำไม Cardinality ของ Label ใน Prometheus กับขนาดของ Map ต้องถูกจำกัดคู่กัน

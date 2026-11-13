@@ -1,6 +1,6 @@
 # Week 10: BPF LSM Inline Security & Policy Enforcement
 
-คู่มือการศึกษาเชิงลึกเกี่ยวกับการบังคับใช้นโยบายความปลอดภัยของระบบปฏิบัติการ Linux ในระดับ Kernel ด้วย **BPF LSM (Linux Security Modules)** เพื่อปฏิเสธการเปิดไฟล์สำคัญแบบ Synchronous Inline Blocking (`-EPERM`) โดยเขียนแบบ **CO-RE** (`vmlinux.h` + `BPF_CORE_READ`) และมีโหมด **Audit** (fentry) สำหรับเคอร์เนลที่ยังไม่ได้เปิด BPF LSM (เช่น Ubuntu ค่าเริ่มต้น)
+แล็บนี้จะพาไปลงมือทำเรื่องการบังคับใช้นโยบายความปลอดภัยของระบบปฏิบัติการ Linux ในระดับ Kernel ด้วย **BPF LSM (Linux Security Modules)** เพื่อปฏิเสธการเปิดไฟล์สำคัญแบบ Synchronous Inline Blocking (`-EPERM`) โดยเขียนแบบ **CO-RE** (`vmlinux.h` + `BPF_CORE_READ`) และมีโหมด **Audit** (fentry) สำหรับเคอร์เนลที่ยังไม่ได้เปิด BPF LSM (เช่น Ubuntu ค่าเริ่มต้น)
 
 ---
 
@@ -14,7 +14,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 สถาปัตยกรรม Linux Security Modules (LSM)
 Linux Security Modules (LSM) คือเฟรมเวิร์กของ Linux Kernel ที่ถูกออกแบบขึ้นตั้งแต่ Linux 2.6 เพื่อให้ระบบสามารถบังคับใช้นโยบายสิทธิ์แบบ **Mandatory Access Control (MAC)** ควบคู่ไปกับ Discretionary Access Control (DAC: สิทธิ์ `rwxrwxrwx` ปกติ)
@@ -462,11 +462,23 @@ exit=0
 
 ---
 
+## 🛠️ การแก้ปัญหาที่พบบ่อย (Troubleshooting)
+
+| อาการ | สาเหตุ / วิธีแก้ |
+|---|---|
+| รันแล้วขึ้น `[AUDIT would-block]` แทนที่จะบล็อกด้วย `-EPERM` | เคอร์เนลไม่ได้เปิด BPF LSM ตอนบูต (`cat /sys/kernel/security/lsm` ไม่มี `bpf`) และ `-mode=auto` สลับเป็น `fentry/security_file_open` อัตโนมัติ — ต้องเพิ่ม `lsm=...,bpf` ใน GRUB/kernel cmdline แล้วรีบูต |
+| รัน `-mode=enforce` แล้วล้มเหลว `lsm/file_open: operation not supported` / `permission denied` | เหตุผลเดียวกับด้านบน (`CONFIG_BPF_LSM=y` มีอยู่แต่ยังไม่มี `bpf` ใน `/sys/kernel/security/lsm`) หรือไม่ได้รันด้วย `sudo` |
+| `-protect lab-files/app.key` ไม่บล็อกไฟล์ที่เพิ่งสร้างใหม่ทับชื่อเดิม | `protected_inodes` จับคู่ด้วย `(s_dev, i_ino)` ของ inode เดิม ถ้าแก้ไฟล์ด้วย `mv` ทับหรือลบสร้างใหม่ inode เปลี่ยน — ให้รีสตาร์ท guard หรือชี้ไฟล์เป้าหมายใหม่ |
+| รัน `-block-all` แล้วคำสั่งระบบหรือ Python ล้มเหลว | กฎ prefix `secret*` จับโดนไฟล์ระบบ (เช่น Python `secrets.py` หรือ Go `runtime/secret.go`) — หลีกเลี่ยง `-block-all` บนเครื่องใช้งานจริง |
+| ต้องการรัน `make clean` หลังทดสอบไฟล์ใน `lab-files/` | `make clean` ลบ `bin/` และไฟล์ที่ `bpf2go` สร้าง; ล้างไฟล์ทดสอบด้วย `rm -rf lab-files` (หากเผลอตั้งสิทธิ์อ่านไม่ได้ใน `lab-files` ให้ลบด้วยสิทธิ์ผู้ใช้ที่สร้าง) |
+
+---
+
 ## 7. แบบฝึกหัดท้ายบท (Exercises)
 
 ### ระดับพื้นฐาน
 **7.1 เปลี่ยน errno**: แก้ให้ enforce mode คืน `-EACCES` (13, "Permission denied") แทน `-EPERM` โดย `#define EACCES 13` ใน C และแก้การแสดงผลใน `main.go` ให้รองรับ
-- *ส่งงาน*: diff + อธิบายว่าทำไมต้อง define เองเมื่อใช้ `vmlinux.h`
+- *ผลที่ควรได้*: diff + อธิบายว่าทำไมต้อง define เองเมื่อใช้ `vmlinux.h`
 - *ตรวจสอบ*: บนเครื่องที่เปิด bpf LSM, `cat lab-files/secret.txt` ต้องได้ `Permission denied`; บนเครื่องที่ไม่เปิด ให้ตรวจด้วย `llvm-objdump -d bpf_bpf.o` ว่า program `restrict_secret_files` คืนค่า `-13`
 
 **7.2 Case-insensitive + suffix**: ปรับกฎชื่อให้ match `secret` แบบไม่สนตัวพิมพ์ และ match นามสกุล `.pem` / `.key` เพิ่ม (ระวัง verifier: loop ต้องมีขอบเขตชัดเจน หรือใช้ `bpf_loop`)
@@ -474,7 +486,7 @@ exit=0
 
 ### ระดับปานกลาง
 **7.3 เปิด BPF LSM ใน VM แล้วทดสอบ enforce**: ทำตามหัวข้อ 1.3 ใน VM (เช่น Multipass/QEMU) แล้วรันขั้นตอนที่ 4 ใน enforce mode
-- *ส่งงาน*: `cat /proc/cmdline`, `cat /sys/kernel/security/lsm` และ output จริงของ guard + terminal ผู้ใช้
+- *ผลที่ควรได้*: `cat /proc/cmdline`, `cat /sys/kernel/security/lsm` และ output จริงของ guard + terminal ผู้ใช้
 - *ตรวจสอบ*: `cat lab-files/secret.txt` และ `cat lab-files/backup.txt` ได้ `Operation not permitted`, `cat lab-files/notes.txt` **อ่านได้** (พิสูจน์ bypass ในหัวข้อ 6 ข้อ 1) และ `python3 -c "import secrets"` ล้มเหลว (พิสูจน์ false positive)
 
 **7.4 ปิดช่อง rename**: เพิ่ม `SEC("lsm/path_rename")` (ต้องใช้ `CONFIG_SECURITY_PATH`; ตรวจด้วย `grep CONFIG_SECURITY_PATH /boot/config-$(uname -r)`) หรือ `lsm/inode_rename` ที่ปฏิเสธการ rename ไฟล์ที่อยู่ใน `protected_inodes` หรือชื่อขึ้นต้นด้วย `secret` สำหรับ non-root พร้อม fentry fallback สำหรับ audit
@@ -482,7 +494,7 @@ exit=0
 
 ### ระดับท้าทาย
 **7.5 Policy ตาม full path ด้วย `bpf_d_path`**: เพิ่ม map แบบ `BPF_MAP_TYPE_LPM_TRIE` หรือ hash ของ path prefix (เช่น `/etc/ssl/private/`) แล้วตัดสินใจจาก path ที่ได้จาก `bpf_d_path()` วิเคราะห์ว่าวิธีนี้หลบได้อย่างไร (bind mount, mount namespace ของ container, `chroot`, path ยาวเกิน buffer) เทียบกับกฎ inode
-- *ส่งงาน*: โค้ด + ตารางเปรียบเทียบ name / inode / path ด้าน correctness, performance, ความสามารถในการหลบ
+- *ผลที่ควรได้*: โค้ด + ตารางเปรียบเทียบ name / inode / path ด้าน correctness, performance, ความสามารถในการหลบ
 - *ตรวจสอบ*: `sudo mount --bind lab-files /mnt/x` (ใน VM) แล้วเปิดผ่าน `/mnt/x/...` -- อธิบายผลที่เห็น
 
 **7.6 ป้องกันตัวเอง (Self-protection)**: pin link และ maps ไว้ใน `/sys/fs/bpf/week10/` เพื่อให้ policy อยู่ต่อแม้ agent ถูก kill และเพิ่ม `SEC("lsm/bpf")` ที่ปฏิเสธ `BPF_MAP_UPDATE_ELEM`/`BPF_MAP_DELETE_ELEM` ต่อ map ของเรา จาก process ที่ไม่ใช่ agent (เปรียบเทียบ map id หรือใช้ `bpf_map` hook)

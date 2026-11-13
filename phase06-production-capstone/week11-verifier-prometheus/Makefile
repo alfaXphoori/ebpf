@@ -1,5 +1,3 @@
-CLANG ?= clang
-CFLAGS ?= -O2 -g -Wall -target bpf -D__TARGET_ARCH_x86
 IFACE ?= lo
 
 # Verifier-log lab (verifier_fail/, make verifier-demo) moved to

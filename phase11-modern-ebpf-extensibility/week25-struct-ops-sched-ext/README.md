@@ -1,6 +1,6 @@
 # สัปดาห์ที่ 25: struct_ops และ sched_ext — เขียน CPU Scheduler ด้วย BPF
 
-ยินดีต้อนรับสู่ **Week 25** ของหลักสูตร eBPF Zero to Hero!
+**Week 25** — เขียน CPU Scheduler เองใน C ด้วย `struct_ops` และ `sched_ext`
 
 ตลอด 24 สัปดาห์ที่ผ่านมา โปรแกรม eBPF ของเรา "เกาะ" อยู่ที่ hook ที่เคอร์เนลเตรียมไว้ (kprobe, tracepoint, XDP, LSM ...) แล้วสังเกตหรือตัดสิน allow/deny ทีละเหตุการณ์ สัปดาห์นี้ต่างออกไป: เราจะใช้ **struct_ops** เพื่อให้โปรแกรม BPF **เป็นผู้ implement ตาราง function pointer ของ subsystem ในเคอร์เนลทั้งชุด** และตัวอย่างที่ทรงพลังที่สุดของแนวคิดนี้คือ **sched_ext** (Linux 6.12+) ซึ่งเปิดให้เขียน **CPU scheduler ทั้งตัวเป็น BPF** โหลดเข้า-ถอดออกได้ขณะเครื่องรันอยู่ โดยไม่ต้อง reboot หรือคอมไพล์เคอร์เนลใหม่
 
@@ -24,7 +24,7 @@
 
 ---
 
-## 1. ทฤษฎีเชิงลึก (Deep-Dive Theory)
+## 1. พื้นฐานและหลักการทำงาน (How It Works)
 
 ### 1.1 struct_ops: ให้ BPF implement "ops table" ของเคอร์เนล
 
@@ -166,7 +166,7 @@ char _license[] SEC("license") = "GPL";
 const volatile bool vtime_mode = false;
 const volatile u32 fail_mode = FAIL_NONE;
 ```
-- `vmlinux.h` ให้ทั้ง `struct sched_ext_ops`, enum (`SCX_DSQ_LOCAL`, `SCX_SLICE_DFL` = 20 ms, `SCX_OPS_SWITCH_PARTIAL` = 8) และ prototype ของ kfunc ทั้งหมด — **ไม่ต้องประกาศ struct หรือ kfunc เอง** (CO-RE ตามแนวทางของหลักสูตร)
+- `vmlinux.h` ให้ทั้ง `struct sched_ext_ops`, enum (`SCX_DSQ_LOCAL`, `SCX_SLICE_DFL` = 20 ms, `SCX_OPS_SWITCH_PARTIAL` = 8) และ prototype ของ kfunc ทั้งหมด — **ไม่ต้องประกาศ struct หรือ kfunc เอง** (เขียนแบบ CO-RE เหมือนแล็บอื่นๆ)
 - kfunc ของ sched_ext ส่งออกให้เฉพาะโปรแกรม GPL
 - `const volatile` อยู่ใน `.rodata` Go แก้ค่าก่อนโหลด verifier จึงเห็นเป็นค่าคงที่และตัด branch ที่ไม่ใช้ทิ้ง
 
@@ -596,7 +596,7 @@ $ sudo dmesg | grep -A3 'sched_ext:' | tail -n 5
 1. **จัดการ `prev` ใน `ops.dispatch`:** เมื่อ `prev` ยัง runnable ให้เทียบ vtime ของ `prev` กับหัวคิว (`scx_bpf_dsq_peek()` มีในเคอร์เนลนี้) ถ้า `prev` ยังควรได้รันต่อให้เติม slice แทนการปล่อยให้ dispatch ดึงตัวอื่น — ระวังเรื่องการคิด vtime ซ้ำ/ตกหล่นใน `ops.stopping` 
    - **ตรวจสอบ:** `nice_demo.sh` แบบ spinner **2 ตัว** (nice 0 กับ nice 10) ในโหมด vtime ต้องได้อัตราส่วน CPU time ใกล้ 9:1 (โค้ดปัจจุบันได้ ~1:1)
 2. **struct_ops ตัวที่สอง: `tcp_congestion_ops`:** เขียน congestion control แบบ Reno ขั้นต่ำ (`ssthresh`, `cong_avoid`, `undo_cwnd`) ด้วย `SEC(".struct_ops.link")` แล้ว attach ด้วยโค้ด Go เดิม 
-   - **ตรวจสอบ:** `sysctl net.ipv4.tcp_available_congestion_control` ต้องมีชื่อของเรา และใน netns ทดสอบ (`w25-` prefix ตามธรรมเนียมของหลักสูตร) `ss -ti` ของการเชื่อมต่อที่ใช้ `setsockopt(TCP_CONGESTION)` ต้องแสดงชื่อ algorithm ของเรา
+   - **ตรวจสอบ:** `sysctl net.ipv4.tcp_available_congestion_control` ต้องมีชื่อของเรา และใน netns ทดสอบ (`w25-` prefix ตามมาตรฐานของแล็บนี้) `ss -ti` ของการเชื่อมต่อที่ใช้ `setsockopt(TCP_CONGESTION)` ต้องแสดงชื่อ algorithm ของเรา
 
 ---
 

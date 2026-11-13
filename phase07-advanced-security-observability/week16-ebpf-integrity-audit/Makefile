@@ -5,7 +5,7 @@
 BIN_DIR := bin
 BINARY := $(BIN_DIR)/bpf-audit
 
-.PHONY: all generate build run clean
+.PHONY: all generate build run test clean
 
 all: generate build
 
@@ -21,6 +21,10 @@ build:
 run: build
 	@echo "===> Running $(BINARY) with sudo..."
 	sudo ./$(BINARY)
+
+test: generate
+	@echo "===> Running Go + eBPF tests (requires sudo)..."
+	go test -exec sudo -v ./...
 
 clean:
 	@echo "===> Cleaning build artifacts..."
