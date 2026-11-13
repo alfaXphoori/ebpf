@@ -1,5 +1,6 @@
-flowchart TD
-    subgraph BPF["ฝั่ง BPF (ไฟล์ .c): SEC(#quot;.struct_ops.link#quot;) struct sched_ext_ops w25_ops"]
+flowchart LR
+    subgraph BPF["ฝั่ง BPF (ไฟล์ .c)"]
+            H["SEC(#quot;.struct_ops.link#quot;)<br/>struct sched_ext_ops w25_ops"]
             F1[".select_cpu = w25_select_cpu"]
             F2[".enqueue = w25_enqueue"]
             F3[".dispatch = w25_dispatch"]
@@ -23,3 +24,4 @@ flowchart TD
     classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
     class M map
     class L kern
+    class H kern
