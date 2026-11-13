@@ -24,8 +24,8 @@ src/<ชื่อ>.mmd ──mmdc (ธีม mermaid-config.json)──▶ raw S
 
 - [`mermaid-config.json`](mermaid-config.json): ธีม `base` ฟอนต์ Noto Sans / Noto Sans Thai เส้นหนา 2px
 - [`../../scripts/diagram_postprocess.py`](../../scripts/diagram_postprocess.py): ทำมุมโค้ง ใส่เงา ทำป้ายหัวกลุ่ม (สีเลือกจาก id ของ subgraph เช่น `KERNEL` แดง, `USER` น้ำเงิน, `TEST` เขียว) ใส่พื้นหลังการ์ดสีขาว และฝังฟอนต์แบบ subset เพื่อให้ภาษาไทยแสดงเหมือนกันทุกเครื่อง
-- [`../../scripts/render_animated_diagrams.py`](../../scripts/render_animated_diagrams.py): สร้าง **Animated SVG (Pure SVG + CSS `@keyframes` + แถบไฮไลต์ตารางทีละขั้นตอน)** ไม่ใช้ JavaScript จึงแสดงผลแบบเคลื่อนไหวได้ทั้งบน GitHub และเบราว์เซอร์ (รองรับ `prefers-reduced-motion`) สำหรับ 9 ภาพหลัก:
-  `guide-ch01-ingress-path`, `guide-ch02-build-load-pipeline`, `guide-ch03-race-condition`, `guide-ch05-ringbuf-mpsc`, `week07-xdp-path`, `week08-sequence`, `week20-sequence`, `week21-sequence`, `week22-sequence` (รันแยกได้ด้วย `python3 scripts/render_animated_diagrams.py` หรือผ่าน `scripts/render_diagrams.sh`)
+- [`../../scripts/render_animated_diagrams.py`](../../scripts/render_animated_diagrams.py) (ร่วมกับ [`anim_svg_ui.py`](../../scripts/anim_svg_ui.py) และ [`anim_weeks_extra.py`](../../scripts/anim_weeks_extra.py)): สร้าง **Animated SVG (Pure SVG + CSS `@keyframes` + แถบไฮไลต์ตารางทีละขั้นตอน)** ไม่ใช้ JavaScript จึงแสดงผลแบบเคลื่อนไหวได้ทั้งบน GitHub และเบราว์เซอร์ (รองรับ `prefers-reduced-motion`) ครบทั้ง **30 ภาพ (4 ภาพแนวคิดหลัก + ครบทุกสัปดาห์ Week 01–26)**:
+  ดูรายชื่อทั้งหมดได้ด้วย `python3 scripts/render_animated_diagrams.py --list` (รันสร้างใหม่ทั้งหมดได้ด้วย `python3 scripts/render_animated_diagrams.py` หรือผ่าน `scripts/render_diagrams.sh`)
 
 ## สีของ class (ใช้ใน `classDef`)
 
