@@ -1,0 +1,35 @@
+sequenceDiagram
+    autonumber
+    participant P as w21-tx<br/>10.21.0.2
+    box rgb(255,241,242) Kernel ใน netns w21-rx
+        participant X as XDP<br/>xsk_redirect_prog
+        participant XM as xsks_map<br/>XSKMAP
+    end
+    box transparent หน่วยความจำร่วมที่ mmap
+        participant FR as FILL ring
+        participant UM as UMEM frames
+        participant RX as RX ring
+    end
+    box rgb(239,246,255) User Space
+        participant G as main.go<br/>xsk.go
+    end
+
+    G->>X: link.AttachXDP บน w21-xsk0
+    G->>UM: socket AF_XDP, mmap UMEM, XDP_UMEM_REG
+    G->>FR: fillFrames(): ใส่ที่อยู่ frame ว่าง แล้วขยับ producer
+    G->>G: bind queue 0 แบบ XDP_COPY
+    G->>XM: XsksMap.Put(0, xsk fd)
+    P->>X: UDP → 10.21.0.1:9999
+    X->>XM: bpf_redirect_map ตาม rx_queue_index<br/>ค่าสำรอง XDP_PASS
+    alt มี socket ผูกกับ queue นี้
+        X->>FR: ดึงที่อยู่ frame ว่าง (kernel เป็น consumer)
+        X->>UM: copy แพ็กเก็ตลง frame
+        X->>RX: ใส่ descriptor addr, len แล้วขยับ producer
+        Note over X: คืน XDP_REDIRECT และนับ redirected
+        G->>RX: Poll(200) แล้ว Receive(): อ่าน descriptor และขยับ consumer
+        G->>UM: อ่านแพ็กเก็ตจาก frame → describePacket()
+        G->>FR: fillFrames(recycle): คืน frame ให้ kernel ใช้ซ้ำ
+    else ไม่ใช่ UDP หรือยังไม่มี socket
+        X-->>P: XDP_PASS → TCP/IP stack ปกติ เช่น ตอบ ping
+    end
+    Note over FR,RX: ถ้า FILL ring ว่างหรือ RX ring เต็ม kernel จะทิ้งแพ็กเก็ต<br/>ดูได้จาก xsk.Stats(): fill_empty, ring_full, rx_dropped

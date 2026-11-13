@@ -46,30 +46,7 @@
 
 ### 1.2 สถาปัตยกรรมของ Tetragon
 
-```
- ┌──────────────────────────── user space ─────────────────────────────────────┐
- │                                                                              │
- │   policies/*.yaml ──(tetra tracingpolicy add)──┐                             │
- │                                                ▼                             │
- │   ┌──────────────── tetragon daemon (privileged container) ──────────────┐   │
- │   │ policy handler → แปลง YAML เป็น BPF program + ค่าใน map (selectors)  │   │
- │   │ process cache (execve_map) → เติม parent / exec_id / arguments      │   │
- │   │ gRPC server :54321 ──→ tetra getevents -o compact / json            │   │
- │   └──────────────▲────────────────────────────────────────────────────────┘   │
- └──────────────────┼───────────────────────────────────────────────────────────┘
-                    │ event (ring buffer / perf buffer)
- ┌──────────────────┼────────────────── kernel ─────────────────────────────────┐
- │  base sensor:    │                                                           │
- │   tracepoint sched_process_exec ─┐   kprobe acct_process / wake_up_new_task  │
- │                                  │                                           │
- │  generic sensors (ตาม policy):    ▼                                           │
- │   hook ─→ *_event ─tail call→ *_setup_event ─→ *_process_event               │
- │        ─→ *_filter_arg (matchArgs/matchBinaries ประเมิน "ใน kernel")          │
- │        ─→ *_actions  (Post | Sigkill | Override | ...)  ─→ *_output ─→ event   │
- │                                                                              │
- │   hook = kprobe_multi (kprobes:) | BPF LSM (lsmhooks:) | fmod_ret (Override)  │
- └──────────────────────────────────────────────────────────────────────────────┘
-```
+![สถาปัตยกรรม Tetragon: sensor ในเคอร์เนลส่ง event ให้ daemon](../../docs/diagrams/week26-tetragon-arch.svg)
 
 ประเด็นสำคัญ:
 
@@ -113,27 +90,7 @@ spec:
 
 ### 1.5 Cilium: eBPF เป็น datapath ของทั้งคลัสเตอร์
 
-```
-                         Kubernetes API (Service, Pod, CiliumNetworkPolicy)
-                                          │ watch
- ┌────────────────────────── Node ────────┼──────────────────────────────────────────┐
- │                                        ▼                                          │
- │   cilium-agent ── compile/load BPF ── เขียน map: services, backends, identity,    │
- │      │                                 policy (ต่อ endpoint), conntrack, NAT      │
- │      └── Hubble server ◄── trace/drop events ── datapath                          │
- │                                                                                   │
- │   Pod A (client)                        Pod B (web)                               │
- │   connect(10.96.x.x:80)                    ▲                                      │
- │      │                                     │                                      │
- │      ▼  cgroup_inet4_connect (socket LB):  │  tcx/ingress บน lxcXXXX               │
- │      เลือก backend แล้วเขียน dst ใหม่       │  (cil_from_container / to-endpoint):  │
- │      เป็น PodIP:80 ตั้งแต่ connect()        │  ตรวจ policy ด้วย security identity    │
- │      (getpeername ยังเห็น ClusterIP)       │                                      │
- │      ▼                                     │                                      │
- │   lxcXXXX ──► cilium_host / cilium_vxlan (tcx) ──► eth0 (tcx; XDP บน NIC จริง*)  │
- └───────────────────────────────────────────────────────────────────────────────────┘
-   * XDP LB acceleration ใช้ได้เฉพาะ NIC/driver ที่รองรับ native XDP (ใน kind ไม่มี XDP)
-```
+![Cilium datapath บน Node: socket LB, tcx และ Hubble](../../docs/diagrams/week26-cilium-datapath.svg)
 
 - **TCX datapath** (Week 08): ทุก interface ที่ Cilium ดูแลมีโปรแกรม `tcx/ingress`/`tcx/egress` (เช่น `cil_from_container`, `cil_to_overlay`) แทน iptables
 - **Socket LB / kube-proxy replacement** (Week 14, 20): แปลง ClusterIP → backend ตั้งแต่ `connect()` ด้วยโปรแกรม `cgroup_inet4_connect` จึงไม่ต้อง DNAT ทุกแพ็กเก็ต และไม่มีกฎ `KUBE-SVC` ใน iptables เลย (4.9 นับได้ 0)

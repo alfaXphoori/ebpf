@@ -23,14 +23,7 @@
 
 **cgroup v2** จัดโปรเซสเป็นลำดับชั้นแบบต้นไม้ใต้ `/sys/fs/cgroup` (systemd ใช้จัด service และ user session, container runtime ใช้แยก container) เคอร์เนลอนุญาตให้ผูกโปรแกรม eBPF เข้ากับ cgroup ใดก็ได้ แล้วโปรแกรมนั้นจะมีผลกับ **cgroup นั้นและ cgroup ลูกหลานทั้งหมด**
 
-```
-/sys/fs/cgroup                      <- ROOT cgroup: ผูกที่นี่ = มีผลกับทุกโปรเซสบนเครื่อง (อันตราย!)
-├── system.slice                    <- systemd services
-├── user.slice                      <- login sessions ของผู้ใช้
-└── w14-sock-enforce                <- cgroup ทดลองของแล็บนี้ (สร้างและลบโดยโปรแกรม)
-        ▲
-        └── cgroup/connect4: sock4_connect  (ผูกด้วย BPF link, flag "multi")
-```
+![ลำดับชั้น cgroup v2 และจุดผูกโปรแกรม connect4](../../docs/diagrams/week14-cgroup-tree.svg)
 
 เวอร์ชันเดิมของแล็บใช้ค่าเริ่มต้น `-cgroup /sys/fs/cgroup` คือผูกกับ **root cgroup** ซึ่งกระทบทุกโปรเซสบนเครื่อง เวอร์ชันนี้แก้ให้:
 - ค่าเริ่มต้นเป็น cgroup เฉพาะ `/sys/fs/cgroup/w14-sock-enforce` ซึ่งโปรแกรมสร้างให้อัตโนมัติและ `rmdir` ทิ้งตอนจบ
@@ -38,25 +31,7 @@
 
 ### 1.2 จุดที่ hook ทำงานในเส้นทาง `connect()`
 
-```
- แอปพลิเคชันใน cgroup w14-sock-enforce
-   connect(fd, {AF_INET, 127.0.0.1, 2323})
-            │
-            ▼
- __sys_connect() -> inet_stream_connect() / inet_dgram_connect()
-            │
-            ▼  sk->sk_prot->pre_connect()  (tcp_v4_pre_connect / udp_pre_connect)
- ┌────────────────────────────────────────────────────────────┐
- │ BPF_CGROUP_RUN_PROG_INET4_CONNECT                          │
- │   ctx = struct bpf_sock_addr { user_ip4, user_port, type } │
- │   sock4_connect():  lookup blocked_ips / blocked_ports     │
- │      return 0  ──► connect() = -1, errno = EPERM           │
- │      return 1  ──► ทำงานต่อ                                │
- └────────────────────────────────────────────────────────────┘
-            │ (อนุญาต)
-            ▼
- tcp_v4_connect(): เลือก source port, ส่ง SYN ...
-```
+![จุดที่ hook cgroup/connect4 ทำงานในเส้นทาง connect()](../../docs/diagrams/week14-connect-hook.svg)
 
 ข้อสังเกตสำคัญ:
 - โปรแกรมทำงานใน **process context ของผู้เรียก `connect()`** ดังนั้น `bpf_get_current_pid_tgid()` และ `bpf_get_current_comm()` ให้ค่าของแอปพลิเคชันจริง (ต่างจาก Week 13 ที่ทำงานใน softirq)

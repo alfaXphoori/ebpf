@@ -1,0 +1,26 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    subgraph USER["User Space"]
+        U1["① User Process (เช่น curl, python3)"]
+        U2["② เรียกใช้งาน SSL_write(ssl, buf, num)"]
+    end
+
+    subgraph KERNEL["Linux Kernel"]
+        K1["③ #BP exception เข้าสู่ Linux Kernel<br/>uprobes subsystem จัดการเอง<br/>ไม่มี SIGTRAP ส่งถึง process"]
+        K2["④ Kernel เรียก eBPF Handler:<br/>uprobe_ssl_write(struct pt_regs &ast;ctx)<br/>BPF_UPROBE() แกะ arg2 (buf = %rsi), arg3 (num = %rdx)<br/>คัดลอก Plaintext payload ด้วย bpf_probe_read_user()"]
+        K3["⑤ Kernel จำลอง/single-step คำสั่งเดิมที่ถูกแทนที่<br/>แล้วให้ OpenSSL ทำงานต่อ"]
+    end
+
+    U1 --> U2
+    U2 -- "0xCC (int3) ถูกเขียนทับ<br/>คำสั่งแรกของฟังก์ชัน<br/>ใน page ของ process" --> K1
+    K1 --> K2
+    K2 --> K3
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class U1,U2 user
+    class K1,K2,K3 kern

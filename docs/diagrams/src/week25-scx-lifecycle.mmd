@@ -1,0 +1,16 @@
+flowchart TD
+    W(["task ตื่น (wakeup)"]) --> SCN["① ops.select_cpu(p, prev_cpu)"] --> SC{"เจอ CPU ว่าง?"}
+    SC -- "yes" --> DD["scx_bpf_dsq_insert(p, SCX_DSQ_LOCAL)<br/>#quot;direct dispatch#quot; (ข้าม ops.enqueue)"]
+    SC -- "no" --> EQ["② ops.enqueue(p)"]
+    EQ --> INS["scx_bpf_dsq_insert[_vtime](p, SHARED_DSQ)"]
+    INS -- "CPU ว่าง / local DSQ หมด" --> DP["③ ops.dispatch(cpu, prev)<br/>→ scx_bpf_dsq_move_to_local<br/>(SHARED_DSQ)"]
+    DP --> LQ["local DSQ ของ CPU"]
+    DD --> LQ
+    LQ --> RUN["④ ops.running(p)"]
+    RUN -- "รันจน slice หมด/หลับ/ถูก preempt" --> STOP["⑤ ops.stopping(p, runnable)"]
+    STOP -- "ยัง runnable และ slice หมด" --> BACK(["→ กลับไป ② ops.enqueue"])
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class SCN,SC,EQ,DP,RUN,STOP kern
+    class W,BACK trig

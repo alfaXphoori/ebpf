@@ -1,0 +1,11 @@
+block-beta
+    columns 4
+    ETH["Ethernet Header<br/>(14 Bytes)<br/>Byte 0 → 14"]
+    IP["IPv4 Header<br/>(20+ Bytes)<br/>Byte 14 → 34"]
+    L4["TCP/UDP/ICMP Hdr<br/>(8 - 20+ Bytes)<br/>Byte 34 → 54"]
+    PAY["Payload<br/>(N Bytes)<br/>Byte 54 → N"]
+
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class ETH,IP,L4 net
+    class PAY user

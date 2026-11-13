@@ -1,0 +1,44 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    PKT(["① Ingress Packet"])
+
+    subgraph KERNEL["② Kernel: XDP Hook"]
+        X["xdp_metrics_prog"]
+        M0[("CPU 0: traffic_metrics[proto]<br/>+= (pkts, bytes)")]
+        M1[("CPU 1: traffic_metrics[proto]<br/>+= (pkts, bytes)")]
+        M2[("CPU 2: traffic_metrics[proto]<br/>+= (pkts, bytes)")]
+    end
+
+    subgraph USER["③ Go Prometheus Collector: xdpCollector"]
+        C1["ขั้นที่ 1: ดึงข้อมูลจากทุก CPU cores<br/>รวมผล (Sum Aggregation)"]
+        C2["ขั้นที่ 2: สร้าง Prometheus Metrics:<br/>ebpf_xdp_packets_total"]
+    end
+
+    P["④ Prometheus Server"]
+    G["⑤ Grafana Dashboard"]
+
+    PKT --> X
+    X --> M0
+    X --> M1
+    X --> M2
+    M0 -.-> C1
+    M1 -.-> C1
+    M2 -.-> C1
+    C1 --> C2
+    C2 -- "HTTP GET :2112/metrics" --> P
+    P --> G
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class PKT net
+    class X kern
+    class M0,M1,M2 map
+    class C1,C2 user
+    class P,G trig

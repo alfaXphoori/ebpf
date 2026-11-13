@@ -38,15 +38,7 @@
 
 ### 1.2 kfunc ถูก resolve อย่างไร (`__ksym`, `__weak`, `bpf_ksym_exists`)
 
-```
-task_kfunc.c                         cilium/ebpf (loader)                    Kernel
------------------------              ---------------------------------       ---------------------------
-extern ... bpf_task_from_pid(...)    อ่าน .ksyms ใน ELF                       /sys/kernel/btf/vmlinux
-    __weak __ksym;          -------> หา FUNC 'bpf_task_from_pid' ใน    ----> [99570] FUNC 'bpf_task_from_pid'
-call bpf_task_from_pid               kernel BTF แล้วเขียน BTF ID ลง imm      [98316] DECL_TAG 'bpf_kfunc' type_id=99570
-                                     ของคำสั่ง call                           verifier: อนุญาตกับ prog type นี้ไหม?
-                                                                                       เช็ก flag KF_* และชนิดอาร์กิวเมนต์
-```
+![การ resolve kfunc ผ่าน __ksym จาก ELF ถึง kernel BTF](../../docs/diagrams/week24-kfunc-resolve.svg)
 
 - **`__ksym`** (= `section(".ksyms")`) บอก loader ว่าสัญลักษณ์นี้ต้องหาใน kernel BTF ไม่ใช่ใน ELF
 - **`__weak`** ถ้าหาไม่เจอ loader จะไม่ล้ม: ที่อยู่ของสัญลักษณ์ = 0 และคำสั่ง `call` ถูก "poison" (cilium/ebpf ใช้ค่าคงที่ `0xdedc0de` + ...)
@@ -104,16 +96,7 @@ for m in /sys/kernel/btf/*; do n=$(bpftool btf dump file $m 2>/dev/null | grep -
 
 map แบบเดิมเก็บ "ค่า" ขนาดคงที่ต่อ key เวลา BPF อยากได้โครงสร้างข้อมูลแบบ linked list/tree ต้องจำลองด้วย index และ user space ต้อง lookup ทีละ key (1 syscall ต่อ key หรือ batch) **Arena** (Linux 6.9+, x86-64 เป็นสถาปัตยกรรมแรก) แก้ปัญหานี้ด้วยแนวคิด "heap ที่แชร์กัน":
 
-```
-              user space (Go)                                kernel (BPF program)
-   ┌──────────────────────────────────────┐        ┌──────────────────────────────────────┐
-   │ mmap(arena fd)  user_vm_start         │        │ kern_vm_start (เคอร์เนลจองให้ 4 GiB+guard)│
-   │ 0x7a23c2b3e000 ┌────────┬────────┐   │        │                ┌────────┬────────┐  │
-   │                │ page 0 │ page 1 │…  │ <====> │                │ page 0 │ page 1 │… │
-   │                └────────┴────────┘   │ same   │                └────────┴────────┘  │
-   └──────────────────────────────────────┘ pages  └──────────────────────────────────────┘
-     pointer ที่เก็บใน arena = user address (64 บิต)      JIT ใช้ kern_vm_start + (32 บิตล่างของ pointer)
-```
+![BPF Arena: หน้าเดียวกันถูก map ทั้งฝั่ง user และ kernel](../../docs/diagrams/week24-arena-mapping.svg)
 
 - สร้างด้วย `BPF_MAP_TYPE_ARENA` + **`BPF_F_MMAPABLE` (บังคับ)**; `max_entries` คือ **จำนวนหน้า** (สูงสุด 2^20 หน้า = 4 GiB บนหน้า 4 KiB — วัดจริงในหัวข้อ 4) `key_size`/`value_size` = 0
 - หน่วยความจำจริงยัง **ไม่ถูกจอง** ตอนสร้าง map (sparse) หน้าจะมีจริงเมื่อ (ก) BPF เรียก kfunc `bpf_arena_alloc_pages()` หรือ (ข) user space แตะหน้านั้น (page fault ฝั่ง user → เคอร์เนลจองหน้าให้) ถ้าสร้าง map ด้วย `BPF_F_SEGV_ON_FAULT` การแตะหน้าที่ยังไม่จองจะได้ SIGSEGV แทน — ทดลองกับ `Memory.ReadAt` ใน Go แล้ว process ตายทันทีด้วย `unexpected fault address ... fatal error: fault`

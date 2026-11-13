@@ -1,0 +1,22 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    I0["id = 0"]
+    N["① BPF_PROG_GET_NEXT_ID(id) -> next id<br/>Go: ebpf.ProgramGetNextID()"]
+    END["หมดแล้ว (ENOENT)"]
+    FD["② BPF_PROG_GET_FD_BY_ID(id) -> fd ของโปรแกรม<br/>Go: ebpf.NewProgramFromID()"]
+    INFO["③ BPF_OBJ_GET_INFO_BY_FD(fd)<br/>-> type, name, tag, uid, map_ids<br/>Go: prog.Info()"]
+
+    I0 --> N
+    N -- "ENOENT" --> END
+    N -- "next id" --> FD
+    FD --> INFO
+    INFO -- "loop" --> N
+
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class N,FD,INFO user
+    class I0,END trig

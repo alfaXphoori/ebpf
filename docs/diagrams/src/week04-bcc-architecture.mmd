@@ -1,0 +1,28 @@
+flowchart TD
+    subgraph USER["User Space"]
+        P["Python Script<br/>(tcp_v4_latency.py)"] -- "ส่ง C Code String ไปยัง BCC Library" --> L["Embedded Clang / LLVM Frontend<br/>① Parse C source code & inject Kernel Headers<br/>(#lt;linux/sched.h#gt;, etc.)<br/>② ทำการคอมไพล์ ณ ขณะรัน (Runtime JIT compilation)"]
+        L --> E["eBPF Bytecode (ELF format)"]
+    end
+
+    subgraph KERNEL["Kernel Space"]
+        V["Verifier<br/>ตรวจสอบความปลอดภัยหน่วยความจำและการวนลูป"] -- "ผ่าน" --> J["JIT Compiler<br/>แปลงเป็น Machine Code ของ CPU สถาปัตยกรรมนั้นๆ"]
+        subgraph PROBES["④ แนบ Probe เข้ากับ Kernel Function Address"]
+            KP["kprobe: tcp_v4_connect"] <==> KR["kretprobe: tcp_v4_connect"]
+        end
+        J --> PROBES
+        KP --> H[("BPF_HASH(start_ts)<br/>บันทึก Start Timestamp")]
+        KR --> H
+        H -- "ส่งต่อ Event เมื่อเสร็จสิ้น" --> PO[("BPF_PERF_OUTPUT<br/>(Circular Ring Buffer)")]
+    end
+
+    E -- "③ โหลดผ่าน sys_bpf(BPF_PROG_LOAD, ...)" --> V
+    PO -- "Poll ข้อมูลขึ้น User Space" --> CB["Python Callback"]
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class P,L,E,CB user
+    class V,J,KP,KR kern
+    class H,PO map

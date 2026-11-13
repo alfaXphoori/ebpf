@@ -1,0 +1,35 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart LR
+    subgraph MEM["ปัญหาของ BPF PERF BUFFER: Per-CPU Buffer แยกกัน"]
+        C0["CPU 0"] --> B0["Event 1 | Event 4"]
+        C1["CPU 1"] --> B1["Event 2"]
+        C2["CPU 2"] --> B2["Event 3 | Event 5"]
+    end
+
+    subgraph USER["User Space"]
+        R0["User Reader 0"]
+        R1["User Reader 1"]
+        R2["User Reader 2"]
+    end
+
+    subgraph ISSUE["ปัญหา"]
+        P1["ปัญหาที่ 1 ลำดับเวลา (Ordering):<br/>Event 1-5 สลับลำดับกันข้าม Core"]
+        P2["ปัญหาที่ 2 Memory Fragmentation:<br/>CPU ที่งานหนัก Buffer เต็ม/Drop<br/>ขณะที่ CPU ว่าง มี Memory เหลือทิ้ง"]
+    end
+
+    B0 --> R0
+    B1 --> R1
+    B2 --> R2
+    R0 ~~~ P1
+    R2 ~~~ P2
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class C0,C1,C2 kern
+    class B0,B1,B2 map
+    class R0,R1,R2 user

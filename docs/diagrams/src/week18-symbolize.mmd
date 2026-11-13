@@ -1,0 +1,21 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    IP["① IP 0x5581c2a3b17e"]
+    MAPS["② /proc/#lt;pid#gt;/maps:<br/>5581c2a3b000-5581c2a3c000 r-xp 00001000 ... /path/busy<br/>file offset = IP - start + offset"]
+    ELF["③ ELF program header PT_LOAD ที่ครอบ offset นี้<br/>-> vaddr = offset - p.Off + p.Vaddr"]
+    SYM["④ .symtab / .dynsym: หาฟังก์ชัน (STT_FUNC)<br/>ที่ addr #lt;= vaddr #lt; addr+size"]
+    RES(["#quot;hot_path_a#quot;"])
+
+    IP --> MAPS
+    MAPS --> ELF
+    ELF --> SYM
+    SYM --> RES
+
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class IP trig
+    class MAPS,ELF,SYM,RES user

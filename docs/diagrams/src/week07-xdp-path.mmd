@@ -1,0 +1,32 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 640
+---
+flowchart TD
+    subgraph NET["PHYSICAL NETWORK"]
+        IN(["① Incoming Packet Stream"])
+    end
+
+    subgraph NIC["NETWORK INTERFACE CARD (NIC)"]
+        DMA["② DMA Transfer to Host RX Ring Buffer"]
+    end
+
+    subgraph KERNEL["NIC DRIVER (RX Path)"]
+        X["③ eBPF XDP Hook (Driver Level)<br/>ctx-#gt;data ▶ [ Ethernet Header ] [ IPv4 Header ] [ L4 TCP/UDP ] [ Payload ] ◀ ctx-#gt;data_end"]
+        CHK["④ - Verifier Bounds Checking: ((void *)(hdr + 1) #gt; data_end)<br/>- Update Per-CPU Protocol Counter (Lock-Free)<br/>- Lookup Source IP in BPF_MAP_TYPE_HASH (blocked_ips)"]
+        X --> CHK
+        CHK -- "Match Blocklist" --> DROP["XDP_DROP<br/>(Zero Memory Overhead!)<br/>- Instantly drops packet<br/>- Increments drop counter<br/>- Packet never touches OS"]
+        CHK -- "Clean Traffic" --> PASS["XDP_PASS"]
+        PASS --> SKB["⑤ Allocate struct sk_buff<br/>Enter Linux Network Stack<br/>(Netfilter, Routing, Sockets)"]
+    end
+
+    IN --> DMA --> X
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class IN,DMA net
+    class X,CHK,DROP,PASS,SKB kern

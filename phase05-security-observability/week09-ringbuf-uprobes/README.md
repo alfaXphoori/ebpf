@@ -19,19 +19,7 @@
 ### 1.1 วิวัฒนาการจาก BPF Perf Buffer สู่ BPF Ring Buffer
 ในยุคแรกเริ่มของ eBPF การส่งข้อมูล Event จาก Kernel space กลับมายัง User space มักพึ่งพา `BPF_MAP_TYPE_PERF_EVENT_ARRAY` (Perf Buffer) ซึ่งออกแบบมาบนโครงสร้างแบบ **Per-CPU Circular Buffer** โดยแต่ละ CPU Core จะมี Memory Buffer แยกอิสระจากกัน
 
-```
-+------------------------------------------------------------------------+
-|                      ปัญหาของ BPF PERF BUFFER                           |
-|                                                                        |
-|  CPU 0  [==== Event 1 ====] [==== Event 4 ====]  ---> User Reader 0    |
-|  CPU 1  [==== Event 2 ====]                      ---> User Reader 1    |
-|  CPU 2  [==== Event 3 ====] [==== Event 5 ====]  ---> User Reader 2    |
-|                                                                        |
-|  1. ลำดับเวลา (Ordering): Event 1-5 สลับลำดับกันข้าม Core              |
-|  2. Memory Fragmentation: CPU ที่งานหนัก Buffer เต็ม/Drop               |
-|     ขณะที่ CPU ว่าง มี Memory เหลือทิ้ง                                |
-+------------------------------------------------------------------------+
-```
+![ปัญหาของ BPF Perf Buffer: บัฟเฟอร์แยกต่อ CPU](../../docs/diagrams/week09-perfbuf-problem.svg)
 
 ข้อจำกัดสำคัญของ Perf Buffer:
 1. **Memory Inefficiency**: หากเรามีระบบที่มี 128 Cores และจัดสรรบัฟเฟอร์ขนาด 4MB ต่อ Core ระบบจะต้องเสียหน่วยความจำไปถึง `128 x 4MB = 512MB` ทั้งๆ ที่ส่วนใหญ่ของคอร์อาจไม่มี Event เกิดขึ้นเลย
@@ -43,26 +31,7 @@
 - **Ordering ข้าม CPU**: Event ถูกต่อคิวตามลำดับที่ `bpf_ringbuf_reserve()` สำเร็จ (ไม่ใช่ timestamp จริงของเหตุการณ์) จึงเรียงลำดับได้ดีกว่า Perf Buffer มาก แต่ถ้าต้องการลำดับเวลาที่แม่นยำให้ใช้ field `ts_ns` ประกอบ
 - **Reserve-Commit (ไม่ต้อง copy ซ้ำ)**: เขียนข้อมูลลงพื้นที่ที่จองไว้ใน buffer โดยตรงผ่าน `bpf_ringbuf_reserve()` / `bpf_ringbuf_submit()` (ฝั่ง user space อ่านผ่าน memory-mapped pages)
 
-```
-+-------------------------------------------------------------------------+
-|                  สถาปัตยกรรม BPF RING BUFFER (MPSC)                     |
-|                                                                         |
-|   eBPF Probe (CPU 0) ---\                                               |
-|   eBPF Probe (CPU 1) ----+--> [ bpf_ringbuf_reserve() ]                 |
-|   eBPF Probe (CPU 2) ---/            |                                  |
-|                                      v                                  |
-|                 +--------------------------------------+                |
-|                 | Shared Single Ring Buffer (16 MB)    |                |
-|                 | [Header][Event 1][Header][Event 2].. |                |
-|                 +--------------------------------------+                |
-|                                      |                                  |
-|                                      v epoll / ringbuf.Reader           |
-|                          +-----------------------+                      |
-|                          | User-space Controller |                      |
-|                          | (main.go Agent)       |                      |
-|                          +-----------------------+                      |
-+-------------------------------------------------------------------------+
-```
+![สถาปัตยกรรม BPF Ring Buffer (MPSC)](../../docs/diagrams/week09-ringbuf-mpsc.svg)
 
 ### 1.2 วงจรชีวิต Reserve-Commit Pattern
 ในการส่งข้อมูลด้วย Ring Buffer จะมี 3 ขั้นตอน (2 helper call):
@@ -73,27 +42,7 @@
 ### 1.3 ทฤษฎี Uprobes (User-Space Probes)
 Uprobe คือกลไกของ Linux Tracing Infrastructure ที่อนุญาตให้ใส่จุด Breakpoint ลงไปใน Binary ที่รันอยู่ใน User space เช่น Executable ELF หรือ Shared Libraries (`.so`) จุดสำคัญคือ uprobe ผูกกับ **ไฟล์ (inode) + offset ของฟังก์ชัน** ไม่ได้ผูกกับ process ใด process หนึ่ง ดังนั้นเมื่อเราวาง uprobe บน `libssl.so.3` ทุก process ที่ map ไฟล์นี้ (curl, python3, ...) จะถูกดักทั้งหมด
 
-```
-+-------------------------------------------------------------------------+
-|                    กลไกการทำงานของ UPROBE BREAKPOINT                    |
-|                                                                         |
-|  User Process (เช่น curl, python3)                                      |
-|  |                                                                      |
-|  +---> เรียกใช้งาน SSL_write(ssl, buf, num)                             |
-|        |                                                                |
-|        | [ 0xCC (int3) ถูกเขียนทับคำสั่งแรกของฟังก์ชันใน page ของ process ] |
-|        v                                                                |
-|  #BP exception เข้าสู่ Linux Kernel (uprobes subsystem จัดการเอง          |
-|  ไม่มี SIGTRAP ส่งถึง process)                                         |
-|        |                                                                |
-|        v                                                                |
-|  Kernel เรียก eBPF Handler: uprobe_ssl_write(struct pt_regs *ctx)       |
-|        | BPF_UPROBE() แกะ arg2 (buf = %rsi), arg3 (num = %rdx)          |
-|        | คัดลอก Plaintext payload ด้วย bpf_probe_read_user()            |
-|        v                                                                |
-|  Kernel จำลอง/single-step คำสั่งเดิมที่ถูกแทนที่ แล้วให้ OpenSSL ทำงานต่อ  |
-+-------------------------------------------------------------------------+
-```
+![กลไกการทำงานของ uprobe breakpoint บน SSL_write](../../docs/diagrams/week09-uprobe-flow.svg)
 
 > **ต้นทุน (Overhead)**: ทุกครั้งที่ฟังก์ชันถูกเรียกจะเกิด exception เข้า kernel 1 รอบ (ระดับไมโครวินาที ขึ้นกับ CPU/kernel) ไม่ใช่ "zero-overhead" ถ้าวางบนฟังก์ชันที่ถูกเรียกถี่มากๆ จะเห็นผลกระทบชัดเจน ควรวัดผลบนเครื่องจริงก่อนใช้งาน production
 

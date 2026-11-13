@@ -28,46 +28,7 @@
 
 **XDP (eXpress Data Path)** ปฏิวัติสถาปัตยกรรมนี้ โดยเปิดโอกาสให้เราประมวลผล eBPF Bytecode ได้ตั้งแต่ในระดับไดรเวอร์ของการ์ดแลน (NIC Driver RX ring buffer) ก่อนที่เคอร์เนลจะจัดสรร `sk_buff`:
 
-```
-+-----------------------------------------------------------------------------------------+
-|                                    PHYSICAL NETWORK                                     |
-|                                [ Incoming Packet Stream ]                               |
-+--------------------------------------------|--------------------------------------------+
-                                             v
-+-----------------------------------------------------------------------------------------+
-|                               NETWORK INTERFACE CARD (NIC)                              |
-|                          DMA Transfer to Host RX Ring Buffer                            |
-+--------------------------------------------|--------------------------------------------+
-                                             v
-+-----------------------------------------------------------------------------------------+
-|                                  NIC DRIVER (RX Path)                                   |
-|                                                                                         |
-|       +------------------------------------------------------------------------+        |
-|       |                        eBPF XDP Hook (Driver Level)                    |        |
-|       |                                                                        |        |
-|       |  ctx->data                                               ctx->data_end |        |
-|       |     |                                                          |       |        |
-|       |     v                                                          v       |        |
-|       |  [ Ethernet Header ] [ IPv4 Header ] [ L4 TCP/UDP ] [ Payload ]        |        |
-|       |                                                                        |        |
-|       |  - Verifier Bounds Checking: ((void *)(hdr + 1) > data_end)            |        |
-|       |  - Update Per-CPU Protocol Counter (Lock-Free)                         |        |
-|       |  - Lookup Source IP in BPF_MAP_TYPE_HASH (blocked_ips)                 |        |
-|       +-----------------------------------|------------------------------------+        |
-|                                           |                                             |
-|                     +---------------------+---------------------+                       |
-|                     | Match Blocklist                           | Clean Traffic         |
-|                     v                                           v                       |
-|               [ XDP_DROP ]                                [ XDP_PASS ]                  |
-|          (Zero Memory Overhead!)                                |                       |
-|         - Instantly drops packet                                v                       |
-|         - Increments drop counter              +---------------------------------+      |
-|         - Packet never touches OS              |   Allocate struct sk_buff       |      |
-|                                                |   Enter Linux Network Stack     |      |
-|                                                |   (Netfilter, Routing, Sockets) |      |
-|                                                +---------------------------------+      |
-+-----------------------------------------------------------------------------------------+
-```
+![เส้นทางแพ็กเก็ตจาก NIC เข้า XDP Hook ระดับไดรเวอร์: XDP_DROP เมื่อตรง Blocklist หรือ XDP_PASS เข้าสู่ Network Stack](../../docs/diagrams/week07-xdp-path.svg)
 
 ---
 

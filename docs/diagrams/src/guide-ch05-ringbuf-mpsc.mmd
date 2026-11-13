@@ -1,0 +1,27 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 400
+title: BPF RING BUFFER (MPSC ARCHITECTURE)
+---
+flowchart TD
+    subgraph KERNEL["① Producers (Kernel CPU Cores)"]
+        C0["CPU 0"] --> R0["bpf_ringbuf_reserve()"]
+        C1["CPU 1"] --> R1["bpf_ringbuf_reserve()"]
+        C2["CPU 2"] --> R2["bpf_ringbuf_reserve()"]
+        RB[("SHARED CIRCULAR<br/>RING BUFFER (RAM)")]
+        R0 --> RB
+        R1 --> RB
+        R2 --> RB
+    end
+    subgraph USER["② Consumer (User Space Application / Go)"]
+        RD["ringbuf.NewReader()<br/>ดึง Event ตามลำดับการ Reserve (ข้ามทุก CPU)"]
+    end
+    RB -- "(Memory Mapped<br/>Zero-Copy)" --> RD
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class C0,C1,C2,R0,R1,R2 kern
+    class RB map
+    class RD user

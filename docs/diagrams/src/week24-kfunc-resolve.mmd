@@ -1,0 +1,24 @@
+flowchart TD
+    subgraph SRC["task_kfunc.c"]
+        S1["① extern ... bpf_task_from_pid(...)<br/>__weak __ksym;"]
+        S2["call bpf_task_from_pid"]
+    end
+
+    subgraph LOAD["cilium/ebpf (loader)"]
+        L1["② อ่าน .ksyms ใน ELF<br/>หา FUNC 'bpf_task_from_pid' ใน kernel BTF<br/>แล้วเขียน BTF ID ลง imm ของคำสั่ง call"]
+    end
+
+    subgraph KERNEL["Kernel"]
+        K1["③ /sys/kernel/btf/vmlinux<br/>[99570] FUNC 'bpf_task_from_pid'<br/>[98316] DECL_TAG 'bpf_kfunc' type_id=99570"]
+        K2["④ verifier: อนุญาตกับ prog type นี้ไหม?<br/>เช็ก flag KF_#42; และชนิดอาร์กิวเมนต์"]
+        K1 ~~~ K2
+    end
+
+    S1 --> L1
+    L1 --> K1
+    L1 -. "BTF ID ลง imm" .-> S2
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class L1 user
+    class K1,K2 kern

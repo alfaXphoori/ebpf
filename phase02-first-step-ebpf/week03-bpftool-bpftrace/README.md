@@ -29,39 +29,7 @@
 - **In-Kernel Verifier**: ตรวจสอบโค้ด Bytecode ทุกคำสั่งก่อนอนุญาตให้รัน เพื่อการันตีว่าโปรแกรมไม่มี Infinite Loop, ไม่เข้าถึงหน่วยความจำนอกขอบเขต (Out-of-bounds), และไม่ทำให้เคอร์เนลแครช
 - **JIT Compiler (Just-In-Time)**: แปลง eBPF Bytecode ให้เป็น Native Machine Code (x86_64, ARM64) โดยตรง ทำให้ทำงานได้ใกล้เคียงโค้ด native ในเคอร์เนล (เร็วกว่าการตีความ bytecode มาก; บน Ubuntu ตั้ง `CONFIG_BPF_JIT_ALWAYS_ON=y` คือใช้ JIT เสมอ)
 
-```
-+-------------------------------------------------------------------+
-|                        User Space                                 |
-|                                                                   |
-|   bpftrace / bpftool / C Application                              |
-|           |                                                       |
-|           v (LLVM Clang Compiler)                                 |
-|      eBPF Bytecode                                                |
-|           |                                                       |
-|           v sys_bpf(BPF_PROG_LOAD, ...)                           |
-+-----------|-------------------------------------------------------+
-|           v            Linux Kernel Space                         |
-|   +---------------+                                               |
-|   |   Verifier    | ---> ปฏิเสธถ้าไม่ปลอดภัย (Out-of-bound / Loop)  |
-|   +-------+-------+                                               |
-|           | (ผ่านการตรวจสอบความปลอดภัย)                            |
-|           v                                                       |
-|   +---------------+                                               |
-|   |  JIT Compiler | ---> แปลงเป็น Native Machine Instructions      |
-|   +-------+-------+                                               |
-|           |                                                       |
-|           v ผูกเข้ากับ Kernel Event Hook (kprobe, tracepoint)     |
-|   +-----------------------------------------------------------+   |
-|   | Executed upon: sys_enter_execve / tcp_sendmsg / etc.      |   |
-|   +-----------------------------+-----------------------------+   |
-|                                 |                                 |
-|                                 v (ส่งข้อมูลผ่าน)                 |
-|                    +-------------------------+                    |
-|                    |        BPF MAPS         |                    |
-|                    | (Hash, Array, RingBuf)  |                    |
-|                    +-------------------------+                    |
-+-------------------------------------------------------------------+
-```
+![สถาปัตยกรรม eBPF: จาก bpftrace/bpftool ผ่าน Verifier และ JIT สู่ Kernel Hook และ BPF Maps](../../docs/diagrams/week03-ebpf-architecture.svg)
 
 ---
 

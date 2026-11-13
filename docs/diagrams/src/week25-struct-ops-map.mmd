@@ -1,0 +1,25 @@
+flowchart TD
+    subgraph BPF["ฝั่ง BPF (ไฟล์ .c): SEC(#quot;.struct_ops.link#quot;) struct sched_ext_ops w25_ops"]
+            F1[".select_cpu = w25_select_cpu"]
+            F2[".enqueue = w25_enqueue"]
+            F3[".dispatch = w25_dispatch"]
+            D1[".flags = SWITCH_PARTIAL<br/>(data)"]
+            D2[".name = #quot;w25_minimal#quot;<br/>(data)"]
+    end
+
+    subgraph KERNEL["ฝั่งเคอร์เนล"]
+        M[("BPF_MAP_TYPE_STRUCT_OPS (1 entry)<br/>bpf_struct_ops_sched_ext_ops<br/>.data = struct sched_ext_ops<br/>func ptr → trampoline → prog FD")]
+        L["BPF_LINK_CREATE = register()<br/>ปิด link = unregister()"]
+    end
+
+    F1 --> M
+    F2 --> M
+    F3 --> M
+    D1 -. "data" .-> M
+    D2 -. "data" .-> M
+    M --> L
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class M map
+    class L kern

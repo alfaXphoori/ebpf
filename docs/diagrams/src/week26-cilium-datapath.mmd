@@ -1,0 +1,38 @@
+flowchart TD
+    K8S["Kubernetes API<br/>(Service, Pod, CiliumNetworkPolicy)"]
+
+    subgraph NODE["Node"]
+        AG["cilium-agent"]
+        M[("map: services, backends, identity,<br/>policy (ต่อ endpoint), conntrack, NAT")]
+        HS["Hubble server"]
+        DP["datapath"]
+        PA["Pod A (client)<br/>connect(10.96.x.x:80)"]
+        CG["cgroup_inet4_connect (socket LB):<br/>เลือก backend แล้วเขียน dst ใหม่<br/>เป็น PodIP:80 ตั้งแต่ connect()<br/>(getpeername ยังเห็น ClusterIP)"]
+        LXC["lxcXXXX"]
+        CH["cilium_host / cilium_vxlan (tcx)"]
+        ETH["eth0 (tcx; XDP บน NIC จริง#42;)"]
+        TCX["tcx/ingress บน lxcXXXX<br/>(cil_from_container / to-endpoint):<br/>ตรวจ policy ด้วย security identity"]
+        PB["Pod B (web)"]
+
+        AG -- "compile/load BPF<br/>เขียน map" --> M
+        AG --- HS
+        DP -- "trace/drop events" --> HS
+        PA --> CG --> LXC --> CH --> ETH
+        TCX --> PB
+    end
+
+    NOTE["หมายเหตุ (#42;): XDP LB acceleration ใช้ได้เฉพาะ NIC/driver ที่รองรับ native XDP<br/>(ใน kind ไม่มี XDP)"]
+
+    K8S -- "watch" --> AG
+    ETH ~~~ NOTE
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class AG,HS user
+    class M map
+    class DP,CG,CH,TCX kern
+    class PA,PB,LXC,ETH net
+    class K8S,NOTE trig

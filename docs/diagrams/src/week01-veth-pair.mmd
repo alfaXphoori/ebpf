@@ -1,0 +1,12 @@
+flowchart LR
+    subgraph NS1["Namespace: w01-ns1"]
+        V1["IP: 10.10.1.1/24<br/>Interface: w01-veth1"]
+    end
+    subgraph NS2["Namespace: w01-ns2"]
+        V2["IP: 10.10.1.2/24<br/>Interface: w01-veth2"]
+    end
+
+    V1 <== "Virtual Wire<br/>(Kernel bypass L1)" ==> V2
+
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class V1,V2 net

@@ -1,0 +1,26 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 560
+title: eBPF BUILD & LOADING PIPELINE
+---
+flowchart TD
+    SRC(["① ซอร์สโค้ด eBPF ภาษา C<br/>(my_prog.bpf.c)"])
+    CL["② Clang / LLVM Compiler Backend<br/>- แปลงภาษา C เป็นสถาปัตยกรรมเป้าหมาย BPF (Target BPF)<br/>- สร้าง ELF Binary Object (.o)<br/>  • Section .text: เก็บ eBPF Bytecode คำสั่งละ 8 ไบต์<br/>  • Section .maps: เก็บนิยาม Map Descriptor<br/>  • Section .BTF & .BTF.ext: เก็บข้อมูล Type Layout<br/>    และ Relocation Debug Info"]
+    LD["③ User Space Loader<br/>(Cilium ebpf ในภาษา Go หรือ libbpf ในภาษา C)<br/>- อ่านไฟล์ ELF และถอดรหัส Maps/Programs<br/>- ทำ BTF Field Relocation ปรับตำแหน่งโครงสร้างข้อมูล<br/>ให้ตรงกับ Host Kernel<br/>- ยิง Syscall: bpf(BPF_PROG_LOAD, union bpf_attr *attr, ...)"]
+    VF{{"④ eBPF VERIFIER<br/>ด่านตรวจความปลอดภัยระดับเคอร์เนล<br/>- ตรวจสอบความถูกต้องของหน่วยความจำ, ป้องกันลูปไม่รู้จบ,<br/>ตรวจ Pointer Bounds"}}
+    JIT["⑤ BPF JIT COMPILER<br/>- แปลง eBPF Bytecode เป็น Native Machine Code<br/>(x86_64 / ARM64 Assembly)<br/>- ฝังโค้ดลงใน Kernel Memory แบบ Read-Only Executable"]
+    HK(["⑥ เกาะเข้ากับ Hook Point:<br/>XDP, TC, Kprobe, Tracepoint, หรือ BPF LSM"])
+
+    SRC -- "คำสั่ง: clang -target bpf -O2 -g -c my_prog.bpf.c -o my_prog.bpf.o" --> CL
+    CL -- "ELF Object File (.o)" --> LD
+    LD -- "ยื่นคำร้องเข้า Linux Kernel" --> VF
+    VF -- "ผ่านการอนุมัติ" --> JIT
+    JIT --> HK
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class SRC trig
+    class CL,LD user
+    class VF,JIT,HK kern

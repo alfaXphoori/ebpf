@@ -1,0 +1,43 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    subgraph NET["① เส้นทางรับแพ็กเก็ต"]
+        N1(["NIC / veth / lo"])
+        N2["ip_rcv"]
+        N3["Netfilter"]
+        N4["tcp_v4_rcv / __udp4_lib_rcv"]
+        N5["Socket"]
+    end
+
+    CS["consume_skb()<br/>→ skb:consume_skb"]
+
+    subgraph KERNEL["② จุดทิ้งแพ็กเก็ต"]
+        KF["kfree_skb_reason(skb, SKB_DROP_REASON_xxx)"]
+        TP["tracepoint skb:kfree_skb<br/>(skbaddr, location, rx_sk,<br/>protocol, reason)"]
+        BPF["③ eBPF: trace_kfree_skb (dropwatch.c)<br/>1) อัปเดตตัวนับใน BPF_MAP_TYPE_HASH (ต่อ reason)<br/>2) ส่ง event รายแพ็กเก็ตผ่าน BPF_MAP_TYPE_RINGBUF"]
+    end
+
+    GO["④ Go Control Plane:<br/>แปลง reason ด้วย Kernel BTF,<br/>แปลง location ด้วย /proc/kallsyms"]
+
+    N1 --> N2
+    N2 --> N3
+    N3 --> N4
+    N4 --> N5
+    N5 --> CS
+    N1 -. "(ring full)" .-> KF
+    N2 -. "(bad hdr)" .-> KF
+    N3 -. "(DROP rule)" .-> KF
+    N4 -. "(no listener)" .-> KF
+    KF --> TP
+    TP --> BPF
+    BPF --> GO
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class N1,N2,N3,N4,N5,CS net
+    class KF,TP,BPF kern
+    class GO user

@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    participant U as ps / top (userspace)
+    participant K as Kernel
+    U->>K: getdents64("/proc")
+    Note right of K: list PIDs
+    loop for each pid
+        U->>K: openat("/proc/#lt;pid#gt;/status")
+        Note right of K: lookup task, alloc file
+        U->>K: read(...)
+        Note right of K: format ~60 lines เป็นข้อความ
+        U->>K: close(...)
+        Note right of K: free
+    end
+    Note over U: parse text → เลือก 4 ฟิลด์

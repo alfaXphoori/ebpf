@@ -1,0 +1,38 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 560
+---
+flowchart TD
+    subgraph KERNEL["LINUX KERNEL SPACE"]
+        T(["Tracepoint: raw_syscalls/sys_enter<br/>(Triggered on EVERY system call)"]) --> P["Extract PID:<br/>bpf_get_current_pid_tgid() #gt;#gt; 32"]
+        P --> J["Kernel Hash Function: jhash (Jenkins)"]
+    end
+
+    subgraph MAPS["BPF_MAP_TYPE_HASH: syscall_map (max_entries = 4096, buckets = 4096)"]
+        B0["Bucket 0 → [ PID: 1042 | Count: 521 | Comm: #quot;node#quot; ]"]
+        B1["Bucket 1 → NULL"]
+        D1["..."]
+        B58["Bucket 58 → [ PID: 1 | Count: 18 | Comm: #quot;systemd#quot; ] → [ PID: 89 | ... ]"]
+        D2["..."]
+        B4095["Bucket 4095 → [ PID: 4521 | Count: 94 | Comm: #quot;bash#quot; ]"]
+        B0 ~~~ B1 ~~~ D1 ~~~ B58 ~~~ D2 ~~~ B4095
+    end
+
+    subgraph USER["USERSPACE (Golang Daemon)"]
+        IT["objs.SyscallMap.Iterate()"] --> RAW["[ PID 1042, #quot;node#quot;, 521 ]<br/>[ PID 4521, #quot;bash#quot;, 94 ]<br/>[ PID 1, #quot;systemd#quot;, 18 ]"]
+        RAW -- "sort.Slice(descending by Count)" --> TOP["#35;1 PID: 1042 COMM: node SYSCALLS: 521 SHARE: 82.3%<br/>#35;2 PID: 4521 COMM: bash SYSCALLS: 94 SHARE: 14.8%<br/>#35;3 PID: 1 COMM: systemd SYSCALLS: 18 SHARE: 2.9%"]
+    end
+
+    J --> MAPS
+    MAPS -- "Syscall bpf(BPF_MAP_GET_NEXT_KEY)<br/>Syscall bpf(BPF_MAP_LOOKUP_ELEM)" --> IT
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class T trig
+    class P,J kern
+    class B0,B1,D1,B58,D2,B4095 map
+    class IT,RAW,TOP user

@@ -21,38 +21,7 @@
 
 ### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as client socket<br/>nc หรือ tcpbench
-    box rgb(253,226,226) Kernel Space
-        participant K as TCP/IP stack<br/>ผ่าน lo
-        participant SO as sockops<br/>bpf_sockops_handler
-        participant H as sock_hash<br/>SOCKHASH
-        participant M as sk_msg<br/>bpf_sk_msg_handler
-    end
-    participant S as server socket<br/>127.0.0.1:18080
-
-    Note over C,S: ทั้งสองฝั่งต้องอยู่ใน cgroup w20-sockops-lab ที่ผูก sockops ไว้
-    C->>K: connect() 127.0.0.1:18080
-    K->>S: SYN, SYN-ACK, ACK ผ่าน lo
-    K->>SO: ACTIVE_ESTABLISHED_CB ของฝั่ง client
-    SO->>H: bpf_sock_hash_update key = sip, dip, sport, dport<br/>BPF_NOEXIST
-    K->>SO: PASSIVE_ESTABLISHED_CB ของฝั่ง server
-    SO->>H: bpf_sock_hash_update key ของฝั่ง server
-    Note over H,M: socket ใน sock_hash ถูกผูก sk_msg verdict ให้อัตโนมัติ
-    C->>M: sendmsg(data)
-    M->>H: bpf_msg_redirect_hash key กลับด้าน<br/>BPF_F_INGRESS
-    alt เจอ socket ของ peer
-        H-->>M: SK_PASS
-        M->>S: ใส่ข้อมูลเข้า ingress queue ของ server ตรง ๆ<br/>ข้าม TCP/IP stack และนับ redirect
-    else ไม่เจอ เช่น connection เกิดก่อน attach
-        H-->>M: SK_DROP
-        M->>K: return SK_PASS และนับ fallback
-        K->>S: เส้นทางปกติ: header, netfilter, lo, softirq, ACK
-    end
-    S->>S: recv() ได้ข้อมูลชุดเดียวกันทั้งสองทาง
-```
+![ลำดับเหตุการณ์ตามเวลา Week 20 (Sequence Diagram)](../../docs/diagrams/week20-sequence.svg)
 
 **อ่านแผนภาพ:** งานแบ่งเป็นสองช่วง ช่วงแรกเกิดครั้งเดียวตอน handshake: `sockops` ลงทะเบียน socket ทั้งสองฝั่งใน `sock_hash` ช่วงที่สองเกิดทุกครั้งที่ส่งข้อมูล: `sk_msg` สลับ 4-tuple เพื่อหา socket ของ peer แล้วย้ายข้อมูลเข้าคิวรับของ peer โดยตรง ถ้าหาไม่เจอโปรแกรมยังคืน `SK_PASS` ข้อมูลจึงไปตามเส้นทาง TCP/IP ปกติและไม่สูญหาย
 
@@ -62,31 +31,7 @@ sequenceDiagram
 
 ### 1.1 เส้นทางข้อมูล Localhost TCP: ปกติ vs SOCKHASH Redirect
 
-```
-        ปกติ (Loopback TCP)                         SOCKHASH Redirect (สัปดาห์นี้)
- +----------------------------+              +----------------------------------+
- | Client: write()/sendmsg()  |              | Client: write()/sendmsg()        |
- +-------------|--------------+              +----------------|-----------------+
-               v                                              v
- +----------------------------+              +----------------------------------+
- | tcp_sendmsg: copy -> skb   |              | tcp_bpf_sendmsg: copy -> sk_msg  |
- | TCP header, seq/ack, cwnd  |              |   +----------------------------+ |
- | IP header, routing         |              |   | SK_MSG prog (bpf_sk_msg_   | |
- | Netfilter OUTPUT/POSTROUTE |              |   | handler): lookup peer key  | |
- | dev_queue_xmit(lo)         |              |   | bpf_msg_redirect_hash(     | |
- +-------------|--------------+              |   |   BPF_F_INGRESS)           | |
-               v                             |   +-------------|--------------+ |
- +----------------------------+              +-----------------|----------------+
- | softirq: netif_rx (lo)     |                                |  ย้าย sk_msg ไปยัง
- | IP rcv, Netfilter PREROUTE |                                |  ingress_msg ของ
- | INPUT, tcp_v4_rcv          |                                |  peer socket โดยตรง
- | ส่ง ACK กลับ (อีกรอบ!)        |                                v
- +-------------|--------------+              +----------------------------------+
-               v                             | Server: tcp_bpf_recvmsg          |
- +----------------------------+              |   copy sk_msg -> user buffer     |
- | Server: recvmsg() copy     |              +----------------------------------+
- +----------------------------+
-```
+![เส้นทางข้อมูล Localhost TCP: ปกติ vs SOCKHASH Redirect](../../docs/diagrams/week20-sockhash-vs-loopback.svg)
 
 สิ่งที่ถูกลัดข้าม: การสร้าง/ประมวลผล TCP Segment, ACK, IP Routing, Netfilter, การส่งผ่าน `lo` และ softirq ฝั่งรับ — ส่วน **Handshake (SYN/SYN-ACK/ACK) และ FIN ยังวิ่งผ่าน Stack ปกติ** เพราะ Redirect ทำงานเฉพาะ Payload ของ `sendmsg()` (เราพิสูจน์ด้วย `tcpdump` ในหัวข้อ 4.4)
 

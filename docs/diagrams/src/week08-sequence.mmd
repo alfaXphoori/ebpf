@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    participant C as w08-client<br/>10.10.2.10
+    box rgb(255,241,242) Kernel ของ w08-lb บน eth0
+        participant X as XDP<br/>xdp_load_balancer
+        participant F as flows<br/>LRU_HASH
+        participant T as TC ingress<br/>tc_reverse_nat
+        participant S as IP stack<br/>ip_forward
+        participant E as TC egress<br/>tc_egress_prog
+    end
+    participant B as Backend<br/>w08-b0 หรือ b1
+
+    C->>X: SYN 10.10.2.10:sport → VIP 10.10.1.100:80
+    alt ไม่ใช่ IPv4 TCP หรือ daddr ไม่ใช่ VIP
+        X->>S: XDP_PASS → stack ปกติ
+    else ตรง VIP
+        X->>X: flow_hash() % 2 เลือก backend
+        X->>F: ยังไม่มี flow_key → update ค่า vip
+        X->>X: เปลี่ยน MAC และ daddr เป็น backend<br/>แก้ IP และ TCP checksum ด้วย bpf_csum_diff
+        X->>B: XDP_TX ออก eth0 ใบเดิม (hairpin)
+    end
+    Note over B: http.server :80 รับ SYN ที่ dst เป็นตัวเอง
+    B->>T: SYN-ACK backend:80 → client ผ่าน gateway 10.10.1.1
+    T->>F: lookup client=daddr, backend=saddr, ports
+    F-->>T: vip เดิมของ flow นี้
+    T->>T: saddr → VIP<br/>bpf_l4_csum_replace + bpf_l3_csum_replace
+    T->>S: TC_ACT_OK
+    S->>E: forward ไป 10.10.2.0/24 ออก eth0
+    E->>E: นับ egress_stats ตาม dport<br/>skb mark 0x42 priority 1
+    E->>C: TC_ACT_OK → client เห็นคำตอบจาก VIP
+    Note over C,B: แพ็กเก็ตถัดไปใน connection เดิมได้ hash เดิม จึงไป backend เดิมทุกครั้ง

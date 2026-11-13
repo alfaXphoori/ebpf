@@ -17,39 +17,7 @@
 
 ### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as w08-client<br/>10.10.2.10
-    box rgb(253,226,226) Kernel ของ w08-lb บน eth0
-        participant X as XDP<br/>xdp_load_balancer
-        participant F as flows<br/>LRU_HASH
-        participant T as TC ingress<br/>tc_reverse_nat
-        participant S as IP stack<br/>ip_forward
-        participant E as TC egress<br/>tc_egress_prog
-    end
-    participant B as Backend<br/>w08-b0 หรือ b1
-
-    C->>X: SYN 10.10.2.10:sport → VIP 10.10.1.100:80
-    alt ไม่ใช่ IPv4 TCP หรือ daddr ไม่ใช่ VIP
-        X->>S: XDP_PASS → stack ปกติ
-    else ตรง VIP
-        X->>X: flow_hash() % 2 เลือก backend
-        X->>F: ยังไม่มี flow_key → update ค่า vip
-        X->>X: เปลี่ยน MAC และ daddr เป็น backend<br/>แก้ IP และ TCP checksum ด้วย bpf_csum_diff
-        X->>B: XDP_TX ออก eth0 ใบเดิม (hairpin)
-    end
-    Note over B: http.server :80 รับ SYN ที่ dst เป็นตัวเอง
-    B->>T: SYN-ACK backend:80 → client ผ่าน gateway 10.10.1.1
-    T->>F: lookup client=daddr, backend=saddr, ports
-    F-->>T: vip เดิมของ flow นี้
-    T->>T: saddr → VIP<br/>bpf_l4_csum_replace + bpf_l3_csum_replace
-    T->>S: TC_ACT_OK
-    S->>E: forward ไป 10.10.2.0/24 ออก eth0
-    E->>E: นับ egress_stats ตาม dport<br/>skb mark 0x42 priority 1
-    E->>C: TC_ACT_OK → client เห็นคำตอบจาก VIP
-    Note over C,B: แพ็กเก็ตถัดไปใน connection เดิมได้ hash เดิม จึงไป backend เดิมทุกครั้ง
-```
+![ลำดับเหตุการณ์ตามเวลา Week 08 (Sequence Diagram)](../../docs/diagrams/week08-sequence.svg)
 
 **อ่านแผนภาพ:** ขาไป XDP ทำ DNAT แล้วส่งกลับออกการ์ดใบเดิมด้วย `XDP_TX` โดยไม่ผ่าน stack เลย พร้อมจด flow ไว้ใน `flows` ส่วนขากลับต้องรอให้ backend ตอบผ่าน gateway ก่อน TC ingress จึงค้น flow เดิมเพื่อเปลี่ยน `saddr` กลับเป็น VIP ถ้าไม่มีขั้นนี้ client จะได้ SYN-ACK จาก IP ของ backend ซึ่งไม่ตรงกับปลายทางที่ connect ไป แล้วจะทิ้งแพ็กเก็ตนั้น
 
@@ -70,54 +38,7 @@ sequenceDiagram
 | **ความสามารถในการปรับแต่ง** | L2/L3/L4 Parsing, Hairpin (`XDP_TX`), Drop, Redirect | Traffic Shaping, Rate Limiting, QoS Marking, Egress filtering |
 | **Action Return Codes** | `XDP_PASS`, `XDP_DROP`, `XDP_TX`, `XDP_REDIRECT` | `TC_ACT_OK`, `TC_ACT_SHOT`, `TC_ACT_PIPE`, `TC_ACT_RECLASSIFY` |
 
-```
-+-----------------------------------------------------------------------------------------+
-|                                  PACKET INGRESS (RX PATH)                               |
-+-----------------------------------------------------------------------------------------+
-                                             |
-                                             v
-               +-----------------------------------------------------------+
-               |                   NIC Driver RX Buffer                    |
-               +-----------------------------------------------------------+
-                                             |
-                                             v
-                        +-----------------------------------------+
-                        |           eBPF XDP HOOK                 |
-                        |   (ctx: struct xdp_md, Wire-Speed)      |
-                        +-----------------------------------------+
-                               /             |             \
-                              /              |              \
-               [ XDP_DROP ]  /        [ XDP_PASS ]           \  [ XDP_TX ]
-              (ทำลายทิ้งทันที)       /        |               \ (สะท้อนแพ็กเก็ตกลับสายแลน)
-                                    v         v                v
-                       +----------------------------------+   Hairpin Out
-                       |     Allocate struct sk_buff      |
-                       +----------------------------------+
-                                             |
-                                             v
-                        +-----------------------------------------+
-                        |        TC Ingress Hook (clsact)         |
-                        +-----------------------------------------+
-                                             |
-                                             v
-                        +-----------------------------------------+
-                        |     Linux TCP/IP Stack & Routing        |
-                        +-----------------------------------------+
-                                             |
-+--------------------------------------------|--------------------------------------------+
-|                                  PACKET EGRESS (TX PATH)                                |
-+--------------------------------------------|--------------------------------------------+
-                                             v
-                        +-----------------------------------------+
-                        |         TC Egress Hook (clsact)         |
-                        | (ctx: struct __sk_buff, QoS & Marking)  |
-                        +-----------------------------------------+
-                                             |
-                                             v
-               +-----------------------------------------------------------+
-               |               NIC Driver TX Buffer (Wire)                 |
-               +-----------------------------------------------------------+
-```
+![ตำแหน่งของ XDP Hook, TC Ingress และ TC Egress บนเส้นทาง RX/TX ของแพ็กเก็ต](../../docs/diagrams/week08-xdp-vs-tc.svg)
 
 ---
 
@@ -143,19 +64,7 @@ sequenceDiagram
 
 เราเลือก **NAT** เพราะเข้ากับเป้าหมายของบทนี้ (XDP + TC + Incremental Checksum) และไม่ต้องดัดแปลง Backend ส่วน DSR อยู่ในแบบฝึกหัดท้ายบท
 
-```
-        Client 10.10.2.10                     LB (ns w08-lb, eth0)                     Backend 10.10.1.2/.3
-              |                       10.10.1.1 + 10.10.2.1, ip_forward=1                     |
-              |  SYN  dst=VIP:80             |                                                |
-              |----------------------------->| XDP: hash -> backend, flows[...] = VIP         |
-              |                              |      DNAT dst=VIP->10.10.1.2, MAC, csum        |
-              |                              |      XDP_TX ---------------------------------->|
-              |                              |                                                |
-              |                              |<---------------------- SYN-ACK src=10.10.1.2  |
-              |                              | TCX ingress: flows hit -> SNAT src=..->VIP     |   (route 10.10.2.0/24
-              |<-----------------------------| kernel forward (+ TC egress mark/stat)         |    via 10.10.1.1)
-              |  SYN-ACK src=VIP:80          |                                                |
-```
+![เส้นทาง SYN และ SYN-ACK ผ่าน LB แบบ NAT: XDP ทำ DNAT ขาไป TCX ingress ทำ SNAT กลับเป็น VIP ขากลับ](../../docs/diagrams/week08-nat-return-path.svg)
 
 ---
 

@@ -1,0 +1,8 @@
+sequenceDiagram
+    autonumber
+    participant T as Thread A
+    participant M as start_ts
+    Note over T: kprobe entry
+    T->>M: บันทึก: start_ts[TID_A] = t1
+    Note over T: kretprobe exit<br/>คำนวณ: delta = t2 - t1
+    T->>M: ลบ start_ts[TID_A]

@@ -32,17 +32,7 @@
 
 **struct_ops** (BPF_PROG_TYPE_STRUCT_OPS, เริ่มใน Linux 5.6 กับ `tcp_congestion_ops`) ทำให้ "ตาราง" นี้เติมด้วยโปรแกรม BPF ได้แทนโมดูลเคอร์เนล:
 
-```
-   ฝั่ง BPF (ไฟล์ .c)                                   ฝั่งเคอร์เนล
- SEC(".struct_ops.link")
- struct sched_ext_ops w25_ops = {          BPF_MAP_TYPE_STRUCT_OPS (1 entry)
-    .select_cpu = w25_select_cpu, ──┐      ┌───────────────────────────────┐
-    .enqueue    = w25_enqueue,    ──┼────▶ │ bpf_struct_ops_sched_ext_ops  │
-    .dispatch   = w25_dispatch,   ──┘      │  .data = struct sched_ext_ops │──▶ BPF_LINK_CREATE
-    .flags      = SWITCH_PARTIAL,  (data)  │   func ptr -> trampoline ->   │    = register()
-    .name       = "w25_minimal",   (data)  │             prog FD           │    ปิด link = unregister()
- };                                        └───────────────────────────────┘
-```
+![struct_ops: sched_ext_ops ใน BPF ถูกโหลดเป็น STRUCT_OPS map แล้ว register ด้วย link](../../docs/diagrams/week25-struct-ops-map.svg)
 
 - แต่ละ callback คือโปรแกรม `SEC("struct_ops/<name>")` แยกกัน verifier ตรวจตาม **ลายเซ็นของ function pointer ใน BTF** (เช่น `void (*enqueue)(struct task_struct *, u64)`) และอนุญาตเฉพาะ kfunc/การเขียน field ที่ subsystem นั้นประกาศว่าปลอดภัย
 - ฟิลด์ที่ไม่ใช่ฟังก์ชัน (`flags`, `timeout_ms`, `name`) เป็น **ข้อมูล** ที่คัดลอกลง map value ตรง ๆ
@@ -75,27 +65,7 @@ sched_ext ไม่ให้ BPF แตะ runqueue ของเคอร์เ�
 | global DSQ | `SCX_DSQ_GLOBAL` | เคอร์เนล | FIFO กลาง ใช้เป็น fallback |
 | custom DSQ | เลขที่เราเลือก (แล็บนี้ใช้ `0`) | `scx_bpf_create_dsq()` ใน `ops.init` | เป็น **FIFO** หรือ **priority queue ตาม vtime** ก็ได้ (ห้ามผสมในคิวเดียว) |
 
-```
- task ตื่น (wakeup)
-      │
-      ▼
- ops.select_cpu(p, prev_cpu)  ── เจอ CPU ว่าง? ──yes──▶ scx_bpf_dsq_insert(p, SCX_DSQ_LOCAL)  ["direct dispatch"]
-      │ no                                                       │      (ข้าม ops.enqueue)
-      ▼                                                          │
- ops.enqueue(p)  ──▶ scx_bpf_dsq_insert[_vtime](p, SHARED_DSQ)   │
-                                │                                │
-             CPU ว่าง / local DSQ หมด                             │
-                                ▼                                │
- ops.dispatch(cpu, prev) ──▶ scx_bpf_dsq_move_to_local(SHARED_DSQ)
-                                │                                │
-                                ▼                                ▼
-                       ┌──────────── local DSQ ของ CPU ─────────────┐
-                       └──────────────────┬─────────────────────────┘
-                                          ▼
-                  ops.running(p)  ──  รันจน slice หมด/หลับ/ถูก preempt  ──  ops.stopping(p, runnable)
-                                          │
-                     ยัง runnable และ slice หมด → กลับไป ops.enqueue
-```
+![วงจรชีวิตของ task ใน sched_ext: select_cpu, enqueue, dispatch, running, stopping](../../docs/diagrams/week25-scx-lifecycle.svg)
 
 ชื่อ kfunc เปลี่ยนไปตามรุ่นเคอร์เนล ตรวจได้จาก `vmlinux.h` ของเครื่องตัวเอง (bpftool 7.x ใส่ prototype ของ kfunc ไว้ให้แล้ว):
 

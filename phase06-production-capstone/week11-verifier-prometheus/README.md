@@ -27,30 +27,7 @@
 - เมื่อใช้ `BPF_MAP_TYPE_PERCPU_ARRAY`: Linux Kernel จะจัดสรร Array แยกให้ทุก CPU (Possible CPU) แต่ละคอร์เขียนเฉพาะสำเนาของตัวเองโดยไม่ต้องพึ่ง Atomic Instructions ใดๆ (โปรแกรม XDP หนึ่งครั้งรันจนจบบน CPU เดียวโดยไม่ย้ายคอร์ จึงไม่มีใครเขียนช่องเดียวกันพร้อมกัน) จากนั้นฝั่ง User-space Go daemon จะทำหน้าที่รวมผล (Aggregation) ตอนที่มีการ Scrape จาก Prometheus เท่านั้น
 - ข้อแลกเปลี่ยน: ใช้หน่วยความจำ `ค่า × จำนวน CPU` และค่าที่ User space อ่านได้ไม่ใช่ Snapshot ณ เวลาเดียวกันของทุกคอร์ (อ่านทีละคอร์) ซึ่งยอมรับได้สำหรับ Counter แต่ **ไม่เหมาะ** กับ State ที่ต้องตัดสินใจร่วมกันข้ามคอร์ (เช่น Rate Limit ต่อ IP ใน Week 12 ที่ต้องใช้ Map ร่วม + Atomic)
 
-```
-+-------------------------------------------------------------------------+
-|                สถาปัตยกรรม EBPF TELEMETRY สู่ PROMETHEUS                 |
-|                                                                         |
-|  [ Ingress Packet ]                                                     |
-|         |                                                               |
-|         v                                                               |
-|  [ XDP Hook: xdp_metrics_prog ]                                         |
-|         |                                                               |
-|         +---> CPU 0: traffic_metrics[proto] += (pkts, bytes)            |
-|         +---> CPU 1: traffic_metrics[proto] += (pkts, bytes)            |
-|         +---> CPU 2: traffic_metrics[proto] += (pkts, bytes)            |
-|                                                                         |
-|  [ Go Prometheus Collector: xdpCollector ]                              |
-|         |                                                               |
-|         |-- 1. ดึงข้อมูลจากทุก CPU cores รวมผล (Sum Aggregation)        |
-|         \-- 2. สร้าง Prometheus Metrics: ebpf_xdp_packets_total         |
-|                                                                         |
-|  [ Prometheus Server ] <--- HTTP GET :2112/metrics                      |
-|         |                                                               |
-|         v                                                               |
-|  [ Grafana Dashboard ]                                                  |
-+-------------------------------------------------------------------------+
-```
+![สถาปัตยกรรม eBPF telemetry สู่ Prometheus](../../docs/diagrams/week11-telemetry-arch.svg)
 
 ---
 

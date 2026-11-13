@@ -7,7 +7,7 @@
 
 ## 📚 แหล่งเรียนรู้หลักและสคริปต์สภาพแวดล้อม (Core References)
 
-- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ ASCII + แผนภาพภาพรวม (SVG) ทุกบท โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
+- 📖 **คู่มือตำราฉบับสมบูรณ์ (Master Textbook)**: [`docs/MASTER_STUDY_GUIDE.md`](docs/MASTER_STUDY_GUIDE.md) — เจาะลึก 11 บท (ครบทุกเฟส) ทฤษฎีระดับฮาร์ดแวร์ แผนภาพ SVG (โครงสร้าง Header, เส้นทางแพ็กเก็ต, Pipeline) + แผนภาพภาพรวมทุกบท โค้ด C/Go บรรทัดต่อบรรทัด และ Cheat Sheet ฉบับปฏิบัติการ
 - 📖 **อภิธานศัพท์ (Glossary)**: [`docs/GLOSSARY.md`](docs/GLOSSARY.md) — ศัพท์ eBPF และเคอร์เนล 86 คำ แบ่ง 10 หมวด พร้อมความหมายภาษาไทยและลิงก์ไปยังสัปดาห์ที่สอน
 - 🌳 **แผนผังเนื้อหาทั้งหมด (Content Tree)**: [`docs/CONTENT_TREE.md`](docs/CONTENT_TREE.md) — ต้นไม้ภาพรวม 11 เฟส / 26 สัปดาห์ และต้นไม้รายเฟสที่บอก Hook, Maps, ไฟล์ และวิธีทดสอบของทุกแล็บ
 - ⚙️ **สคริปต์ติดตั้งสภาพแวดล้อมอัตโนมัติ**: [`scripts/setup_env.sh`](scripts/setup_env.sh) — Provisioning Ubuntu 26.04 LTS (Kernel 7.0+, แพลตฟอร์มหลัก) / 24.04 LTS (Kernel 6.8, Best-effort), ตรวจสอบ BTF, สร้าง `vmlinux.h` และตั้งค่า BPF LSM
@@ -16,59 +16,7 @@
 
 ## 🗺️ แผนที่การเรียนรู้ 11 เฟส รวม 26 สัปดาห์ (Complete 11-Phase eBPF Curriculum Roadmap)
 
-```
-+----------------------------------------------------------------------------------------------------+
-|                                    26-WEEK eBPF LEARNING ROADMAP                                   |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 01: รากฐานระบบเครือข่ายและเคอร์เนล Linux (Network Foundation)                                       |
-|  - Week 01: ผ่าโครงสร้าง Packet ระดับ Byte และการจำลองระบบเครือข่ายด้วย Network Namespaces         |
-|  - Week 02: สำรวจเส้นทางข้อมูล Linux Network Data Path (RX Ring -> SoftIRQ -> sk_buff)             |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 02: ก้าวแรกสู่ eBPF และด่านตรวจ Verifier (First Step into eBPF)                                  |
-|  - Week 03: เครื่องมือวิเคราะห์เคอร์เนลเร่งด่วน: bpftool และ bpftrace One-Liners                    |
-|  - Week 04: การสร้างเครื่องมือวิเคราะห์ระดับโปรดักชันด้วย BCC & Python                             |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 03: หัวใจของ Modern eBPF และสถาปัตยกรรม CO-RE (Modern eBPF Core)                                 |
-|  - Week 05: ยุคสมัยใหม่ของ eBPF: libbpf, BTF, vmlinux.h และการเขียน Go Control Plane (Cilium)       |
-|  - Week 06: eBPF Maps (Hash, LRU, Per-CPU), การอ่าน Verifier Log และการทดสอบด้วย BPF_PROG_TEST_RUN |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 04: ระบบเครือข่ายความเร็วสูงระดับ Wire-Speed (High-Speed Networking)                            |
-|  - Week 07: ดักจับและคัดกรองแพ็กเก็ตความเร็วสูงด้วย XDP (eXpress Data Path) & Bounds Checking       |
-|  - Week 08: การดัดแปลงแพ็กเก็ตและการทำ Load Balancer ด้วย TC (Traffic Control / cls_bpf)          |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 05: ความปลอดภัยและการสังเกตการณ์เชิงลึก (Security & Observability)                               |
-|  - Week 09: สตรีมเหตุการณ์ความเร็วสูงด้วย BPF Ring Buffer และการดักฟัง TLS ด้วย Uprobes           |
-|  - Week 10: การรักษาความปลอดภัยเชิงรุกและบล็อกการโจมตีระดับเคอร์เนลด้วย BPF LSM                     |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 06: โครงการประยุกต์ใช้งานจริงระดับโปรดักชัน (Production Capstone)                                 |
-|  - Week 11: Prometheus Exporter และการปรับแต่งประสิทธิภาพ (Performance Tuning)                      |
-|  - Week 12: โครงการจบ: ระบบป้องกันการบุกรุก eBPF IPS (Intrusion Prevention System) แบบเรียลไทม์    |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 07: ความปลอดภัยขั้นสูงและการตรวจจับภัยคุกคามเคอร์เนล (Advanced Kernel Security & Fleet Defense)    |
-|  - Week 13: วินิจฉัยแพ็กเก็ตสูญหายในเคอร์เนลด้วย Dropwatch (tracepoint:skb:kfree_skb)               |
-|  - Week 14: ระบบความปลอดภัย Zero-Trust Socket Egress Control ด้วย cgroup/connect4                  |
-|  - Week 15: ตรวจจับ Reverse Shell และ Web RCE ทันทีในเคอร์เนลด้วย task_struct real_parent          |
-|  - Week 16: ตรวจจับมัลแวร์ eBPF Rootkits และประเมินความปลอดภัยเคอร์เนล (fentry/__sys_bpf Integrity)|
-+----------------------------------------------------------------------------------------------------+
-| เฟส 08: การวัดประสิทธิภาพระบบ การแกะรอย Stack และการวิเคราะห์ฮาร์ดแวร์ (System Performance)          |
-|  - Week 17: สร้าง Storage I/O Latency Log2 Histogram (biolatency: block_rq_issue/complete)         |
-|  - Week 18: On-CPU Profiler & Kernel Call Stack Unwinding (Flamegraph Profiling ด้วย perf_event)   |
-|  - Week 19: เฝ้าระวัง Memory Page Faults และดักจับ OOM Killer ทันทีในเคอร์เนล (oom:mark_victim)     |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 09: การเร่งความเร็ว Socket และสถาปัตยกรรม Kernel Bypass (Socket Acceleration & AF_XDP)          |
-|  - Week 20: เร่งความเร็ว Local TCP ด้วย Sockops และ sk_msg Socket Bypass (ข้าม TCP/IP Stack)        |
-|  - Week 21: AF_XDP (XSK) Kernel-Bypass Packet Redirect ด้วย UMEM + BPF_MAP_TYPE_XSKMAP               |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 10: เทคโนโลยี eBPF ยุคใหม่ระดับแนวหน้า (Cutting-Edge Modern eBPF Technologies)                 |
-|  - Week 22: BPF Trampoline (fentry / fexit) ดักฟังฟังก์ชันเคอร์เนลแบบ Low-Overhead (เทียบกับ kprobe)  |
-|  - Week 23: BPF Task Iterators (bpf_iter_task) ท่องโครงสร้างเคอร์เนลโดยตรง ไม่ง้อ /proc             |
-+----------------------------------------------------------------------------------------------------+
-| เฟส 11: ขยายขีดความสามารถเคอร์เนลด้วย eBPF ยุคใหม่ (Modern eBPF Extensibility)                      |
-|  - Week 24: kfuncs (Acquire/Release, RCU) และ BPF Arena หน่วยความจำร่วมระหว่าง BPF กับ User Space  |
-|  - Week 25: struct_ops และ sched_ext: เขียน CPU Scheduler ด้วย BPF (SWITCH_PARTIAL + Watchdog)       |
-|  - Week 26: ระบบนิเวศ eBPF ในงาน Production: Tetragon TracingPolicy และ Cilium (kube-proxy-free)    |
-+----------------------------------------------------------------------------------------------------+
-```
+![แผนที่การเรียนรู้ 26 สัปดาห์ แบ่ง 11 เฟส](docs/diagrams/readme-roadmap.svg)
 
 ### 🔀 แผนภาพลำดับการเรียนรู้ (Course Flow Diagram)
 

@@ -146,7 +146,13 @@ def visible_text(svg: str) -> str:
 
 def font_faces(svg: str, font_dir: Path) -> str:
     hb = HarfBuzz()
-    chars = sorted({ord(c) for c in visible_text(svg) if not c.isspace()} | {0x20, 0xA0})
+    chars = {ord(c) for c in visible_text(svg) if not c.isspace()} | {0x20, 0xA0}
+    # HarfBuzz's Thai shaper decomposes SARA AM (U+0E33) into NIKHAHIT + SARA AA
+    # by codepoint, so a subset holding only the characters seen in the text
+    # makes "นำ"/"ทำ" fall back to another font. Keep the whole Thai block.
+    if any(0x0E00 <= cp <= 0x0E7F for cp in chars):
+        chars |= set(range(0x0E01, 0x0E5C))
+    chars = sorted(chars)
     paths = {f: font_dir / f for _, _, f in FONTS}
     css = []
     for family, weight, fname in FONTS:
@@ -245,28 +251,42 @@ def style_clusters(svg: str) -> str:
 
 
 def process(svg: str, font_dir: Path) -> str:
-    # Rounded corners: plain node boxes (no rx yet) and subgraph cards.
+    # Rounded corners: plain node boxes (no rx yet, or block-beta's rx="0") and subgraph cards.
+    svg = re.sub(r'<rect ([^>]*?)\s?r[xy]="0" r[xy]="0"([^>]*class="basic label-container"[^>]*)/>',
+                 r'<rect \1\2/>', svg)
     svg = re.sub(r'<rect (?![^>]*\brx=)([^>]*class="basic label-container"[^>]*)/>',
                  r'<rect rx="10" ry="10" \1/>', svg)
     svg = re.sub(r'(<g [^>]*class="cluster[^"]*"[^>]*><rect )', r'\1rx="16" ry="16" ', svg)
 
-    # Card background covering the viewBox.
+    # Other diagram types: sequence actors/notes, packet fields, block-beta boxes.
+    for cls, r in (("actor", 10), ("note", 8), ("labelBox", 6), ("packetBlock", 4)):
+        svg = re.sub(rf'<rect (?![^>]*\brx=)([^>]*class="[^"]*\b{cls}\b[^"]*"[^>]*)/>',
+                     rf'<rect rx="{r}" ry="{r}" \1/>', svg)
+
+    # Pad the viewBox and draw a white card behind everything.
+    pad = 16
     m = re.search(r'viewBox="([-\d.]+) ([-\d.]+) ([\d.]+) ([\d.]+)"', svg)
     x, y, w, h = (float(v) for v in m.groups())
+    x, y, w, h = x - pad, y - pad, w + 2 * pad, h + 2 * pad
+    svg = svg.replace(m.group(0), f'viewBox="{x:.2f} {y:.2f} {w:.2f} {h:.2f}"', 1)
     card = (f'<rect x="{x + 2:.1f}" y="{y + 2:.1f}" width="{w - 4:.1f}" height="{h - 4:.1f}" '
             f'rx="18" ry="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="2"/>')
-    svg = re.sub(r'style="background-color: white;"', 'style="background-color: transparent;"', svg, count=1)
 
     svg = widen_labels(svg)
     svg = style_clusters(svg)
     faces = font_faces(svg, font_dir)
-    svg = svg.replace("</style>", EXTRA_CSS + faces + "</style>", 1)
-    svg = re.sub(r"(</style>)", r"\1" + SHADOW_DEFS + card, svg, count=1)
 
-    # Fixed pixel size so GitHub shows the image at its natural size
-    # (it still shrinks wide diagrams to the column width).
-    svg = re.sub(r'(<svg[^>]*?) width="[\d.]+"', rf'\1 width="{w:.0f}"', svg, count=1)
-    svg = re.sub(r'(<svg[^>]*?) height="[\d.]+"', rf'\1 height="{h:.0f}"', svg, count=1)
+    # Root <svg> tag: fixed pixel size (GitHub still shrinks wide images to
+    # the column width), transparent background so the card's corners show.
+    m = re.match(r"<svg[^>]*>", svg)
+    tag = m.group(0)
+    tag = re.sub(r'\s(width|height)="[^"]*"', "", tag)
+    tag = re.sub(r'\sstyle="[^"]*"', "", tag)
+    tag = tag[:-1] + f' width="{w:.0f}" height="{h:.0f}" style="background-color: transparent;">'
+    # Card first, so it sits under every diagram type (sequence diagrams draw
+    # their actors before Mermaid's <style>).
+    head = f"<style>{EXTRA_CSS}{faces}</style>{SHADOW_DEFS}{card}"
+    svg = tag + head + svg[m.end():]
     return svg
 
 

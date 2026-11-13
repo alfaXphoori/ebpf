@@ -1,0 +1,29 @@
+flowchart TD
+    subgraph SW["netns w02-sw (แทน #quot;Host/Gateway#quot;)"]
+        BR["Linux Bridge: br0<br/>(10.20.0.1/24)"]
+        B3["veth-br3"]
+        B2["veth-br2"]
+        B1["veth-br1"]
+    end
+
+    subgraph NS3["w02-ns3"]
+        N3["veth-ns3<br/>.13"]
+    end
+    subgraph NS2["w02-ns2"]
+        N2["veth-ns2<br/>.12"]
+    end
+    subgraph NS1["w02-ns1"]
+        N1["veth-ns1<br/>.11"]
+    end
+
+    BR <--> B1
+    BR <--> B2
+    BR <--> B3
+    B1 <-- "veth pair" --> N1
+    B2 <-- "veth pair" --> N2
+    B3 <-- "veth pair" --> N3
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class BR kern
+    class B1,B2,B3,N1,N2,N3 net

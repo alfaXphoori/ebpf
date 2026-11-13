@@ -1,0 +1,31 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    M["① malloc(50 MB)"]
+    VMA["VMA ใหม่ใน mm_struct<br/>(total_vm += 50 MB, RSS ยังเท่าเดิม)"]
+    P["② &ast;p = 1 (แตะหน้าแรก)"]
+    PF["③ #PF exception (x86 vector 14)"]
+
+    subgraph KERNEL["④ Kernel: exc_page_fault()"]
+        TP["trace_page_fault_user(address, regs, error_code)<br/>#lt;== eBPF hook"]
+        H["handle_mm_fault()"]
+        AL["จัดสรรหน้า 4 KiB<br/>(charge เข้า memory cgroup ของโปรเซส)"]
+        OOM["mem_cgroup_out_of_memory()<br/>-> OOM killer (1.2)"]
+    end
+
+
+    M --> VMA
+    VMA --> PF
+    P --> PF
+    PF --> TP
+    TP --> H
+    H --> AL
+    AL -- "ถ้า cgroup เกิน memory.max<br/>และ reclaim ไม่ได้" --> OOM
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class M,P user
+    class VMA,PF,TP,H,AL,OOM kern

@@ -31,56 +31,7 @@
 
 `BPF_MAP_TYPE_HASH` เป็นตารางแฮช (Generic Hash Table) ในหน่วยความจำเคอร์เนลที่อนุญาตให้เก็บ Key-Value ที่มีความยาวตายตัว (Arbitrary fixed-size key and value) เหมาะอย่างยิ่งสำหรับกรณีที่คีย์เป็นค่าสุ่มหรือไม่เรียงลำดับ เช่น Process ID (PID), IP Address, หรือ File Descriptor
 
-```
-+-----------------------------------------------------------------------------------------+
-|                                    LINUX KERNEL SPACE                                   |
-|                                                                                         |
-|  Tracepoint: raw_syscalls/sys_enter                                                     |
-|  (Triggered on EVERY system call)                                                       |
-|                     |                                                                   |
-|                     v                                                                   |
-|       Extract PID: bpf_get_current_pid_tgid() >> 32                                     |
-|                     |                                                                   |
-|                     +---------------------+                                             |
-|                                           |                                             |
-|                                           v                                             |
-|                            [ Kernel Hash Function: jhash (Jenkins) ]                    |
-|                                           |                                             |
-|                                           v                                             |
-|   BPF_MAP_TYPE_HASH: syscall_map (max_entries = 4096, buckets = 4096)                   |
-|   +----------------------------------------------------------------------------------+  |
-|   | Bucket 0   -> [ PID: 1042 | Count: 521 | Comm: "node" ]                          |  |
-|   | Bucket 1   -> NULL                                                               |  |
-|   | ...                                                                              |  |
-|   | Bucket 58  -> [ PID: 1    | Count: 18  | Comm: "systemd" ] -> [ PID: 89 | ... ]  |  |
-|   | ...                                                                              |  |
-|   | Bucket 4095-> [ PID: 4521 | Count: 94  | Comm: "bash" ]                          |  |
-|   +----------------------------------------------------------------------------------+  |
-|                                           ^                                             |
-+-------------------------------------------|---------------------------------------------+
-                                            |
-                         Syscall bpf(BPF_MAP_GET_NEXT_KEY)
-                         Syscall bpf(BPF_MAP_LOOKUP_ELEM)
-                                            |
-+-------------------------------------------|---------------------------------------------+
-|                                           v                                             |
-|  USERSPACE (Golang Daemon):                                                             |
-|                                                                                         |
-|  objs.SyscallMap.Iterate()                                                              |
-|        |                                                                                |
-|        v                                                                                |
-|  [ PID 1042, "node",    521 ]                                                           |
-|  [ PID 4521, "bash",     94 ]                                                           |
-|  [ PID 1,    "systemd",  18 ]                                                           |
-|        |                                                                                |
-|        v sort.Slice(descending by Count)                                                |
-|  +-----------------------------------------------------------------------------------+  |
-|  | #1  PID: 1042  COMM: node     SYSCALLS: 521   SHARE: 82.3%                        |  |
-|  | #2  PID: 4521  COMM: bash     SYSCALLS: 94    SHARE: 14.8%                        |  |
-|  | #3  PID: 1     COMM: systemd  SYSCALLS: 18    SHARE:  2.9%                        |  |
-|  +-----------------------------------------------------------------------------------+  |
-+-----------------------------------------------------------------------------------------+
-```
+![โครงสร้าง BPF_MAP_TYPE_HASH: sys_enter → jhash → bucket ใน syscall_map → Go Iterate และเรียงลำดับ](../../docs/diagrams/week06-hash-map.svg)
 
 #### คุณสมบัติสำคัญของ Hash Map ในเคอร์เนล:
 1. **Pre-allocation vs On-demand:** ตามค่าเริ่มต้น เคอร์เนลจะ Pre-allocate หน่วยความจำสำหรับจำนวน Elements ทั้งหมด (`max_entries = 4096`) ทันทีที่ Map ถูกสร้างขึ้น เพื่อป้องกันปัญหาหน่วยความจำเคอร์เนลไม่พอตอนรันและลด Latency (หากต้องการประหยัดหน่วยความจำสามารถใส่ Flag `BPF_F_NO_PREALLOC`)
@@ -422,36 +373,7 @@ Shutting down eBPF monitor cleanly.
 ### 5.1 การทำงานภายในของ eBPF Verifier
 ก่อนที่ eBPF Bytecode จะได้รับอนุญาตให้รันภายใน Linux Kernel ตัวเคอร์เนลจะนำ Bytecode เข้าสู่กระบวนการ Static Analysis ที่เข้มงวดที่สุดในโลกของระบบปฏิบัติการ เรียกว่า **eBPF Verifier**
 
-```
-+-------------------------------------------------------------------------+
-|                  การทำงานของ EBPF VERIFIER STATIC ANALYSIS              |
-|                                                                         |
-|  C Code (.c) ---> Clang/LLVM ---> eBPF Bytecode (.o)                   |
-|                                         |                               |
-|                                         v                               |
-|                     +-----------------------------------+               |
-|                     |        eBPF Kernel Verifier       |               |
-|                     +-----------------------------------+               |
-|                     | 1. ตรวจสอบ Control Flow Graph     |               |
-|                     |    - ป้องกัน Infinite Loop        |               |
-|                     |    - ตรวจจับ Unreachable Code     |               |
-|                     |                                   |               |
-|                     | 2. จำลองการทำงานทุก Execution Path|               |
-|                     |    - ติดตาม State ของ Registers   |               |
-|                     |      (R0 - R10: Type, Bounds, Min/Max)            |
-|                     |                                   |               |
-|                     | 3. Packet Bounds Checking         |               |
-|                     |    - ทุกการอ่าน Memory ต้องพิสูจน์ได้ว่า|             |
-|                     |      data + offset <= data_end    |               |
-|                     +-----------------------------------+               |
-|                                 |           |                           |
-|                        ผ่าน      v           v ล้มเหลว                   |
-|                  +---------------+   +-----------------------------+    |
-|                  | JIT Compiler  |   | ปฏิเสธการโหลดลง Kernel       |    |
-|                  | (x86/ARM64)   |   | ส่งกลับ Verifier Log ละเอียด |    |
-|                  +---------------+   +-----------------------------+    |
-+-------------------------------------------------------------------------+
-```
+![ขั้นตอน Static Analysis ของ eBPF Verifier: ผ่านไป JIT หรือล้มเหลวพร้อม Verifier Log](../../docs/diagrams/week06-verifier.svg)
 
 สิ่งสำคัญที่ต้องจำ: **clang ไม่รู้กฎของ Verifier** โค้ดที่คอมไพล์ผ่านโดยไม่มี Warning อาจถูกปฏิเสธตอน `BPF_PROG_LOAD` ได้เสมอ (ดูผล `make all` ในหัวข้อ 4.1 ที่ `verifier_fail.c` คอมไพล์ผ่าน)
 
@@ -669,17 +591,7 @@ processed 2 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_stat
 ### 6.1 หลักการ: ให้เคอร์เนลรันโปรแกรมกับข้อมูลปลอม
 `bpf(BPF_PROG_TEST_RUN)` (cilium/ebpf: `Program.Run()`) สั่งให้เคอร์เนลรันโปรแกรม eBPF **ที่โหลดแล้ว** หนึ่งครั้ง (หรือ `Repeat` ครั้ง) โดยใช้ Input ที่เราส่งเข้าไปเอง แล้วคืน Return Code (เช่น `XDP_PASS` = 2) กลับมา — Map ที่โปรแกรมเขียนเป็น Map จริงในเคอร์เนล ฝั่ง Go จึงอ่านผลจาก Map มาตรวจได้ทันที
 
-```
-  go test (root)                         LINUX KERNEL
-  ---------------                        ---------------------------------------
-  loadMaptypesObjects()  --BPF_PROG_LOAD-->  Verifier -> JIT -> count_by_key
-  prog.Run(RunOptions{   --BPF_PROG_TEST_RUN--> สร้าง xdp_buff ปลอมจาก Data
-     Data:   packet(42),                      รัน count_by_key 1000 ครั้ง
-     Repeat: 1000})      <-- ret = 2 (XDP_PASS) --    |
-                                                      v  เขียน hash_map / percpu_map / lru_map
-  objs.HashMap.Lookup(42) --BPF_MAP_LOOKUP_ELEM--> 1000
-  t.Fatalf(...) ถ้าไม่ตรง
-```
+![ลำดับการทดสอบด้วย BPF_PROG_TEST_RUN จาก go test ถึงการตรวจค่าใน Map](../../docs/diagrams/week06-test-run.svg)
 ข้อดี: ไม่ต้อง Attach กับ Interface/Hook จริง (ไม่กระทบเครื่อง), ผลลัพธ์ Deterministic, รันใน CI ได้ (ยังต้องมีสิทธิ์โหลดโปรแกรม eBPF เช่น root — เทสต์ในสัปดาห์นี้จึง Skip เมื่อไม่ใช่ root)
 
 ### 6.2 ชนิดโปรแกรมไหนใช้ test_run ได้บ้าง

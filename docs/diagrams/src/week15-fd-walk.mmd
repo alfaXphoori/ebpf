@@ -1,0 +1,23 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    T["① struct task_struct &ast;task = bpf_get_current_task()"]
+    FS["② struct files_struct"]
+    FDT["③ struct fdtable<br/>{ max_fds, struct file &ast;&ast;fd }"]
+    F["④ struct file<br/>{ f_inode, private_data, ... }"]
+    M["⑤ (i_mode & S_IFMT) == S_IFSOCK ?"]
+    SO["⑥ struct socket ->sk"]
+    FAM["⑦ sk->__sk_common.skc_family<br/>== AF_INET (2) / AF_INET6 (10) ?"]
+
+    T -- "->files" --> FS
+    FS -- "->fdt" --> FDT
+    FDT -- "fd[0], fd[1], fd[2]" --> F
+    F -- "->f_inode->i_mode" --> M
+    F -- "->private_data" --> SO
+    SO --> FAM
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    class T,FS,FDT,F,M,SO,FAM kern

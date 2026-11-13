@@ -93,13 +93,7 @@ struct trace_bpf_args {
 
 ตัวเฝ้า `bpf()` แบบ real-time เห็นเฉพาะการเรียก **หลังจาก** มันเริ่มทำงาน โปรแกรมที่ถูกโหลดไว้ก่อน (เช่น rootkit ที่ติดตั้งตอนบูต หรือก่อนที่ agent จะ restart) จะมองไม่เห็นเลย เวอร์ชันนี้จึงเพิ่ม **inventory scan** ที่ทำแบบเดียวกับ `bpftool prog list`:
 
-```
- id = 0
- loop:
-   BPF_PROG_GET_NEXT_ID(id)   -> next id (ENOENT = หมดแล้ว)     ebpf.ProgramGetNextID()
-   BPF_PROG_GET_FD_BY_ID(id)  -> fd ของโปรแกรม                  ebpf.NewProgramFromID()
-   BPF_OBJ_GET_INFO_BY_FD(fd) -> type, name, tag, uid, map_ids    prog.Info()
-```
+![ลูปสแกนโปรแกรม eBPF ที่โหลดอยู่ (inventory)](../../docs/diagrams/week16-inventory-loop.svg)
 
 ลำดับสำคัญ: auditor **attach hook ก่อน แล้วจึงสแกน** เพื่อปิดช่องว่างเวลา โปรแกรมที่ถูกโหลดระหว่างสแกนจะถูก hook จับได้อยู่ดี (ถ้าสแกนก่อน attach จะมีช่วงที่ไม่มีใครเฝ้า)
 

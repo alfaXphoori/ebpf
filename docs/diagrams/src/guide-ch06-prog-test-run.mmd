@@ -1,0 +1,9 @@
+sequenceDiagram
+    autonumber
+    participant G as Go Test (go test -exec sudo)
+    participant K as Kernel
+    Note over G: สร้าง Packet จำลอง (bytes)
+    G->>K: bpf(BPF_PROG_TEST_RUN)
+    Note over K: รันโปรแกรม XDP/TC 1..N รอบ<br/>คืน retval + data_out
+    K-->>G: retval, data_out, duration
+    Note over G: ตรวจ retval == XDP_DROP ?<br/>ตรวจ Packet ขาออก / Map

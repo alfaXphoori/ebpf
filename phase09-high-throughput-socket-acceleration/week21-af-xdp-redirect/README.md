@@ -21,43 +21,7 @@
 
 ### ⏱️ ลำดับเหตุการณ์ตามเวลา (Sequence Diagram)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant P as w21-tx<br/>10.21.0.2
-    box rgb(253,226,226) Kernel ใน netns w21-rx
-        participant X as XDP<br/>xsk_redirect_prog
-        participant XM as xsks_map<br/>XSKMAP
-    end
-    box transparent หน่วยความจำร่วมที่ mmap
-        participant FR as FILL ring
-        participant UM as UMEM frames
-        participant RX as RX ring
-    end
-    box rgb(226,240,253) User Space
-        participant G as main.go<br/>xsk.go
-    end
-
-    G->>X: link.AttachXDP บน w21-xsk0
-    G->>UM: socket AF_XDP, mmap UMEM, XDP_UMEM_REG
-    G->>FR: fillFrames(): ใส่ที่อยู่ frame ว่าง แล้วขยับ producer
-    G->>G: bind queue 0 แบบ XDP_COPY
-    G->>XM: XsksMap.Put(0, xsk fd)
-    P->>X: UDP → 10.21.0.1:9999
-    X->>XM: bpf_redirect_map ตาม rx_queue_index<br/>ค่าสำรอง XDP_PASS
-    alt มี socket ผูกกับ queue นี้
-        X->>FR: ดึงที่อยู่ frame ว่าง (kernel เป็น consumer)
-        X->>UM: copy แพ็กเก็ตลง frame
-        X->>RX: ใส่ descriptor addr, len แล้วขยับ producer
-        Note over X: คืน XDP_REDIRECT และนับ redirected
-        G->>RX: Poll(200) แล้ว Receive(): อ่าน descriptor และขยับ consumer
-        G->>UM: อ่านแพ็กเก็ตจาก frame → describePacket()
-        G->>FR: fillFrames(recycle): คืน frame ให้ kernel ใช้ซ้ำ
-    else ไม่ใช่ UDP หรือยังไม่มี socket
-        X-->>P: XDP_PASS → TCP/IP stack ปกติ เช่น ตอบ ping
-    end
-    Note over FR,RX: ถ้า FILL ring ว่างหรือ RX ring เต็ม kernel จะทิ้งแพ็กเก็ต<br/>ดูได้จาก xsk.Stats(): fill_empty, ring_full, rx_dropped
-```
+![ลำดับเหตุการณ์ตามเวลา Week 21 (Sequence Diagram)](../../docs/diagrams/week21-sequence.svg)
 
 **อ่านแผนภาพ:** user space และ kernel ไม่ส่งแพ็กเก็ตหากันผ่าน syscall แต่ผลัดกันขยับ index ของ ring ในหน่วยความจำร่วม: user space เป็นผู้ผลิตของ FILL ring (ส่ง frame ว่างให้) และเป็นผู้บริโภคของ RX ring (รับ frame ที่มีข้อมูล) ส่วน kernel ทำกลับกัน frame จึงวนใช้ซ้ำไม่รู้จบ ถ้า user space คืน frame ไม่ทัน FILL ring จะว่างและแพ็กเก็ตจะถูกทิ้งตั้งแต่ใน kernel
 
@@ -67,38 +31,7 @@ sequenceDiagram
 
 ### 1.1 สถาปัตยกรรม AF_XDP
 
-```
- +-------------------------------- NIC / veth (RX queue 0) --------------------------------+
- |                                         |                                               |
- |                                         v                                               |
- |                   +---------------------------------------------+                       |
- |                   | XDP program: xsk_redirect_prog              |                       |
- |                   |  ARP / ICMP / TCP ---------> XDP_PASS ------+----> Kernel Stack     |
- |                   |  IPv4/UDP: bpf_redirect_map(&xsks_map,      |      (ping ยังตอบได้)     |
- |                   |            rx_queue_index, XDP_PASS)        |                       |
- |                   +----------------------|----------------------+                       |
- +------------------------------------------|----------------------------------------------+
-                                            | XDP_REDIRECT
-                                            v
-                         +-------------------------------------+
-                         | BPF_MAP_TYPE_XSKMAP                 |
-                         |  [0] -> AF_XDP socket (fd 7)        |
-                         +------------------|------------------+
-                                            |  copy mode: memcpy ลง frame ว่างจาก FILL ring
-                                            |  zero-copy: NIC DMA ลง UMEM โดยตรง
-  ==========================================|====================================== kernel
-                                            v                                         user
-  +--------------------------------------------------------------------------------------+
-  | UMEM (8 MiB = 4096 frames x 2048 B, mmap แบบ anonymous, register ด้วย XDP_UMEM_REG)    |
-  |  [frame 0][frame 1][frame 2] ............................................ [frame 4095]  |
-  +--------------------------------------------------------------------------------------+
-     ^ FILL ring (user -> kernel)                  RX ring (kernel -> user) |
-     |  "นี่คือ frame ว่าง ใช้ได้"                       {addr, len} ของแพ็กเก็ตที่เขียนแล้ว   v
-  +--------------------------------------------------------------------------------------+
-  |  Go RX loop: poll() -> อ่าน RX ring -> parse eth/ip/udp ใน UMEM -> คืน frame ลง FILL ring  |
-  +--------------------------------------------------------------------------------------+
-     (TX ring + COMPLETION ring ใช้สำหรับการส่ง — แล็บนี้รับอย่างเดียว)
-```
+![สถาปัตยกรรม AF_XDP: XDP → XSKMAP → UMEM และ RX/FILL ring](../../docs/diagrams/week21-af-xdp-arch.svg)
 
 ### 1.2 UMEM และ Ring ทั้ง 4
 

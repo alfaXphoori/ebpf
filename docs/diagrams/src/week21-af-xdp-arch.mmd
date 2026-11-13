@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph KERNEL["Kernel"]
+        subgraph NET["NIC / veth (RX queue 0)"]
+            X["① XDP program: xsk_redirect_prog<br/>ARP / ICMP / TCP → XDP_PASS<br/>IPv4/UDP: bpf_redirect_map(&xsks_map,<br/>rx_queue_index, XDP_PASS)"]
+        end
+        KS["Kernel Stack<br/>(ping ยังตอบได้)"]
+        XM[("② BPF_MAP_TYPE_XSKMAP<br/>[0] → AF_XDP socket (fd 7)")]
+    end
+
+    subgraph USER["User Space"]
+        UMEM["③ UMEM (8 MiB = 4096 frames x 2048 B)<br/>mmap แบบ anonymous, register ด้วย XDP_UMEM_REG<br/>[frame 0][frame 1][frame 2] … [frame 4095]"]
+        RX["RX ring (kernel → user)<br/>{addr, len} ของแพ็กเก็ตที่เขียนแล้ว"]
+        GO["④ Go RX loop: poll() → อ่าน RX ring<br/>→ parse eth/ip/udp ใน UMEM<br/>→ คืน frame ลง FILL ring"]
+        FILL["FILL ring (user → kernel)<br/>นี่คือ frame ว่าง ใช้ได้"]
+        TXC["TX ring + COMPLETION ring ใช้สำหรับการส่ง<br/>— แล็บนี้รับอย่างเดียว"]
+    end
+
+    X -- "XDP_PASS" --> KS
+    X -- "XDP_REDIRECT" --> XM
+    XM -- "copy mode: memcpy ลง frame ว่างจาก FILL ring<br/>zero-copy: NIC DMA ลง UMEM โดยตรง" --> UMEM
+    UMEM --> RX --> GO
+    GO --> FILL
+    FILL -.-> UMEM
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class X,KS kern
+    class XM map
+    class UMEM,RX,GO,FILL user
+    class TXC trig

@@ -1,0 +1,15 @@
+block-beta
+    columns 5
+    T["เวลา →"] W1["Window 1 (1s)"]:2 W2["Window 2 (1s)"]:2
+    S["SYN"] A1["......................."] A2["XXXXX<br/>100 ตัว<br/>(ไม่เกิน Limit)"] B1["XXXXX<br/>100 ตัว<br/>(ไม่เกิน Limit)"] B2["......................."]
+    space:2 BURST["แต่ 200 ตัวภายใน ~0.2s!"]:2 space
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class T,S trig
+    class W1,W2 user
+    class A1,B2 trig
+    class A2,B1 net
+    class BURST kern

@@ -1,0 +1,39 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 460
+---
+flowchart TD
+    subgraph NET["Wire / NIC"]
+        W(["Physical Network Wire / veth"])
+        N1["<b>① NIC Hardware</b><br/>รับสัญญาณไฟฟ้า/แสง เขียนข้อมูลลง Host RAM<br/>ผ่าน DMA (Direct Memory Access)<br/>เข้าสู่ RX Ring Buffer"]
+    end
+
+    subgraph KERNEL["Kernel Space"]
+        N2["<b>② CPU Hard IRQ</b><br/>CPU รับสัญญาณขัดจังหวะ (Hard IRQ)<br/>สั่งปิด Interrupt บน NIC และสั่ง Schedule NAPI Poll<br/>(ส่งต่อให้ Bottom Half)"]
+        N3["<b>③ NAPI Poll Loop</b><br/>เคอร์เนลวนลูปอ่านแพ็กเก็ตจาก RX Ring Buffer<br/>ตาม Budget (เช่น 64 pkts)<br/>สร้างโครงสร้างข้อมูล #quot;struct sk_buff#quot;<br/>ให้กับทุกแพ็กเก็ต"]
+        XDP{{"จุดที่ XDP (eBPF) เข้ามาดักจับ!<br/>ก่อน sk_buff ถูกสร้าง"}}
+        N4["<b>④ L2 Processing (br_handle_frame)</b><br/>ถอดรหัส Ethernet Frame<br/>ตรวจสอบว่าเป็น Bridge Interface หรือไม่<br/>(ถ้าเป็น Bridge จะค้นตาราง FDB<br/>แล้ว Switch ไปยังพอร์ตปลายทาง)"]
+        N5["<b>⑤ L3 IP Layer (Netfilter / iptables)</b><br/>ip_rcv() ตรวจสอบ Checksum<br/>ทำ Routing Decision (FORWARD หรือ LOCAL IN)<br/>ผ่าน Netfilter Hooks (PREROUTING, INPUT)"]
+        N6["<b>⑥ L4 Transport (TCP / UDP)</b><br/>tcp_v4_rcv() / udp_rcv() ตรวจสอบ<br/>TCP State Machine, Window, Sequence<br/>และนำข้อมูลใส่ลงใน Socket Receive Queue ของโปรเซส"]
+    end
+
+    subgraph USER["User Space"]
+        N7["<b>⑦ User Space App (Socket Read)</b><br/>โปรเซสผู้รับตื่นจาก epoll_wait()<br/>และเรียก recvmsg() / read()<br/>คัดลอกข้อมูลจาก Kernel Memory<br/>สู่ User Memory Buffer (Data Copy)"]
+    end
+
+    W --> N1
+    N1 -- "Hardware Interrupt /<br/>Top Half" --> N2
+    N2 -- "SoftIRQ: NET_RX_SOFTIRQ" --> N3
+    N3 -. "XDP hook" .-> XDP
+    N3 --> N4
+    N4 --> N5
+    N5 --> N6
+    N6 --> N7
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class W,N1 net
+    class N2,N3,N4,N5,N6,XDP kern
+    class N7 user

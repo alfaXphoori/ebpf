@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant G as go test (root)
+    box rgb(255,241,242) LINUX KERNEL
+        participant K as count_by_key<br/>(XDP program)
+        participant M as hash_map<br/>percpu_map<br/>lru_map
+    end
+    G->>K: loadMaptypesObjects() ผ่าน BPF_PROG_LOAD
+    Note over K: Verifier -> JIT -> count_by_key
+    G->>K: prog.Run(RunOptions{ Data: packet(42), Repeat: 1000 })<br/>ผ่าน BPF_PROG_TEST_RUN
+    Note over K: สร้าง xdp_buff ปลอมจาก Data<br/>รัน count_by_key 1000 ครั้ง
+    K->>M: เขียน hash_map / percpu_map / lru_map
+    K-->>G: ret = 2 (XDP_PASS)
+    G->>M: objs.HashMap.Lookup(42) ผ่าน BPF_MAP_LOOKUP_ELEM
+    M-->>G: 1000
+    Note over G: t.Fatalf(...) ถ้าไม่ตรง

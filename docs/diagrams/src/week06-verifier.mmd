@@ -1,0 +1,26 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 360
+---
+flowchart TD
+    C["C Code (.c)"] --> CL["Clang/LLVM"] --> BC["eBPF Bytecode (.o)"]
+
+    subgraph KERNEL["eBPF Kernel Verifier"]
+        V1["① ตรวจสอบ Control Flow Graph<br/>- ป้องกัน Infinite Loop<br/>- ตรวจจับ Unreachable Code"]
+        V2["② จำลองการทำงานทุก Execution Path<br/>- ติดตาม State ของ Registers<br/>(R0 - R10: Type, Bounds, Min/Max)"]
+        V3["③ Packet Bounds Checking<br/>- ทุกการอ่าน Memory ต้องพิสูจน์ได้ว่า<br/>data + offset #lt;= data_end"]
+        V1 ~~~ V2 ~~~ V3
+    end
+
+    BC --> KERNEL
+    KERNEL -- "ผ่าน" --> JIT["JIT Compiler<br/>(x86/ARM64)"]
+    KERNEL -- "ล้มเหลว" --> REJ["ปฏิเสธการโหลดลง Kernel<br/>ส่งกลับ Verifier Log ละเอียด"]
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class C,CL,BC user
+    class V1,V2,V3,JIT,REJ kern

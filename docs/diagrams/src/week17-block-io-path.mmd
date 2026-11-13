@@ -1,0 +1,35 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    A["① Application: read() / write() / fsync()"]
+    V["② VFS -> Page Cache<br/>(ถ้า Cache hit จะไม่เกิด Block I/O เลย!)<br/>-> Filesystem (ext4/xfs/btrfs)<br/>แปลง offset ของไฟล์ -> sector บนดิสก์"]
+
+    subgraph KERNEL["③ Block Layer (blk-mq)"]
+        B1["bio ถูกรวม/แบ่ง (merge/split ตาม max_sectors_kb)<br/>-> struct request"]
+        B2["block_rq_insert -> I/O Scheduler queue<br/>(mq-deadline / none / bfq)"]
+        B3["block_rq_issue<br/>blk_mq_start_request() (t0)"]
+    end
+
+    D["④ Device Driver (nvme / ahci-scsi / virtio-blk)<br/>-> Hardware Queue -> Disk"]
+    C["⑤ block_rq_complete<br/>blk_update_request() (t1)"]
+    L["latency = t1 - t0<br/>=#gt; เวลาที่ Request อยู่ใน #quot;ไดรเวอร์ + ฮาร์ดแวร์#quot;"]
+
+    A --> V
+    V -- "struct bio" --> B1
+    B1 --> B2
+    B2 --> B3
+    B3 --> D
+    D -- "IRQ / completion" --> C
+    C --> L
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class A user
+    class V,B1,B2,B3,C kern
+    class D net
+    class L trig

@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    participant U as Userspace (Go)
+    participant K as Kernel
+    U->>K: BPF_PROG_LOAD (iter/task)
+    Note right of K: verifier ตรวจ: ctx = struct bpf_iter__task (BTF)
+    U->>K: BPF_LINK_CREATE
+    Note right of K: สร้าง iter link (ยังไม่ทำงาน)
+    U->>K: BPF_ITER_CREATE (link.Iter.Open())
+    Note right of K: สร้าง anon file + seq_file (1 fd)
+    U->>K: read(fd)
+    Note right of K: seq_file ->start/next: เดิน task ถัดไป<br/>→ เรียก dump_task(ctx{meta, task}) ทีละ task<br/>→ BPF_SEQ_PRINTF() เขียนลง seq buffer
+    K-->>U: คืนข้อความใน buffer
+    U->>K: read(fd) ... จนได้ 0 (EOF)
+    Note right of K: สุดท้ายเรียกโปรแกรมอีกครั้งด้วย task == NULL

@@ -1,0 +1,13 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 560
+title: eBPF VERIFIER 2-STAGE ANALYSIS
+---
+flowchart TD
+    V1["ขั้นตอนที่ 1: สร้าง Directed Acyclic Graph (DAG) และตรวจจับลูป<br/>- แปลงคำสั่งกระโดด (JMP) ทั้งหมดเพื่อสร้างกราฟเส้นทางการทำงาน<br/>- ตรวจสอบว่าไม่มีโค้ดส่วนใดที่เข้าไม่ถึง (Unreachable Code)<br/>- ตรวจจับ Unbounded Loops (ลูปที่จำนวนรอบไม่แน่นอนจะถูกตีตกทันที)"]
+    V2["ขั้นตอนที่ 2: จำลองการรันเชิงนามธรรม (Symbolic / Abstract Execution)<br/>- ไล่ตรวจทีละคำสั่งและจำลองค่าของ Register ทั้งหมด (R0–R10)<br/>- บันทึกประเภทของพอยน์เตอร์ (Pointer Types):<br/>  PTR_TO_STACK, PTR_TO_PACKET, PTR_TO_MAP_VALUE, SCALAR_VALUE<br/>- คำนวณช่วงของค่าที่เป็นไปได้<br/>(Min/Max Bound Tracking: smin, smax, umin, umax)<br/>- ทุกการ Dereference พอยน์เตอร์ จะต้องมีคำสั่ง Branch เช็ค Bounds ก่อนเสมอ!"]
+    V1 --> V2
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    class V1,V2 kern

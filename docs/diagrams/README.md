@@ -1,10 +1,10 @@
 # 🖼️ แผนภาพของหลักสูตร (Course Diagrams)
 
-แผนภาพ flowchart ทุกภาพในหลักสูตรเป็นไฟล์ SVG สไตล์การ์ด (กล่องมุมโค้ง สีพาสเทล เงาบาง ป้ายหัวกลุ่มสีทึบ) ที่ render จากต้นฉบับ Mermaid ในโฟลเดอร์ [`src/`](src/) ส่วน Sequence Diagram 4 ภาพ (W08, W20, W21, W22) ยังเป็นบล็อก Mermaid ใน README ตามเดิม
+แผนภาพทุกภาพในหลักสูตร (flowchart, sequence diagram, ผัง header ของแพ็กเก็ต และผังหน่วยความจำ) เป็นไฟล์ SVG สไตล์การ์ด (กล่องมุมโค้ง สีพาสเทล เงาบาง ป้ายหัวกลุ่มสีทึบ) ที่ render จากต้นฉบับ Mermaid ในโฟลเดอร์ [`src/`](src/) ส่วนตาราง ผลลัพธ์จาก terminal โค้ด และผังไดเรกทอรียังเป็นข้อความ Markdown เพื่อให้ค้นหาและ copy ได้
 
 ## แก้ไขแผนภาพ
 
-1. แก้ไฟล์ `src/<ชื่อ>.mmd` (ไวยากรณ์ Mermaid flowchart ปกติ)
+1. แก้ไฟล์ `src/<ชื่อ>.mmd` (ไวยากรณ์ Mermaid ปกติ: `flowchart`, `sequenceDiagram`, `packet-beta`, `block-beta`, `stateDiagram-v2`)
 2. รัน `make diagrams` ที่ root ของ repo หรือ `scripts/render_diagrams.sh <ชื่อ>` เพื่อ render เฉพาะภาพนั้น
 3. เปิดไฟล์ `docs/diagrams/<ชื่อ>.svg` ดูผล แล้ว commit ทั้ง `.mmd` และ `.svg`
 
@@ -46,4 +46,6 @@ src/<ชื่อ>.mmd ──mmdc (ธีม mermaid-config.json)──▶ raw S
 | `course-flow`, `prerequisite-map` | `README.md` |
 | `content-tree-overview`, `content-tree-phase01` … `phase11` | `docs/CONTENT_TREE.md` |
 | `guide-ch01` … `guide-ch11` | `docs/MASTER_STUDY_GUIDE.md` |
-| `week01-overview` … `week26-overview` | `README.md` ของแต่ละสัปดาห์ |
+| `week01-overview` … `week26-overview` | แผนภาพ Workflow Overview ต้น `README.md` ของแต่ละสัปดาห์ |
+| `week08-sequence`, `week20-sequence`, `week21-sequence`, `week22-sequence` | Sequence Diagram ของสัปดาห์นั้น |
+| `weekNN-<ชื่อ>`, `guide-chNN-<ชื่อ>`, `readme-<ชื่อ>` | แผนภาพอื่นในไฟล์นั้น (แปลงมาจากแผนภาพ ASCII เดิม) |

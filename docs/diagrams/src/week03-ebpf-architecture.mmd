@@ -1,0 +1,23 @@
+flowchart TD
+    subgraph USER["User Space"]
+        A["① bpftrace / bpftool / C Application"] -- "LLVM Clang Compiler" --> B["② eBPF Bytecode"]
+    end
+
+    subgraph KERNEL["Linux Kernel Space"]
+        V{"③ Verifier"}
+        V -- "ไม่ปลอดภัย" --> R["ปฏิเสธถ้าไม่ปลอดภัย<br/>(Out-of-bound / Loop)"]
+        V -- "ผ่านการตรวจสอบความปลอดภัย" --> J["④ JIT Compiler<br/>แปลงเป็น Native Machine Instructions"]
+        J -- "ผูกเข้ากับ Kernel Event Hook<br/>(kprobe, tracepoint)" --> H["⑤ Executed upon:<br/>sys_enter_execve / tcp_sendmsg / etc."]
+        H -- "ส่งข้อมูลผ่าน" --> M[("⑥ BPF MAPS<br/>(Hash, Array, RingBuf)")]
+    end
+
+    B -- "sys_bpf(BPF_PROG_LOAD, ...)" --> V
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class A,B user
+    class V,R,J,H kern
+    class M map

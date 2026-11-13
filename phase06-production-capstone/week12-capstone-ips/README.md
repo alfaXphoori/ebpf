@@ -19,40 +19,7 @@
 ### 1.1 สถาปัตยกรรม Smart IPS: การทำงานระหว่าง Data Plane และ Control Plane
 ในระบบเครือข่ายความเร็วสูง การหยุดยั้งการโจมตีแบบ DoS/DDoS ต้องทำตั้งแต่จุดที่เร็วที่สุดเท่าที่จะเป็นไปได้ ก่อนที่แพ็กเก็ตจะถูกส่งต่อเข้าสู่ Kernel Network Stack ปกติ
 
-```
-+-----------------------------------------------------------------------------------------+
-|                สถาปัตยกรรม SMART EBPF IPS (DATA PLANE vs CONTROL PLANE)                 |
-|                                                                                         |
-|       [ Ingress Packets (NIC Driver) ]                                                  |
-|                      |                                                                  |
-|                      v                                                                  |
-|     +-------------------------------------------------------------+                     |
-|     | DATA PLANE: eBPF XDP Driver Hook (ips_kern.c)               |                     |
-|     |                                                             |                     |
-|     | 1. Bounds Check: eth + iph + tcph/icmph                     |                     |
-|     | 2. ตรวจสอบ Blacklist Map (LRU Hash)                         |                     |
-|     |    - ถ้าพบ IP และยังไม่หมด TTL: Atomic เพิ่มสถิติ -> XDP_DROP |                     |
-|     | 3. ตรวจสอบประเภทแพ็กเก็ต: TCP SYN หรือ ICMP Echo             |                     |
-|     | 4. นับใน Fixed Window ต่อ IP (rate_tracker Map, Atomic)     |                     |
-|     |    - ถ้า SYN > 100 หรือ ICMP > 50 ต่อ Window (ค่าเริ่มต้น):  |                     |
-|     |      * ถ้า CONF_AUTOBAN_EN=1: ใส่ IP ลง blacklist_map       |                     |
-|     |      * สตรีมแจ้งเตือนลง ips_events (Ring Buffer)           |                     |
-|     |      * คืนค่า XDP_DROP                                      |                     |
-|     | 5. ทราฟฟิกปกติ: คืนค่า XDP_PASS                             |                     |
-|     +-------------------------------------------------------------+                     |
-|            |                                              ^                             |
-|            | Ring Buffer Events (ips_events)              | BPF Map Operations          |
-|            v                                              | (Blacklist / Config)        |
-|     +-------------------------------------------------------------+                     |
-|     | CONTROL PLANE: Go Daemon Agent (cmd/ips-agent)              |                     |
-|     |                                                             |                     |
-|     | [Ringbuf Consumer]  <-- อ่าน Event แจ้งเตือนแบบ Real-time   |                     |
-|     | [TTL Reaper]        --> สแกน blacklist_map ลบ Ban ที่หมดอายุ |                     |
-|     | [Prometheus Server] --> ให้บริการสถิติที่ :2112/metrics     |                     |
-|     | [REST API Server]   --> CRUD จัดการ Blacklist IP            |                     |
-|     +-------------------------------------------------------------+                     |
-+-----------------------------------------------------------------------------------------+
-```
+![สถาปัตยกรรม Smart eBPF IPS: Data Plane และ Control Plane](../../docs/diagrams/week12-ips-arch.svg)
 
 ### 1.2 การเปรียบเทียบประสิทธิภาพ: XDP vs Iptables / Nftables
 เมื่อเซิร์ฟเวอร์ตกอยู่ภายใต้การโจมตีแบบ SYN Flood หรือ Ping Flood ปริมาณสูง:
@@ -74,12 +41,7 @@
 
 ### 1.5 Fixed (Tumbling) Window vs Sliding Window
 โปรแกรมนี้ใช้ **Fixed Window** (หรือ Tumbling Window): นับแพ็กเก็ตตั้งแต่ `window_start_ns` และเมื่อผ่านไปเกิน `window_ns` ก็รีเซ็ตตัวนับเป็นศูนย์แล้วเริ่ม Window ใหม่
-```
-เวลา ->  |------ Window 1 (1s) ------|------ Window 2 (1s) ------|
-SYN      .......................XXXXX|XXXXX......................
-                             100 ตัว  | 100 ตัว
-                       (ไม่เกิน Limit)  (ไม่เกิน Limit) แต่ 200 ตัวภายใน ~0.2s!
-```
+![Fixed Window กับปัญหา boundary burst](../../docs/diagrams/week12-fixed-window.svg)
 - **ข้อดี**: ใช้หน่วยความจำต่อ IP น้อย (timestamp 1 ตัว + ตัวนับ) และอัปเดตได้ด้วย Atomic ไม่กี่คำสั่ง
 - **ข้อเสีย (Boundary Burst)**: ผู้โจมตีที่ยิงคร่อมรอยต่อของสอง Window สามารถส่งได้เกือบ **2 เท่า** ของ Limit ในช่วงเวลาสั้นๆ โดยไม่ถูกจับ
 - **Sliding Window** แก้ปัญหานี้ได้ เช่นแบบ **Two-Bucket Weighted**: เก็บตัวนับของ Window ก่อนหน้า (`prev`) และปัจจุบัน (`curr`) แล้วประมาณอัตราเป็น `curr + prev × (1 - elapsed/window)` — ให้ลองทำในแบบฝึกหัดระดับท้าทาย

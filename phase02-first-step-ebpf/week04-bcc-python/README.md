@@ -22,50 +22,7 @@
 ### 1.1 สถาปัตยกรรมของ BCC (BPF Compiler Collection)
 BCC เป็น Toolkit ที่ช่วยให้นักพัฒนาสามารถเขียนโค้ด eBPF ภาษา C ฝังไว้เป็นสตริงในสคริปต์ระดับสูง (เช่น Python, Lua, C++) โดยมีกระบวนการทำงานดังนี้:
 
-```
-+-----------------------------------------------------------------------------+
-|                                User Space                                   |
-|                                                                             |
-|   Python Script (tcp_v4_latency.py)                                         |
-|        |                                                                    |
-|        v (ส่ง C Code String ไปยัง BCC Library)                              |
-|   Embedded Clang / LLVM Frontend                                            |
-|        | 1. Parse C source code & inject Kernel Headers (<linux/sched.h>, etc.)|
-|        | 2. ทำการคอมไพล์ ณ ขณะรัน (Runtime JIT compilation)                |
-|        v                                                                    |
-|   eBPF Bytecode (ELF format)                                                |
-|        |                                                                    |
-|        v 3. โหลดผ่าน sys_bpf(BPF_PROG_LOAD, ...)                            |
-+--------|--------------------------------------------------------------------+
-|        v                        Kernel Space                                |
-|   +---------------+                                                         |
-|   |   Verifier    | ---> ตรวจสอบความปลอดภัยหน่วยความจำและการวนลูป          |
-|   +-------+-------+                                                         |
-|           | (ผ่าน)                                                          |
-|           v                                                                 |
-|   +---------------+                                                         |
-|   |  JIT Compiler | ---> แปลงเป็น Machine Code ของ CPU สถาปัตยกรรมนั้นๆ    |
-|   +-------+-------+                                                         |
-|           |                                                                 |
-|           v 4. แนบ Probe เข้ากับ Kernel Function Address                     |
-|   [ kprobe: tcp_v4_connect ] <======> [ kretprobe: tcp_v4_connect ]         |
-|                 \                                 /                         |
-|                  \   +-----------------------+   /                          |
-|                   -->| BPF_HASH(start_ts)    |<--                           |
-|                      | บันทึก Start Timestamp|                              |
-|                      +-----------------------+                              |
-|                                  |                                          |
-|                                  v ส่งต่อ Event เมื่อเสร็จสิ้น               |
-|                      +-----------------------+                              |
-|                      | BPF_PERF_OUTPUT       |                              |
-|                      | (Circular Ring Buffer)|                              |
-|                      +-----------------------+                              |
-+----------------------------------|------------------------------------------+
-                                   v Poll ข้อมูลขึ้น User Space
-                          +------------------+
-                          | Python Callback  |
-                          +------------------+
-```
+![สถาปัตยกรรม BCC: Python ส่งโค้ด C ให้ Clang/LLVM คอมไพล์ขณะรัน โหลดผ่าน Verifier/JIT แล้วแนบ kprobe/kretprobe](../../docs/diagrams/week04-bcc-architecture.svg)
 
 ---
 
@@ -93,12 +50,7 @@ BCC เป็น Toolkit ที่ช่วยให้นักพัฒนา�
   - คำนวณความต่างของเวลา: `delta_us = (bpf_ktime_get_ns() - info->ts) / 1000`
   - นำค่า Delta บันทึกลงใน BPF Histogram และส่งรายละเอียด Event ขึ้นสู่ User Space ผ่าน Perf Buffer
 
-```
-Thread A:  [kprobe entry] ---------------------------> [kretprobe exit]
-               |                                            |
-               +---> บันทึก: start_ts[TID_A] = t1            +---> คำนวณ: delta = t2 - t1
-                                                                  ลบ start_ts[TID_A]
-```
+![ลำดับเวลาของ kprobe/kretprobe บน Thread A: บันทึก start_ts แล้วคำนวณ delta และลบ entry](../../docs/diagrams/week04-kprobe-timing.svg)
 
 > [!IMPORTANT]
 > **สิ่งที่วัดได้คือ "เวลาที่ใช้ในฟังก์ชัน `tcp_v4_connect()`" ไม่ใช่ Network Latency**: สำหรับ socket ปกติ `connect()` แบบ blocking จะไปรอ SYN-ACK ภายหลังใน `inet_wait_for_connect()` ซึ่งอยู่ **นอก** `tcp_v4_connect()` ส่วน socket แบบ non-blocking (เช่นที่ `curl` ใช้) ฟังก์ชันคืน `-EINPROGRESS` ทันที ผลที่ได้จึงอยู่ในหลักสิบไมโครวินาที (หาค่า route, จอง source port, ส่ง SYN) ไม่ว่าเซิร์ฟเวอร์จะอยู่ใกล้หรือไกล — ถ้าต้องการ RTT ของ handshake จริง ต้องจับเวลาจาก `tcp_v4_connect` ถึงตอนที่ socket เปลี่ยนเป็น `ESTABLISHED` (แนวทางเดียวกับเครื่องมือ `tcpconnlat` ของ BCC; ดูแบบฝึกหัด)

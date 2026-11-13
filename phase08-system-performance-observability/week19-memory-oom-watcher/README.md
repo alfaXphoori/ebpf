@@ -26,22 +26,7 @@
 
 Linux ใช้ **Demand Paging** — `malloc()`/`mmap()` เพียงแค่จองช่วง *virtual address* (เพิ่ม `total_vm`) แต่ยังไม่มีหน้าแรมจริง เมื่อโปรแกรมแตะหน้านั้นครั้งแรก CPU จะเกิด **Page Fault** แล้วเคอร์เนลจึงจัดสรรหน้าแรมจริง (เพิ่ม RSS):
 
-```
- malloc(50 MB)  ──>  VMA ใหม่ใน mm_struct (total_vm += 50 MB, RSS ยังเท่าเดิม)
-                         │
- *p = 1 (แตะหน้าแรก)  ──>  #PF exception (x86 vector 14)
-                         │
-                         v
- +-----------------------------------------------------------------------+
- | exc_page_fault()                                                      |
- |   -> trace_page_fault_user(address, regs, error_code)  <== eBPF hook  |
- |   -> handle_mm_fault()                                                |
- |        -> จัดสรรหน้า 4 KiB (charge เข้า memory cgroup ของโปรเซส)       |
- |             │                                                         |
- |             └─ ถ้า cgroup เกิน memory.max และ reclaim ไม่ได้           |
- |                  -> mem_cgroup_out_of_memory() -> OOM killer (1.2)     |
- +-----------------------------------------------------------------------+
-```
+![เส้นทาง page fault และ OOM ใน memory cgroup](../../docs/diagrams/week19-page-fault.svg)
 
 `error_code` ของ x86 บอกชนิดของ fault ทีละบิต เช่น bit 1 (`X86_PF_WRITE`) = fault จากการเขียน, bit 0 (`X86_PF_PROT`) = หน้ามีอยู่แล้วแต่สิทธิ์ไม่พอ (เช่น Copy-on-Write) ในแล็บนี้เรานับแยก fault จากการเขียนไว้ด้วย
 

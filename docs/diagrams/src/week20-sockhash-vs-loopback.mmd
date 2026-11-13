@@ -1,0 +1,19 @@
+flowchart TD
+    subgraph SOCK["SOCKHASH Redirect (สัปดาห์นี้)"]
+        R1["① Client: write()/sendmsg()"] --> R2
+        subgraph TBS["② tcp_bpf_sendmsg: copy → sk_msg"]
+            R2["SK_MSG prog (bpf_sk_msg_handler):<br/>lookup peer key<br/>bpf_msg_redirect_hash(BPF_F_INGRESS)"]
+        end
+        R2 -- "ย้าย sk_msg ไปยัง ingress_msg<br/>ของ peer socket โดยตรง" --> R4["③ Server: tcp_bpf_recvmsg<br/>copy sk_msg → user buffer"]
+    end
+
+    subgraph NORMAL["ปกติ (Loopback TCP)"]
+        N1["① Client: write()/sendmsg()"] --> N2["② tcp_sendmsg: copy → skb<br/>TCP header, seq/ack, cwnd<br/>IP header, routing<br/>Netfilter OUTPUT/POSTROUTE<br/>dev_queue_xmit(lo)"]
+        N2 --> N3["③ softirq: netif_rx (lo)<br/>IP rcv, Netfilter PREROUTE<br/>INPUT, tcp_v4_rcv<br/>ส่ง ACK กลับ (อีกรอบ!)"]
+        N3 --> N4["④ Server: recvmsg() copy"]
+    end
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class N2,N3,R2 kern
+    class N1,N4,R1,R4 user

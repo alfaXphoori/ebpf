@@ -13,7 +13,32 @@
     "clusterBkg": "#f8fafc",
     "clusterBorder": "#94a3b8",
     "titleColor": "#0f172a",
-    "edgeLabelBackground": "#ffffff"
+    "edgeLabelBackground": "#ffffff",
+    "actorBkg": "#dbeafe",
+    "actorBorder": "#2563eb",
+    "actorTextColor": "#0f172a",
+    "actorLineColor": "#94a3b8",
+    "signalColor": "#334155",
+    "signalTextColor": "#0f172a",
+    "labelBoxBkgColor": "#1e293b",
+    "labelBoxBorderColor": "#1e293b",
+    "labelTextColor": "#ffffff",
+    "loopTextColor": "#0f172a",
+    "noteBkgColor": "#fef3c7",
+    "noteBorderColor": "#d97706",
+    "noteTextColor": "#0f172a",
+    "activationBkgColor": "#e2e8f0",
+    "activationBorderColor": "#64748b",
+    "sequenceNumberColor": "#ffffff",
+    "packet": {
+      "blockFillColor": "#dbeafe",
+      "blockStrokeColor": "#2563eb",
+      "blockStrokeWidth": "2",
+      "labelColor": "#0f172a",
+      "titleColor": "#0f172a",
+      "byteFontSize": "11px",
+      "labelFontSize": "13px"
+    }
   },
   "flowchart": {
     "htmlLabels": true,
@@ -24,5 +49,26 @@
     "diagramPadding": 28,
     "useMaxWidth": false
   },
-  "themeCSS": ".cluster-label .nodeLabel, .cluster-label span { font-weight: 700; color: #0f172a; } .cluster-label div { max-width: none !important; white-space: nowrap !important; } .cluster rect { stroke-width: 2px; stroke-dasharray: 7 5; } .flowchart-link { stroke-width: 2px; } .edge-pattern-dotted { stroke-dasharray: 3 5 !important; stroke-linecap: round; } .marker { fill: #334155; stroke: #334155; } .edgeLabel p, .edgeLabel span.edgeLabel { background: #ffffff; color: #334155; font-weight: 600; } foreignObject { overflow: visible; }"
+  "themeCSS": ".cluster-label .nodeLabel, .cluster-label span { font-weight: 700; color: #0f172a; } .cluster-label div { max-width: none !important; white-space: nowrap !important; } .cluster rect { stroke-width: 2px; stroke-dasharray: 7 5; } .flowchart-link { stroke-width: 2px; } .edge-pattern-dotted { stroke-dasharray: 3 5 !important; stroke-linecap: round; } .marker { fill: #334155; stroke: #334155; } .edgeLabel p, .edgeLabel span.edgeLabel { background: #ffffff; color: #334155; font-weight: 600; } foreignObject { overflow: visible; } .actor { stroke-width: 2px; } .messageLine0, .messageLine1 { stroke-width: 2px; } .sequenceNumber { font-weight: 700; } .note { stroke-width: 1.5px; } .loopLine { stroke: #64748b; stroke-width: 1.5px; } rect.actor { filter: url(#bbg-shadow); }",
+  "sequence": {
+    "mirrorActors": true,
+    "actorMargin": 60,
+    "boxMargin": 12,
+    "noteMargin": 12,
+    "messageMargin": 38,
+    "diagramMarginX": 30,
+    "diagramMarginY": 20,
+    "useMaxWidth": false
+  },
+  "packet": {
+    "useMaxWidth": false,
+    "rowHeight": 36,
+    "bitWidth": 30,
+    "paddingX": 6,
+    "paddingY": 8
+  },
+  "block": {
+    "useMaxWidth": false,
+    "padding": 12
+  }
 }

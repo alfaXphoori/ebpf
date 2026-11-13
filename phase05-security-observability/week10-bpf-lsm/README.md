@@ -21,31 +21,7 @@ Linux Security Modules (LSM) คือเฟรมเวิร์กของ Li
 
 โมดูลความปลอดภัยดั้งเดิมเช่น SELinux, AppArmor, Smack, และ Tomoyo ล้วนถูกเขียนเป็นโมดูล C ภายในเคอร์เนล ซึ่งการจะเพิ่มกฎหรือเปลี่ยนแปลงพฤติกรรมจำเป็นต้องคอมไพล์เคอร์เนลใหม่หรือใช้ไวยากรณ์เฉพาะของโมดูลนั้นๆ BPF LSM (Linux 5.7+) เปิดให้เราเขียน logic ของ hook เหล่านี้เป็นโปรแกรม eBPF แล้วโหลดได้ขณะระบบทำงาน
 
-```
-+-------------------------------------------------------------------------+
-|                  สถาปัตยกรรม VFS และ LSM HOOK EXECUTION                 |
-|                                                                         |
-|  User Process: open("secret_keys.pem", O_RDONLY)                        |
-|        |                                                                |
-|        v                                                                |
-|  [ System Call: sys_openat() ]                                          |
-|        |                                                                |
-|        v                                                                |
-|  [ Path lookup + DAC Check (may_open): สิทธิ์ rwx ของ user/group ]       |
-|        | ผ่าน DAC                                                       |
-|        v                                                                |
-|  [ VFS: vfs_open() -> do_dentry_open() ]                                |
-|        |                                                                |
-|        v                                                                |
-|  [ security_file_open(file) ]  <-- fentry (audit mode) ดักตรงนี้ได้      |
-|        |                                                                |
-|        +---> AppArmor / IMA ... (ตามลำดับใน lsm=)                       |
-|        +---> BPF LSM Hook: restrict_secret_files(file)                  |
-|                 |                                                       |
-|                 |-- คืนค่า 0      --> อนุญาต ให้เปิดไฟล์ต่อไป               |
-|                 \-- คืนค่า -EPERM --> open() ล้มเหลว errno=EPERM         |
-+-------------------------------------------------------------------------+
-```
+![เส้นทาง open() ผ่าน VFS และ LSM hook](../../docs/diagrams/week10-lsm-hook-path.svg)
 
 ### 1.2 ทำไม BPF LSM ถึงเหมาะกับงาน Prevention มากกว่า Kprobes / Tracepoints
 ก่อนหน้าที่มี BPF LSM นักพัฒนาความปลอดภัยมักใช้ Kprobes หรือ Tracepoints เช่น `sys_enter_openat` ในการตรวจสอบพฤติกรรม แต่พบข้อจำกัดในเชิงการป้องกัน (Prevention):

@@ -1,0 +1,31 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    A["① แอปพลิเคชันใน cgroup w14-sock-enforce<br/>connect(fd, {AF_INET, 127.0.0.1, 2323})"]
+    B["② __sys_connect() -> inet_stream_connect()<br/>/ inet_dgram_connect()"]
+
+    subgraph KERNEL["③ BPF_CGROUP_RUN_PROG_INET4_CONNECT"]
+        C["ctx = struct bpf_sock_addr<br/>{ user_ip4, user_port, type }"]
+        D["sock4_connect():<br/>lookup blocked_ips / blocked_ports"]
+    end
+
+    E["connect() = -1, errno = EPERM"]
+    F["ทำงานต่อ"]
+    G["④ tcp_v4_connect():<br/>เลือก source port, ส่ง SYN ..."]
+
+    A --> B
+    B -- "sk->sk_prot->pre_connect()<br/>(tcp_v4_pre_connect / udp_pre_connect)" --> C
+    C --> D
+    D -- "return 0" --> E
+    D -- "return 1" --> F
+    F -- "(อนุญาต)" --> G
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class A user
+    class B,C,D,E kern
+    class F,G net

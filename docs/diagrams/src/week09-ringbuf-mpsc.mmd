@@ -1,0 +1,33 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    subgraph KERNEL["① Producers: eBPF Probe บนหลาย CPU"]
+        P0["eBPF Probe (CPU 0)"]
+        P1["eBPF Probe (CPU 1)"]
+        P2["eBPF Probe (CPU 2)"]
+        RES["bpf_ringbuf_reserve()"]
+    end
+
+    subgraph MAPS["② Shared Memory"]
+        RB[("Shared Single Ring Buffer (16 MB)<br/>[Header][Event 1][Header][Event 2]..")]
+    end
+
+    subgraph USER["③ Consumer เดียว"]
+        U["User-space Controller<br/>(main.go Agent)"]
+    end
+
+    P0 --> RES
+    P1 --> RES
+    P2 --> RES
+    RES --> RB
+    RB -- "epoll / ringbuf.Reader" --> U
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class P0,P1,P2,RES kern
+    class RB map
+    class U user

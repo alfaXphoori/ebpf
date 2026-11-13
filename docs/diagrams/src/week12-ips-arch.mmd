@@ -1,0 +1,41 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    NIC(["Ingress Packets (NIC Driver)"])
+
+    subgraph KERNEL["DATA PLANE: eBPF XDP Driver Hook (ips_kern.c)"]
+        K1["① Bounds Check: eth + iph + tcph/icmph"]
+        K2["② ตรวจสอบ Blacklist Map (LRU Hash)<br/>- ถ้าพบ IP และยังไม่หมด TTL:<br/>Atomic เพิ่มสถิติ -> XDP_DROP"]
+        K3["③ ตรวจสอบประเภทแพ็กเก็ต:<br/>TCP SYN หรือ ICMP Echo"]
+        K4["④ นับใน Fixed Window ต่อ IP<br/>(rate_tracker Map, Atomic)<br/>- ถ้า SYN #gt; 100 หรือ ICMP #gt; 50 ต่อ Window (ค่าเริ่มต้น):<br/>• ถ้า CONF_AUTOBAN_EN=1: ใส่ IP ลง blacklist_map<br/>• สตรีมแจ้งเตือนลง ips_events (Ring Buffer)<br/>• คืนค่า XDP_DROP"]
+        K5["⑤ ทราฟฟิกปกติ: คืนค่า XDP_PASS"]
+    end
+
+    subgraph USER["CONTROL PLANE: Go Daemon Agent (cmd/ips-agent)"]
+        C1["Ringbuf Consumer<br/>อ่าน Event แจ้งเตือนแบบ Real-time"]
+        C2["TTL Reaper<br/>สแกน blacklist_map ลบ Ban ที่หมดอายุ"]
+        C3["Prometheus Server<br/>ให้บริการสถิติที่ :2112/metrics"]
+        C4["REST API Server<br/>CRUD จัดการ Blacklist IP"]
+    end
+
+    NIC --> K1
+    K1 --> K2
+    K2 --> K3
+    K3 --> K4
+    K4 --> K5
+    K4 -- "Ring Buffer Events (ips_events)" --> C1
+    C2 -. "BPF Map Operations<br/>(Blacklist / Config)" .-> K2
+    C4 -. "BPF Map Operations<br/>(Blacklist / Config)" .-> K2
+    C2 ~~~ C4
+    C4 ~~~ C3
+    C3 ~~~ C1
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class NIC net
+    class K1,K2,K3,K4,K5 kern
+    class C1,C2,C3,C4 user

@@ -1,0 +1,20 @@
+flowchart TD
+    subgraph USER["user space (Go)"]
+        U1["mmap(arena fd)  user_vm_start<br/>0x7a23c2b3e000"]
+    end
+
+    subgraph KERNEL["kernel (BPF program)"]
+        K1["kern_vm_start<br/>(เคอร์เนลจองให้ 4 GiB+guard)"]
+    end
+
+    PG[("page 0 │ page 1 │ …<br/>same pages")]
+
+    U1 == "pointer ที่เก็บใน arena<br/>= user address (64 บิต)" ==> PG
+    K1 == "JIT ใช้ kern_vm_start<br/>+ (32 บิตล่างของ pointer)" ==> PG
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    class U1 user
+    class K1 kern
+    class PG map

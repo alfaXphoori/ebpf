@@ -1,0 +1,28 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    subgraph RX["PACKET INGRESS (RX PATH)"]
+        NRX["NIC Driver RX Buffer"] --> XDP["eBPF XDP HOOK<br/>(ctx: struct xdp_md, Wire-Speed)"]
+        XDP -- "XDP_DROP" --> DROP["ทำลายทิ้งทันที"]
+        XDP -- "XDP_PASS" --> SKB["Allocate struct sk_buff"]
+        XDP -- "XDP_TX" --> HP["สะท้อนแพ็กเก็ตกลับสายแลน<br/>Hairpin Out"]
+        SKB --> TCI["TC Ingress Hook (clsact)"]
+        TCI --> STK["Linux TCP/IP Stack & Routing"]
+    end
+
+    subgraph TX["PACKET EGRESS (TX PATH)"]
+        TCE["TC Egress Hook (clsact)<br/>(ctx: struct __sk_buff, QoS & Marking)"] --> NTX["NIC Driver TX Buffer (Wire)"]
+    end
+
+    STK --> TCE
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class NRX,NTX,HP net
+    class XDP,DROP,SKB,TCI,STK,TCE kern

@@ -23,50 +23,7 @@
 
 เมื่อข้อมูลเดินทางเข้าสู่ระบบคอมพิวเตอร์ผ่านทาง NIC (Network Interface Card) เส้นทางการประมวลผลของเคอร์เนลจะแบ่งออกเป็น 2 ช่วงใหญ่ คือ **Top Half (Hardware Interrupt)** และ **Bottom Half (Software Interrupt - SoftIRQ)**:
 
-```
-[ Physical Network Wire / veth ]
-              |
-              v
-     +-----------------+
-     | NIC Hardware    |  1. รับสัญญาณไฟฟ้า/แสง เขียนข้อมูลลง Host RAM ผ่าน DMA
-     +-----------------+     (Direct Memory Access) เข้าสู่ RX Ring Buffer
-              |
-              v (Hardware Interrupt / Top Half)
-     +-----------------+
-     | CPU Hard IRQ    |  2. CPU รับสัญญาณขัดจังหวะ (Hard IRQ), สั่งปิด Interrupt บน NIC
-     +-----------------+     และสั่ง Schedule NAPI Poll (ส่งต่อให้ Bottom Half)
-              |
-              v (SoftIRQ: NET_RX_SOFTIRQ)
-     +-----------------+
-     | NAPI Poll Loop  |  3. เคอร์เนลวนลูปอ่านแพ็กเก็ตจาก RX Ring Buffer ตาม Budget (เช่น 64 pkts)
-     +-----------------+     สร้างโครงสร้างข้อมูล "struct sk_buff" ให้กับทุกแพ็กเก็ต
-              |
-              |---> [ จุดที่ XDP (eBPF) เข้ามาดักจับ! ก่อน sk_buff ถูกสร้าง ]
-              v
-     +-----------------+
-     | L2 Processing   |  4. ถอดรหัส Ethernet Frame, ตรวจสอบว่าเป็น Bridge Interface หรือไม่
-     | (br_handle_frame)     (ถ้าเป็น Bridge จะค้นตาราง FDB แล้ว Switch ไปยังพอร์ตปลายทาง)
-     +-----------------+
-              |
-              v
-     +-----------------+
-     | L3 IP Layer     |  5. ip_rcv() ตรวจสอบ Checksum, ทำ Routing Decision (FORWARD หรือ LOCAL IN)
-     | (Netfilter /    |     ผ่าน Netfilter Hooks (PREROUTING, INPUT)
-     |  iptables)      |
-     +-----------------+
-              |
-              v
-     +-----------------+
-     | L4 Transport    |  6. tcp_v4_rcv() / udp_rcv() ตรวจสอบ TCP State Machine, Window, Sequence
-     | (TCP / UDP)     |     และนำข้อมูลใส่ลงใน Socket Receive Queue ของโปรเซส
-     +-----------------+
-              |
-              v
-     +-----------------+
-     | User Space App  |  7. โปรเซสผู้รับตื่นจาก epoll_wait() และเรียก recvmsg() / read()
-     | (Socket Read)   |     คัดลอกข้อมูลจาก Kernel Memory สู่ User Memory Buffer (Data Copy)
-     +-----------------+
-```
+![เส้นทางรับแพ็กเก็ตใน Linux 7 ขั้น: NIC → Hard IRQ → NAPI → L2 → L3 → L4 → User Space พร้อมจุด XDP hook](../../docs/diagrams/week02-rx-path.svg)
 
 ---
 
@@ -110,20 +67,7 @@
 
 ### สคริปต์จำลองห้องทดลอง: `bridge_router_lab.sh`
 
-```
-+-----------------------------------------+
-| netns w02-sw   (แทน "Host/Gateway")      |
-|   Linux Bridge: br0 (10.20.0.1/24)      |
-+---------+-----------+-----------+-------+
-          |           |           |
-      veth-br1    veth-br2    veth-br3
-          |           |           |
-      veth-ns1    veth-ns2    veth-ns3
-    +---------+ +---------+ +---------+
-    | w02-ns1 | | w02-ns2 | | w02-ns3 |
-    |   .11   | |   .12   | |   .13   |
-    +---------+ +---------+ +---------+
-```
+![topology ของแล็บ: namespace w02-sw มี Linux Bridge br0 ต่อกับ w02-ns1..3 ด้วย veth pair](../../docs/diagrams/week02-bridge-topology.svg)
 
 > **ทำไม Bridge ไม่อยู่บน Host?** หากสร้าง `br0` ใน Host (root) Namespace สคริปต์จะไปเพิ่ม route `10.20.0.0/24` และแก้ sysctl ของเครื่องจริง และบนเครื่องที่มี Docker ทราฟฟิกที่ผ่าน Bridge อาจถูก `br_netfilter` ส่งเข้า iptables chain `FORWARD` ซึ่ง Docker ตั้ง policy เป็น `DROP` ทำให้ ping ข้าม namespace ไม่ผ่านแบบงงๆ การย้าย Bridge เข้า namespace `w02-sw` จึงทั้งปลอดภัยและได้ผลลัพธ์ที่ทำซ้ำได้ ส่วนแนวคิด L2 Switching ยังเหมือนเดิมทุกประการ
 

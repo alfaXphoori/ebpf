@@ -1,0 +1,12 @@
+sequenceDiagram
+    autonumber
+    participant C as Client<br/>10.10.2.10
+    participant L as LB (ns w08-lb, eth0)<br/>10.10.1.1 + 10.10.2.1, ip_forward=1
+    participant B as Backend<br/>10.10.1.2/.3
+    C->>L: SYN dst=VIP:80
+    Note over L: XDP: hash -> backend, flows[...] = VIP<br/>DNAT dst=VIP->10.10.1.2, MAC, csum
+    L->>B: XDP_TX
+    Note over B: route 10.10.2.0/24<br/>via 10.10.1.1
+    B->>L: SYN-ACK src=10.10.1.2
+    Note over L: TCX ingress: flows hit -> SNAT src=..->VIP<br/>kernel forward (+ TC egress mark/stat)
+    L->>C: SYN-ACK src=VIP:80

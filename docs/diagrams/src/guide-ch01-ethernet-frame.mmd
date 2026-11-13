@@ -1,0 +1,11 @@
+block-beta
+    columns 4
+    T["ETHERNET II FRAME<br/>STRUCTURE (14 BYTES)"]:4
+    A["Dest MAC<br/>Offset 0 – 5<br/>6 Bytes"] B["Src MAC<br/>Offset 6 – 11<br/>6 Bytes"] C["Type<br/>Offset 12 – 13<br/>2 Bytes"] D["Payload<br/>(IPv4 / IPv6 / ARP)<br/>Offset 14 – N<br/>46 - 1500 Bytes"]
+
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class A,B,C net
+    class D user
+    class T trig

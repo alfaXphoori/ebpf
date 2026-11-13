@@ -1,0 +1,22 @@
+flowchart TD
+    subgraph FN["do_sys_openat2"]
+        F1["call bpf_trampoline_XXXX"]
+        F2["push rbp<br/>... (เนื้อฟังก์ชันเดิม)<br/>ret"]
+        F1 ~~~ F2
+    end
+
+    subgraph TRAMP["bpf_trampoline_XXXX (JIT-generated)"]
+        T1["① save args (rdi, rsi, rdx)<br/>→ stack (u64 ctx[])"] --> T2["② __bpf_prog_enter()<br/>(rcu, migrate_disable, [stats])"]
+        T2 --> T3["③ call fentry prog(ctx)"] --> T4["④ __bpf_prog_exit()"]
+        subgraph FEXIT["ถ้ามี fexit:"]
+            T5["⑤ call ต่อจากจุด patch<br/>ของฟังก์ชันจริง"] --> T6["⑥ save return value (rax)<br/>→ ctx[nr_args]"] --> T7["⑦ call fexit prog(ctx)"]
+        end
+        T4 --> T5
+        T7 --> T8["⑧ ret"]
+    end
+
+    F1 --> T1
+    T8 --> F1
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    class F1,F2,T1,T2,T3,T4,T5,T6,T7,T8 kern

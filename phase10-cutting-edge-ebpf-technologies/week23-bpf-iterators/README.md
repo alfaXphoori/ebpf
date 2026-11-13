@@ -27,32 +27,12 @@
 
 ### 1.1 ปัญหาของ procfs
 
-```
-ps / top (userspace)                          Kernel
----------------------                         ---------------------------------
-getdents64("/proc")            ----------->   list PIDs
-for each pid:
-   openat("/proc/<pid>/status") ---------->   lookup task, alloc file
-   read(...)                    ---------->   format ~60 lines เป็นข้อความ
-   close(...)                   ---------->   free
-parse text -> เลือก 4 ฟิลด์
-```
+![ลำดับ syscall ของ ps/top เมื่อเดิน /proc](../../docs/diagrams/week23-procfs-walk.svg)
 จำนวน syscall โตตามจำนวนโปรเซส (O(N) ครั้ง × 3+ syscall) และงานจัดรูปข้อความส่วนใหญ่ถูกทิ้ง ในการทดลองของเรา (หัวข้อ 4.3) การเดิน `/proc` ใช้ **321 `openat()` + 1,089 `read()`** เพื่อให้ได้ข้อมูล ~160 โปรเซส
 
 ### 1.2 BPF Iterator ทำงานอย่างไร
 
-```
-Userspace (Go)                      Kernel
------------------                   ----------------------------------------------------------
-BPF_PROG_LOAD (iter/task) -------> verifier ตรวจ: ctx = struct bpf_iter__task (BTF)
-BPF_LINK_CREATE ----------------->  สร้าง iter link (ยังไม่ทำงาน)
-BPF_ITER_CREATE -----------------> สร้าง anon file + seq_file (1 fd)    <-- link.Iter.Open()
-read(fd) ------------------------>  seq_file ->start/next: เดิน task ถัดไป
-                                     -> เรียก dump_task(ctx{meta, task})  ทีละ task
-                                     -> BPF_SEQ_PRINTF() เขียนลง seq buffer
-                     <-------------  คืนข้อความใน buffer
-read(fd) ... จนได้ 0 (EOF)          -> สุดท้ายเรียกโปรแกรมอีกครั้งด้วย task == NULL
-```
+![ลำดับการทำงานของ BPF iterator ระหว่าง Go กับเคอร์เนล](../../docs/diagrams/week23-iter-flow.svg)
 
 จุดสำคัญ:
 - **ไม่มีอะไรรันเบื้องหลัง:** iterator ทำงาน **เฉพาะตอนที่มีคน `read()`** และทุกครั้งที่ `Open()` ใหม่ (`BPF_ITER_CREATE`) เคอร์เนลจะเริ่มเดินตั้งแต่ต้นอีกรอบ — จึงใช้ link เดิม `Open()` ซ้ำเพื่อ "รีเฟรช" ได้

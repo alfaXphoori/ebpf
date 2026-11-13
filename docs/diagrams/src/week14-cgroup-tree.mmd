@@ -1,0 +1,23 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    ROOT["/sys/fs/cgroup<br/>ROOT cgroup: ผูกที่นี่ = มีผลกับ<br/>ทุกโปรเซสบนเครื่อง (อันตราย!)"]
+    SYS["system.slice<br/>systemd services"]
+    USR["user.slice<br/>login sessions ของผู้ใช้"]
+    W14["w14-sock-enforce<br/>cgroup ทดลองของแล็บนี้<br/>(สร้างและลบโดยโปรแกรม)"]
+    P["cgroup/connect4: sock4_connect"]
+
+    ROOT --> SYS
+    ROOT --> USR
+    ROOT --> W14
+    P -- "ผูกด้วย BPF link, flag #quot;multi#quot;" --> W14
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class ROOT,SYS,USR trig
+    class W14 net
+    class P kern

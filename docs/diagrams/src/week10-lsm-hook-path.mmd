@@ -1,0 +1,39 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    U["① User Process:<br/>open(#quot;secret_keys.pem#quot;, O_RDONLY)"]
+
+    subgraph KERNEL["Kernel: VFS และ LSM Hook Execution"]
+        S["② System Call: sys_openat()"]
+        D["③ Path lookup + DAC Check (may_open):<br/>สิทธิ์ rwx ของ user/group"]
+        V["④ VFS: vfs_open() -> do_dentry_open()"]
+        SEC["⑤ security_file_open(file)"]
+        AA["AppArmor / IMA ...<br/>(ตามลำดับใน lsm=)"]
+        B{"⑥ BPF LSM Hook:<br/>restrict_secret_files(file)"}
+        OK["อนุญาต ให้เปิดไฟล์ต่อไป"]
+        NO["open() ล้มเหลว errno=EPERM"]
+    end
+
+    FE["fentry (audit mode)"]
+
+    U --> S
+    S --> D
+    D -- "ผ่าน DAC" --> V
+    V --> SEC
+    SEC --> AA
+    SEC --> B
+    B -- "คืนค่า 0" --> OK
+    B -- "คืนค่า -EPERM" --> NO
+    FE -. "ดักตรงนี้ได้" .-> SEC
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class U user
+    class S,D,V,SEC,AA,B,NO kern
+    class OK net
+    class FE trig

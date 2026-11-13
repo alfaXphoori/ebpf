@@ -30,24 +30,7 @@
 
 ตั้งแต่ราว Linux 5.17 เคอร์เนลเริ่มส่ง **เหตุผลการดรอป** (`enum skb_drop_reason`) ไปพร้อมกับ `kfree_skb_reason()` ทำให้เรารู้ได้ว่าแพ็กเก็ตถูกทิ้งเพราะไม่มี socket รอรับ (`NO_SOCKET`), checksum ผิด (`TCP_CSUM`), ถูก Netfilter ทิ้ง (`NETFILTER_DROP`) ฯลฯ
 
-```
-[ NIC / veth / lo ] --> [ ip_rcv ] --> [ Netfilter ] --> [ tcp_v4_rcv / __udp4_lib_rcv ] --> [ Socket ]
-         |                  |                |                       |                            |
-         | (ring full)      | (bad hdr)      | (DROP rule)           | (no listener)              | consume_skb()
-         v                  v                v                       v                            v
-   +--------------------------------------------------------------------------+         skb:consume_skb
-   |      kfree_skb_reason(skb, SKB_DROP_REASON_xxx)                          |
-   |        └──> tracepoint skb:kfree_skb  (skbaddr, location, rx_sk,         |
-   |                                         protocol, reason)                |
-   +-----------------------------------|--------------------------------------+
-                                       v
-                        [ eBPF: trace_kfree_skb (dropwatch.c) ]
-                          |  1) อัปเดตตัวนับใน BPF_MAP_TYPE_HASH (ต่อ reason)
-                          |  2) ส่ง event รายแพ็กเก็ตผ่าน BPF_MAP_TYPE_RINGBUF
-                          v
-                        [ Go Control Plane: แปลง reason ด้วย Kernel BTF,
-                          แปลง location ด้วย /proc/kallsyms ]
-```
+![เส้นทางการทิ้งแพ็กเก็ตผ่าน kfree_skb_reason สู่ eBPF](../../docs/diagrams/week13-drop-path.svg)
 
 ### 1.2 `enum skb_drop_reason` ไม่ใช่ ABI ที่คงที่ และมี "subsystem" ซ่อนอยู่
 

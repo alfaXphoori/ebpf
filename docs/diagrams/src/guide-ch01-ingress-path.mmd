@@ -1,0 +1,35 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 560
+title: LINUX KERNEL INGRESS PACKET DATA PATH
+---
+flowchart TD
+    W(["สัญญาณเคเบิล / ใยแก้วนำแสง"])
+    S1["① ฮาร์ดแวร์การ์ดเครือข่าย (Physical NIC Hardware)<br/>- ตรวจสอบ Frame Check Sequence (FCS / CRC32) ตัดทิ้งหากพัง<br/>- ส่งข้อมูลตรงเข้า RAM โฮสต์ผ่าน DMA (Direct Memory Access)<br/>- เขียน Descriptor ลงใน NIC RX Ring Buffer ในหน่วยความจำ RAM"]
+    S2["② ขัดจังหวะการทำงานของ CPU (Hard IRQ)<br/>- NIC ยิงสัญญาณ Hardware Interrupt ไปยัง CPU Core<br/>- Top-Half Interrupt Handler ทำงาน: ปิด IRQ ชั่วคราว<br/>เพื่อกันถล่ม (Interrupt Storm)<br/>- สั่งเรียก napi_schedule() แล้วส่งต่องานให้ SoftIRQ ทันที"]
+    S3["③ การประมวลผลช่วงล่าง (SoftIRQ: NET_RX_SOFTIRQ) & NAPI Poll<br/>- เธรด ksoftirqd/x หรือ Bottom-Half Context ตื่นขึ้นมา<br/>- วนลูปประมวลผลฟังก์ชัน napi_poll()<br/>เพื่อดึงแพ็กเก็ตจาก RX Ring แบบ Batch"]
+    H1["HOOK POINT 1: XDP (eXpress Data Path)<br/>- ทำงานที่ระดับไดรเวอร์การ์ดเครือข่าย (Native Mode)<br/>หรือชิป NIC (Offload)<br/>- ข้อมูลยังเป็น Raw Memory Buffer<br/>(ยังไม่ได้จอง sk_buff ให้เปลือง RAM)<br/>- ทางเลือก 5 อย่าง: XDP_DROP, XDP_TX,<br/>XDP_REDIRECT, XDP_PASS, XDP_ABORTED<br/>- ความเร็วสูงสุดระดับ 40,000,000+ packets/sec<br/>สำหรับการบล็อก DDoS"]
+    S4["④ การจองหน่วยความจำระดับเคอร์เนล: Allocate sk_buff (Socket Buffer)<br/>- เคอร์เนลสร้าง Data Structure ขนาดใหญ่ (ราว 240 ไบต์ + ข้อมูลแพ็กเก็ต)<br/>- ทำ GRO (Generic Receive Offload) รวมแพ็กเก็ตย่อยเป็นก้อนใหญ่เพื่อลดภาระ CPU<br/>- เรียกฟังก์ชัน netif_receive_skb()"]
+    H2["HOOK POINT 2: TC Ingress (Traffic Control / cls_bpf)<br/>- ทำงานกับ struct __sk_buff<br/>(มองเห็น Metadata, VLAN, Socket Mark, cgroups)<br/>- สามารถแก้ไขข้อมูล (Packet Mangling),<br/>Redirect, Mirror, หรือ Drop ได้<br/>- ทำงานได้ทั้งขาเข้า (Ingress) และขาออก (Egress)"]
+    S5["⑤ Netfilter / Connection Tracking (Conntrack)<br/>- ผ่าน PREROUTING Chain (iptables / nftables nat table)<br/>- ตรวจสอบสถานะการเชื่อมต่อ (Stateful Connection Tracking)"]
+    S6["⑥ การตัดสินใจเชิงเส้นทาง (Routing Decision)<br/>- เคอร์เนลเรียก ip_route_input_noref() เพื่อตรวจปลายทาง<br/>- ถ้าปลายทางคือเครื่องอื่น → ส่งเข้า FORWARD Chain แล้วยิงออกทาง TC Egress<br/>- ถ้าปลายทางคือเครื่องนี้ (Local) → ส่งต่อไปยัง Transport Layer"]
+    S7["⑦ Netfilter INPUT Chain<br/>- ผ่านกฎไฟร์วอลล์ระดับโฮสต์ (iptables -A INPUT ...)"]
+    S8["⑧ โปรโตคอล Transport Layer (tcp_v4_rcv() / udp_rcv())<br/>- ตรวจสอบ Checksum L4<br/>- ค้นหา Socket ที่เปิดรออยู่ผ่าน 4-Tuple (Src IP, Dst IP, Src Port, Dst Port)<br/>- บริหารจัดการ Window Size และ TCP State Machine"]
+    S9["⑨ เข้าสู่คิว Socket Receive Buffer (sk_receive_queue)<br/>- แพ็กเก็ตถูกคัดลอกเข้า Buffer ของโปรเซสปลายทาง<br/>- ส่งสัญญาณปลุก (Wake up) โปรเซสที่รออยู่ที่ epoll_wait() หรือ select()"]
+    S10["⑩ แอปพลิเคชันระดับ User Space<br/>- โปรแกรม (เช่น Nginx, Envoy, Go Web Server) เรียก Syscall read() หรือ recvmsg()<br/>- ข้อมูลถูกคัดลอกข้ามขอบเขต Kernel Space → User Space RAM"]
+
+    W --> S1 --> S2 --> S3 --> H1
+    H1 -- "กรณีส่งต่อ: XDP_PASS" --> S4
+    S4 --> H2
+    H2 -- "กรณีส่งต่อ: TC_ACT_OK" --> S5
+    S5 --> S6 --> S7 --> S8 --> S9 --> S10
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    class W,S1 net
+    class S2,S3,S4,S5,S6,S7,S8,S9 kern
+    class H1,H2 map
+    class S10 user

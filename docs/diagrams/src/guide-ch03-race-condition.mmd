@@ -1,0 +1,15 @@
+sequenceDiagram
+    title RACE CONDITION SCENARIO
+    autonumber
+    participant C0 as CPU 0
+    participant M as Counter ใน Map
+    participant C1 as CPU 1
+    C0->>M: อ่านค่า Counter
+    M-->>C0: 100
+    C1->>M: อ่านค่า Counter
+    M-->>C1: 100
+    Note over C0: คำนวณ (100 + 1 = 101)
+    Note over C1: คำนวณ (100 + 1 = 101)
+    C0->>M: เขียนค่า (101)
+    C1->>M: เขียนค่า (101)
+    Note over C0,C1: ผลลัพธ์: มี 2 แพ็กเก็ตเข้ามา แต่ Counter เพิ่มขึ้นแค่ 1 เท่านั้น! (ข้อมูลสูญหาย)

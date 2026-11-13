@@ -1,0 +1,31 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 440
+---
+flowchart TD
+    subgraph USER["① USERSPACE (Golang Control Plane)"]
+        C["counter.c<br/>(C Source Code)"] -- "go generate (bpf2go)<br/>(Invokes Clang -target bpf)" --> ELF["bpf2go ELF<br/>Embedded in Go"]
+        ELF -- "bpf(BPF_PROG_LOAD)<br/>bpf(BPF_MAP_CREATE)" --> MAIN["main.go: rlimit.RemoveMemlock()<br/>→ loadBpfObjects() → link.Tracepoint()"]
+    end
+
+    subgraph KERNEL["② LINUX KERNEL SPACE"]
+        V["eBPF Verifier<br/>- ตรวจสอบความปลอดภัยหน่วยความจำ<br/>ป้องกัน NULL pointer dereference<br/>- ตรวจสอบความลึกและลูปของการทำงาน<br/>(Max complexity check)"]
+        V --> J["JIT Compiler (Native asm)"]
+        J --> H["Hook: tracepoint/sched/sched_process_exec"]
+        EV(["Event Trigger:<br/>Process execs program"]) --> H
+        H --> LK["bpf_map_lookup_elem(&exec_count, 0)<br/>__sync_fetch_and_add(val, 1)"]
+        H --> PK["bpf_printk(#quot;exec by PID %d#quot;, pid)"]
+        PK --> TP["/sys/kernel/tracing/trace_pipe"]
+    end
+
+    MAIN -- "Syscall bpf()" --> V
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class C,ELF,MAIN user
+    class V,J,H,LK,PK,TP kern
+    class EV trig

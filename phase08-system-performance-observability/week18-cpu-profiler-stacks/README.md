@@ -30,27 +30,7 @@
 
 แทนที่จะจับเวลาทุกฟังก์ชัน (instrumentation ซึ่งแพงมาก) Sampling Profiler จะ "ถ่ายภาพ" สิ่งที่ CPU กำลังทำอยู่เป็นระยะ ๆ:
 
-```
- CPU 0 timeline  ──┬──────────┬──────────┬──────────┬──────────┬──>  (ทุก ~10.1 ms ที่ 99 Hz)
-                   │          │          │          │          │
-            hrtimer interrupt (PERF_COUNT_SW_CPU_CLOCK ครบรอบ)
-                   │
-                   v
- +-------------------------------------------------------------------------+
- | perf_event overflow  ->  เรียกโปรแกรม eBPF SEC("perf_event")              |
- |                                                                         |
- |   ctx->regs = register ของงานที่ "กำลังรันอยู่" ตอนถูกขัดจังหวะ             |
- |                                                                         |
- |   bpf_get_stackid(ctx, &stack_traces, 0)                 -> kernel stack |
- |   bpf_get_stackid(ctx, &stack_traces, BPF_F_USER_STACK)  -> user stack   |
- |        (เคอร์เนลเดิน frame pointer / ORC แล้วเก็บ IP ลง STACK_TRACE map)   |
- |                                                                         |
- |   stack_counts[{pid, kstack_id, ustack_id, comm}] += 1                  |
- +-------------------------------------------------------------------------+
-                   │  (ทุกอย่างรวมผลในเคอร์เนล)
-                   v
- Userspace (Go): อ่าน stack_counts + stack_traces -> symbolize -> folded -> flamegraph.pl
-```
+![การทำงานของ sampling profiler ด้วย perf_event](../../docs/diagrams/week18-sampling-profiler.svg)
 
 ถ้าฟังก์ชัน `A` ใช้ CPU 30% ของเวลา โดยเฉลี่ยจะมี sample ประมาณ 30% ที่ตกอยู่ใน `A` — ยิ่งเก็บนาน ค่าประมาณยิ่งแม่น (ความคลาดเคลื่อนเชิงสถิติลดลงตามรากที่สองของจำนวน sample)
 
@@ -143,14 +123,7 @@ fd, _ := unix.PerfEventOpen(&attr, -1, cpu, -1, unix.PERF_FLAG_FD_CLOEXEC)
 **Kernel:** `/proc/kallsyms` ให้ (ที่อยู่, ชนิด, ชื่อ) ของทุกสัญลักษณ์ เราเก็บเฉพาะ text symbol (`t/T/w/W`) เรียงตามที่อยู่ แล้วใช้ binary search หา "สัญลักษณ์ที่อยู่ก่อนหน้าใกล้ที่สุด" (ต้องรันเป็น root ไม่เช่นนั้น `kptr_restrict` จะซ่อนที่อยู่เป็น 0)
 
 **User:** ขั้นตอนแปลง IP ของโปรเซสเป็นชื่อฟังก์ชัน:
-```
-IP 0x5581c2a3b17e
-  └─ /proc/<pid>/maps: 5581c2a3b000-5581c2a3c000 r-xp 00001000 ... /path/busy
-       file offset = IP - start + offset
-  └─ ELF program header PT_LOAD ที่ครอบ offset นี้ -> vaddr = offset - p.Off + p.Vaddr
-  └─ .symtab / .dynsym: หาฟังก์ชัน (STT_FUNC) ที่ addr <= vaddr < addr+size
-       => "hot_path_a"
-```
+![ขั้นตอนแปลง IP เป็นชื่อฟังก์ชันฝั่ง user](../../docs/diagrams/week18-symbolize.svg)
 
 **Folded format** คือหนึ่งบรรทัดต่อหนึ่ง stack เรียงจาก **เฟรมนอกสุด (root) ไปในสุด (leaf)** คั่นด้วย `;` ตามด้วยจำนวน sample:
 ```

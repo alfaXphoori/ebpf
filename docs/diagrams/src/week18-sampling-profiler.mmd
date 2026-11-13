@@ -1,0 +1,44 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 420
+---
+flowchart TD
+    CPU["① CPU 0 timeline: ทุก ~10.1 ms ที่ 99 Hz"]
+    HR["② hrtimer interrupt<br/>(PERF_COUNT_SW_CPU_CLOCK ครบรอบ)"]
+
+    subgraph KERNEL["③ perf_event overflow -> เรียกโปรแกรม eBPF SEC(#quot;perf_event#quot;)"]
+        R["ctx->regs = register ของงานที่ #quot;กำลังรันอยู่#quot;<br/>ตอนถูกขัดจังหวะ"]
+        S["bpf_get_stackid(ctx, &stack_traces, 0)<br/>-> kernel stack<br/>bpf_get_stackid(ctx, &stack_traces, BPF_F_USER_STACK)<br/>-> user stack<br/>(เคอร์เนลเดิน frame pointer / ORC<br/>แล้วเก็บ IP ลง STACK_TRACE map)"]
+        C["stack_counts[{pid, kstack_id, ustack_id, comm}] += 1"]
+        ST[("stack_traces<br/>STACK_TRACE map")]
+        SC[("stack_counts")]
+    end
+
+    subgraph USER["④ Userspace (Go)"]
+        U1["อ่าน stack_counts + stack_traces"]
+        U2["symbolize"]
+        U3["folded"]
+        U4["flamegraph.pl"]
+    end
+
+    CPU --> HR
+    HR --> R
+    R --> S
+    S --> C
+    S -.-> ST
+    C -.-> SC
+    SC -- "ทุกอย่างรวมผลในเคอร์เนล" --> U1
+    ST -.-> U1
+    U1 --> U2
+    U2 --> U3
+    U3 --> U4
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef map fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class CPU trig
+    class HR,R,S,C kern
+    class ST,SC map
+    class U1,U2,U3,U4 user

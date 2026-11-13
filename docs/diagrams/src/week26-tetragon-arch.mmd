@@ -1,0 +1,40 @@
+flowchart TD
+    subgraph KERNEL["kernel"]
+        subgraph BASE["base sensor"]
+            B1["tracepoint sched_process_exec<br/>kprobe acct_process / wake_up_new_task"]
+        end
+        subgraph GENS["generic sensors (ตาม policy)"]
+            H["① hook = kprobe_multi (kprobes:)<br/>| BPF LSM (lsmhooks:) | fmod_ret (Override)"]
+            E["② #42;_event"]
+            SE["③ #42;_setup_event → #42;_process_event"]
+            FA["④ #42;_filter_arg<br/>(matchArgs/matchBinaries ประเมิน #quot;ใน kernel#quot;)"]
+            AC["⑤ #42;_actions (Post | Sigkill | Override | ...)<br/>→ #42;_output"]
+            H --> E
+            E -- "tail call" --> SE --> FA --> AC
+        end
+    end
+
+    subgraph USER["user space"]
+        P["policies/#42;.yaml"]
+        subgraph DAEMON["tetragon daemon (privileged container)"]
+            PH["policy handler → แปลง YAML เป็น BPF program<br/>+ ค่าใน map (selectors)"]
+            PC["process cache (execve_map)<br/>→ เติม parent / exec_id / arguments"]
+            GR["gRPC server :54321"]
+        end
+        TG["tetra getevents -o compact / json"]
+        P -- "tetra tracingpolicy add" --> PH
+        GR --> TG
+    end
+
+    B1 -- "event" --> PC
+    AC -- "⑥ event (ring buffer / perf buffer)" --> PC
+    AC ~~~ P
+    P ~~~ PC
+    PC ~~~ GR
+
+    classDef kern fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#0f172a
+    classDef user fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    classDef trig fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a
+    class PH,PC,GR user
+    class B1,H,E,SE,FA,AC kern
+    class P,TG trig
