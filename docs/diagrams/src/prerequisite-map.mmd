@@ -1,61 +1,72 @@
+---
+config:
+  flowchart:
+    wrappingWidth: 70
+    nodeSpacing: 12
+    rankSpacing: 48
+    padding: 8
+---
 flowchart TD
-    W01["W01 Packet bytes + netns"]
-    W02["W02 Bridge/Router + data path"]
-    W03["W03 bpftool + bpftrace"]
-    W04["W04 BCC + Python"]
-    W05["W05 CO-RE + bpf2go"]
-    W06["W06 Maps + Verifier + test_run"]
-    W07["W07 XDP parsing"]
-    W08["W08 XDP LB + TC egress"]
-    W09["W09 Ring Buffer + uprobes"]
-    W10["W10 BPF LSM"]
-    W11["W11 Prometheus exporter"]
-    W12["W12 Capstone IPS"]
-    W13["W13 Dropwatch"]
-    W14["W14 cgroup connect4"]
-    W15["W15 Reverse shell guard"]
-    W16["W16 eBPF integrity audit"]
-    W17["W17 biolatency"]
-    W18["W18 CPU profiler + stacks"]
-    W19["W19 OOM watcher"]
-    W20["W20 sockops + sk_msg"]
-    W21["W21 AF_XDP"]
-    W22["W22 fentry/fexit"]
-    W23["W23 BPF iterators"]
-    W24["W24 kfuncs + Arena"]
-    W25["W25 struct_ops + sched_ext"]
-    W26["W26 Tetragon + Cilium"]
+    W01["<b>W01</b><br/>Packet bytes + netns"]
+    W02["<b>W02</b><br/>Bridge/Router + data path"]
+    W03["<b>W03</b><br/>bpftool + bpftrace"]
+    W04["<b>W04</b><br/>BCC + Python"]
+    W05["<b>W05</b><br/>CO-RE + bpf2go"]
+    W06["<b>W06</b><br/>Maps + Verifier + test_run"]
+    W07["<b>W07</b><br/>XDP parsing"]
+    W08["<b>W08</b><br/>XDP LB + TC egress"]
+    W09["<b>W09</b><br/>Ring Buffer + uprobes"]
+    W10["<b>W10</b><br/>BPF LSM"]
+    W11["<b>W11</b><br/>Prometheus exporter"]
+    W12["<b>W12</b><br/>Capstone IPS"]
+    W13["<b>W13</b><br/>Dropwatch"]
+    W14["<b>W14</b><br/>cgroup connect4"]
+    W15["<b>W15</b><br/>Reverse shell guard"]
+    W16["<b>W16</b><br/>eBPF integrity audit"]
+    W17["<b>W17</b><br/>biolatency"]
+    W18["<b>W18</b><br/>CPU profiler + stacks"]
+    W19["<b>W19</b><br/>OOM watcher"]
+    W20["<b>W20</b><br/>sockops + sk_msg"]
+    W21["<b>W21</b><br/>AF_XDP"]
+    W22["<b>W22</b><br/>fentry/fexit"]
+    W23["<b>W23</b><br/>BPF iterators"]
+    W24["<b>W24</b><br/>kfuncs + Arena"]
+    W25["<b>W25</b><br/>struct_ops + sched_ext"]
+    W26["<b>W26</b><br/>Tetragon + Cilium"]
 
-    W01 -- "netns + veth" --> W02
-    W02 -- "จุด hook ใน data path" --> W07
-    W03 -- "kprobe + map แบบ bpftrace" --> W04
-    W04 -- "เลิก runtime compile สู่ CO-RE" --> W05
-    W05 -- "bpf2go + vmlinux.h" --> W06
-    W06 -- "map + test_run" --> W07
-    W06 -- "map + CO-RE" --> W09
-    W06 -- "HASH/ARRAY map" --> W17
-    W07 -- "XDP parsing" --> W08
-    W07 -- "XDP firewall" --> W11
-    W07 -- "XDP redirect" --> W21
-    W11 -- "Prometheus exporter" --> W12
-    W09 -- "ring buffer" --> W12
-    W09 -- "ring buffer" --> W10
-    W09 -- "ring buffer" --> W13
-    W09 -- "ring buffer" --> W14
-    W09 -- "ring buffer + CO-RE" --> W15
-    W09 -- "ring buffer" --> W19
-    W13 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
-    W14 -- "ใช้ .o เป็นโปรแกรมทดสอบ" --> W16
-    W10 -- "fentry" --> W16
-    W10 -- "fentry" --> W22
-    W10 -- "BPF LSM" --> W26
-    W14 -- "แนบโปรแกรมกับ cgroup" --> W20
-    W17 -- "tracing ประสิทธิภาพ" --> W18
-    W18 -- "stack + kallsyms" --> W19
-    W22 -- "BTF tracing program" --> W23
-    W22 -- "BTF + BPF_PROG" --> W24
-    W24 -- "kfuncs" --> W25
-    W08 -- "TC/TCX สู่ Cilium" --> W26
+    W01 --> W02
+    W02 --> W07
+    W03 --> W04
+    W04 --> W05
+    W05 --> W06
+    W06 --> W07
+    W06 --> W09
+    W06 --> W17
+    W07 --> W08
+    W07 --> W11
+    W07 --> W21
+    W11 --> W12
+    W09 --> W12
+    W09 --> W10
+    W09 --> W13
+    W09 --> W14
+    W09 --> W15
+    W09 --> W19
+    W13 --> W16
+    W14 --> W16
+    W10 --> W16
+    W10 --> W22
+    W10 --> W26
+    W14 --> W20
+    W17 --> W18
+    W18 --> W19
+    W22 --> W23
+    W22 --> W24
+    W24 --> W25
+    W08 --> W26
+
+    %% Layout only: keeps W26 next to W12 so no arrow runs under another box
+    W12 ~~~ W26
 
     classDef net fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a
     classDef core fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
