@@ -13,13 +13,12 @@ run "make test 2>&1 | grep -v -e 'vmlinux.h' -e '^ *[0-9]* |' -e '^ *|' -e 'warn
 shot_end
 
 LOG=$(mktemp)
-bg "$LOG" sudo ./bin/trampoline-tracer -comm gnucat
+bg "$LOG" sudo ./bin/trampoline-tracer -comm cat
 sleep 2.5
 
 shot_begin 3-trampoline-inspect "Terminal 2 — ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)"
-note "เครื่องนี้มี agent อื่นรัน cat อยู่ตลอด จึงใช้ gnucat (GNU cat ที่มากับ Ubuntu 26.04) แทน cat เพื่อให้เห็นเฉพาะเหตุการณ์ของเรา"
-run gnucat /etc/hosts '>' /dev/null
-run gnucat /nonexistent_file
+run cat /etc/hosts '>' /dev/null
+run cat /nonexistent_file
 run sudo bpftool prog show name trace_openat2_entry
 show "sudo bpftool link show | grep -A1 tracing" \
      "sudo bpftool link show | grep -B1 -A2 -E 'attach_type trace_(fentry|fexit)' | grep -v '^--' | head -n 12"
@@ -28,14 +27,14 @@ shot_end
 sleep 2.5
 
 bg_stop '^./bin/trampoline-tracer'
-shot_begin 2-tracer-cat "Terminal 1 — sudo ./bin/trampoline-tracer -comm gnucat (gnucat /etc/hosts + /nonexistent_file)"
-prompt_only sudo ./bin/trampoline-tracer -comm gnucat
+shot_begin 2-tracer-cat "Terminal 1 — sudo ./bin/trampoline-tracer -comm cat (cat /etc/hosts + /nonexistent_file)"
+prompt_only sudo ./bin/trampoline-tracer -comm cat
 append "$LOG"
 shot_end
 rm -f "$LOG"
 
-shot_begin 4-bench "Terminal — วัด overhead: REPS=3 ./bench/run_bench.sh (เครื่องมีงานอื่นรันพร้อมกัน)"
-run REPS=3 ./bench/run_bench.sh
+shot_begin 4-bench "Terminal — วัด overhead: REPS=9 ./bench/run_bench.sh (เครื่องว่าง)"
+run REPS=9 ./bench/run_bench.sh
 run sysctl kernel.bpf_stats_enabled
 shot_end
 

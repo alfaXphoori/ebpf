@@ -145,6 +145,24 @@ def trim(lines):
     return head + ["\x1b[2m... (ตัด %d บรรทัดเพื่อความกระชับ) ...\x1b[0m" % gap] + tail
 
 
+def expand_tabs(line, width=8):
+    """Expand tabs to 8-column stops, counting only visible characters."""
+    if "\t" not in line:
+        return line
+    out, col = [], 0
+    for tok in re.split(r"(\x1b\[[0-9;]*m)", line):
+        if tok.startswith("\x1b["):
+            out.append(tok)
+            continue
+        for ch in tok:
+            if ch == "\t":
+                n = width - col % width
+                out.append(" " * n); col += n
+            else:
+                out.append(ch); col += 1
+    return "".join(out)
+
+
 def visible_len(line):
     return len(SGR_RE.sub("", line))
 
@@ -170,7 +188,7 @@ def to_html(text):
     st = State()
     lines = []
     for raw in text.split("\n"):
-        lines.extend(wrap(raw))
+        lines.extend(wrap(expand_tabs(raw)))
     lines = trim(lines)
     body = []
     for line in lines:
