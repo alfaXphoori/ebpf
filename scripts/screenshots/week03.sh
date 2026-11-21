@@ -86,10 +86,13 @@ sleep 1
 
 export W0=$(date +%H:%M:%S)
 shot_begin 2-workload "Terminal 2 — สร้าง exec และทราฟฟิก TCP"
-run ls -la
-run whoami
-run "curl -s https://example.com > /dev/null"
-run "curl -s https://www.google.com > /dev/null"
+# Terminal 2 really runs as the unprivileged system user `nobody` (the prompt
+# says so), so the screenshot does not show the capture machine's login.
+as_nobody() { SHOT_USER=nobody show "$1" "sudo -u nobody bash -c 'cd /tmp && $1'"; }
+as_nobody "ls -la /usr/sbin/*.bt | head -5"
+as_nobody whoami
+as_nobody "curl -s https://example.com > /dev/null"
+as_nobody "curl -s https://www.google.com > /dev/null"
 shot_end
 export W1=$(date +%H:%M:%S)
 
