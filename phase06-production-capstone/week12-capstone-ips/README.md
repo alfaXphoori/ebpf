@@ -349,6 +349,30 @@ sudo ip netns exec w12ips curl -s localhost:2112/metrics | grep "^ips_"
 
 > **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 — veth `w12b` ใน Namespace `w12ips` ตามขั้นตอนที่ 3 (โค้ดสี ANSI ใน Log ถูกตัดออกเพื่อให้อ่านง่าย)
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week12.sh`](../../scripts/screenshots/week12.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week12-1-unit-tests.png)
+
+*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
+
+![Terminal 2 — Ping Flood / SYN Burst จาก w12atk และตรวจผ่าน REST API + /metrics](screenshots/week12-2-autoban-attack.png)
+
+*ภาพที่ 2: Terminal 2 — Ping Flood / SYN Burst จาก w12atk และตรวจผ่าน REST API + /metrics*
+
+![Terminal 1 — sudo ip netns exec w12ips ./bin/ips-agent (Auto-Ban mode, หลัง Ctrl+C)](screenshots/week12-3-autoban-agent.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ip netns exec w12ips ./bin/ips-agent (Auto-Ban mode, หลัง Ctrl+C)*
+
+![Rate-limit-only mode (-autoban=false): ping 100 pps จาก w12atk + log ของ agent](screenshots/week12-4-ratelimit-only.png)
+
+*ภาพที่ 4: Rate-limit-only mode (-autoban=false): ping 100 pps จาก w12atk + log ของ agent*
+
+<!-- screenshots:end -->
+
 ### 4.1 ผลลัพธ์ `make test`
 ```text
 cd cmd/ips-agent && go generate ./...

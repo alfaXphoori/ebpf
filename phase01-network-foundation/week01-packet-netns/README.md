@@ -305,6 +305,30 @@ sudo ./lab_netns.sh clean
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), Python 3, iproute2, ethtool
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week01.sh`](../../scripts/screenshots/week01.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — sudo ./lab_netns.sh setup](screenshots/week01-1-setup.png)
+
+*ภาพที่ 1: Terminal — sudo ./lab_netns.sh setup*
+
+![Terminal — sudo ./lab_netns.sh test](screenshots/week01-2-connectivity.png)
+
+*ภาพที่ 2: Terminal — sudo ./lab_netns.sh test*
+
+![Terminal 2 — ส่งทราฟฟิกจาก w01-ns1](screenshots/week01-3-traffic.png)
+
+*ภาพที่ 3: Terminal 2 — ส่งทราฟฟิกจาก w01-ns1*
+
+![Terminal 1 — raw_sniffer.py ใน w01-ns2](screenshots/week01-4-sniffer.png)
+
+*ภาพที่ 4: Terminal 1 — raw_sniffer.py ใน w01-ns2*
+
+<!-- screenshots:end -->
+
 ### 4.1 การตั้งค่า Topology และทดสอบ Connectivity (`sudo ./lab_netns.sh setup && sudo ./lab_netns.sh test`)
 ```text
 ===> Setting up isolated Network Namespaces (w01-ns1 <-> w01-ns2)...

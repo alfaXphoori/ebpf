@@ -283,6 +283,26 @@ sudo bpftool prog show name trace_kfree_skb
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0
 > บันทึกเมื่อ 2026-10-28 ขณะที่มีแล็บอื่นรันอยู่บนเครื่องเดียวกัน จึงมี event พื้นหลังปนอยู่
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week13.sh`](../../scripts/screenshots/week13.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make all (bpf2go + go build)](screenshots/week13-1-build.png)
+
+*ภาพที่ 1: Terminal — make all (bpf2go + go build)*
+
+![Terminal 2 — สร้าง drop ที่รู้สาเหตุบน loopback](screenshots/week13-2-trigger-drops.png)
+
+*ภาพที่ 2: Terminal 2 — สร้าง drop ที่รู้สาเหตุบน loopback*
+
+![Terminal 1 — sudo ./bin/dropwatch -ip-only](screenshots/week13-3-dropwatch.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ./bin/dropwatch -ip-only*
+
+<!-- screenshots:end -->
+
 ### 4.1 การคอมไพล์ (`make all`)
 ```text
 ===> Generating Go bindings from dropwatch.c via bpf2go...

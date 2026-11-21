@@ -208,6 +208,30 @@ sudo strace -f -c -e trace=bpf,openat,read ./bin/task-iter -quiet -runs 1
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 — เครื่องมีงานอื่นรันอยู่ระหว่างทดลอง
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week23.sh`](../../scripts/screenshots/week23.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (1 แถวต่อ 1 โปรเซส)](screenshots/week23-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test (1 แถวต่อ 1 โปรเซส)*
+
+![Terminal — sudo ./bin/task-iter (ตัดแถวกลางออก)](screenshots/week23-2-task-iter.png)
+
+*ภาพที่ 2: Terminal — sudo ./bin/task-iter (ตัดแถวกลางออก)*
+
+![Terminal — รันซ้ำ 3 ครั้ง (-quiet) และนับ syscall ด้วย strace -c](screenshots/week23-3-quiet-strace.png)
+
+*ภาพที่ 3: Terminal — รันซ้ำ 3 ครั้ง (-quiet) และนับ syscall ด้วย strace -c*
+
+![Terminal — เทียบกับ ps และ pin iterator แล้วอ่านด้วย cat (ขั้นตอนที่ 4-5)](screenshots/week23-4-ps-pin.png)
+
+*ภาพที่ 4: Terminal — เทียบกับ ps และ pin iterator แล้วอ่านด้วย cat (ขั้นตอนที่ 4-5)*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test`
 ```text
 === RUN   TestTaskIterOneRowPerProcess

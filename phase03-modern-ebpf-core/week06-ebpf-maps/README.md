@@ -305,6 +305,34 @@ make test            # go generate + go test -exec sudo -v ./...  (หัวข�
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), Go 1.26, clang 21, cilium/ebpf v0.16.0
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week06.sh`](../../scripts/screenshots/week06.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make clean && make all](screenshots/week06-1-build.png)
+
+*ภาพที่ 1: Terminal — make clean && make all*
+
+![Terminal 2 — สร้างโหลด getpid() 50,000 ครั้ง + bpftool](screenshots/week06-2-load.png)
+
+*ภาพที่ 2: Terminal 2 — สร้างโหลด getpid() 50,000 ครั้ง + bpftool*
+
+![Terminal 1 — sudo ./bin/syscall-top (กด Ctrl+C)](screenshots/week06-3-syscall-top.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ./bin/syscall-top (กด Ctrl+C)*
+
+![Terminal — Verifier Log จริง (verifier_fail)](screenshots/week06-4-verifier.png)
+
+*ภาพที่ 4: Terminal — Verifier Log จริง (verifier_fail)*
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week06-5-test.png)
+
+*ภาพที่ 5: Terminal — make test (BPF_PROG_TEST_RUN)*
+
+<!-- screenshots:end -->
+
 ### 4.1 การคอมไพล์ (`make clean && make all`)
 `go generate ./...` สร้าง Bindings ให้ทั้ง 3 Package (โฟลเดอร์หลัก, `maps_testrun/`, `verifier_fail/`) — สังเกตว่า `verifier_fail.c` ซึ่งมีบั๊กถูก **คอมไพล์ผ่าน** ตามปกติ บั๊กจะถูกพบตอนโหลดเข้าเคอร์เนลเท่านั้น
 ```text

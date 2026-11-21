@@ -336,6 +336,30 @@ sudo bpftool link show | grep -A1 perf_event # ต้องมี 1 link ต่�
 >
 > หมายเหตุ: path ของไฟล์ `-folded` ในบรรทัด `Wrote ...`/`Render: ...` ถูกย่อจากไดเรกทอรีชั่วคราวบนเครื่องทดสอบให้เหลือแค่ชื่อไฟล์ ส่วนอื่นเป็นผลลัพธ์จริงทั้งหมด
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week18.sh`](../../scripts/screenshots/week18.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — ตรวจ frame pointer ของ workload](screenshots/week18-1-objdump.png)
+
+*ภาพที่ 1: Terminal — ตรวจ frame pointer ของ workload*
+
+![Terminal — profile เฉพาะ PID ของ busy](screenshots/week18-2-pid-profile.png)
+
+*ภาพที่ 2: Terminal — profile เฉพาะ PID ของ busy*
+
+![Terminal — profile ทั้งระบบขณะ busy ทำงาน](screenshots/week18-3-system-wide.png)
+
+*ภาพที่ 3: Terminal — profile ทั้งระบบขณะ busy ทำงาน*
+
+![Terminal — สร้าง Flame Graph ด้วย flamegraph.py](screenshots/week18-4-flamegraph.png)
+
+*ภาพที่ 4: Terminal — สร้าง Flame Graph ด้วย flamegraph.py*
+
+<!-- screenshots:end -->
+
 ### 4.1 Profile เฉพาะ PID (`./bin/busy 10 &` แล้ว `sudo ./bin/cpu-profiler -p $! -d 6s -folded out.txt`)
 ```text
 busy: pid=4077337, burning one CPU for 10 s (hot_path_a:hot_path_b = 2:1)
@@ -502,9 +526,9 @@ busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;s
 
 ### 4.5 Flame Graph ที่ได้จริง (render ด้วย `flamegraph.py`)
 
-Capture รอบใหม่บนเครื่องเดียวกัน (Linux 7.0.0-38, 99 Hz) แล้ว render ด้วย `python3 flamegraph.py` ตัวเลข sample จึงต่างจากข้อ 4.1/4.3 เล็กน้อย
+Capture รอบใหม่บนเครื่องเดียวกัน (99 Hz) แล้ว render ด้วย `python3 flamegraph.py` ตัวเลข sample จึงต่างจากข้อ 4.1/4.3 เล็กน้อย: กราฟ (ก) มาจากการรันของ [`scripts/screenshots/week18.sh`](../../scripts/screenshots/week18.sh) บน Linux 7.0.0-43 (ภาพที่ 2 และ 4 ด้านบน) ส่วนกราฟ (ข) บันทึกบน Linux 7.0.0-38
 
-**(ก) เฉพาะ PID ของ `busy`** — `-p <pid> -d 6s` ได้ 594 samples: `hot_path_a` 402 : `hot_path_b` 192 ≈ **2.09 : 1** (ค่าที่ออกแบบไว้ 2 : 1) ไฟล์ folded ต้นฉบับอยู่ที่ [`images/cpu-busy.folded`](images/cpu-busy.folded) ให้ลอง render เองได้
+**(ก) เฉพาะ PID ของ `busy`** — `-p <pid> -d 6s` ได้ 577 samples: `hot_path_a` 379 : `hot_path_b` 198 ≈ **1.91 : 1** (ค่าที่ออกแบบไว้ 2 : 1) ไฟล์ folded ต้นฉบับอยู่ที่ [`images/cpu-busy.folded`](images/cpu-busy.folded) ให้ลอง render เองได้
 
 ![busy on-CPU flame graph](images/cpu-busy.svg)
 

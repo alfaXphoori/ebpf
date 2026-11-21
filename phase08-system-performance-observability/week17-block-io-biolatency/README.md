@@ -328,6 +328,26 @@ iostat -x 1                         # ค่า r_await / w_await เป็น�
 >
 > เครื่องทดสอบมีงานอื่นทำงานอยู่ด้วย (เช่น การคอมไพล์) จึงมี request พื้นหลังปนอยู่ในผล
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week17.sh`](../../scripts/screenshots/week17.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — ตรวจ BTF และดิสก์ก่อนรัน](screenshots/week17-1-precheck.png)
+
+*ภาพที่ 1: Terminal — ตรวจ BTF และดิสก์ก่อนรัน*
+
+![Terminal 2 — สร้าง Disk I/O ระหว่าง biolatency ทำงาน](screenshots/week17-2-workload.png)
+
+*ภาพที่ 2: Terminal 2 — สร้าง Disk I/O ระหว่าง biolatency ทำงาน*
+
+![Terminal 1 — sudo ./bin/biolatency -duration 10s](screenshots/week17-3-histogram.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ./bin/biolatency -duration 10s*
+
+<!-- screenshots:end -->
+
 ### 4.1 Workload ที่ใช้ (รันระหว่าง biolatency ทำงาน)
 ```text
 $ sudo gnudd if=/dev/sda of=/dev/null bs=4k count=5000 iflag=direct

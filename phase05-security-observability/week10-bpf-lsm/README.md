@@ -297,6 +297,30 @@ sudo cat lab-files/secret.txt   # root: ได้รับการยกเว�
 > - หัวข้อ 4.1–4.2 capture **ก่อน** เปิด BPF LSM (LSM=`lockdown,capability,landlock,yama,apparmor,ima,evm`)
 > - หัวข้อ 4.3 capture **หลัง** เพิ่ม `lsm=...,bpf` ใน GRUB และรีบูต (LSM=`lockdown,capability,landlock,yama,apparmor,bpf,ima,evm`) — การบล็อกจริงของโค้ดเวอร์ชันนี้ทดสอบครบแล้ว
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week10.sh`](../../scripts/screenshots/week10.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน AUDIT mode](screenshots/week10-1-audit-user.png)
+
+*ภาพที่ 1: Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน AUDIT mode*
+
+![Terminal 1 — sudo ./bin/lsm_file_guard -mode=audit -protect lab-files/app.key](screenshots/week10-2-audit-guard.png)
+
+*ภาพที่ 2: Terminal 1 — sudo ./bin/lsm_file_guard -mode=audit -protect lab-files/app.key*
+
+![Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน ENFORCE mode (BPF LSM)](screenshots/week10-3-enforce-user.png)
+
+*ภาพที่ 3: Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน ENFORCE mode (BPF LSM)*
+
+![Terminal 1 — sudo ./bin/lsm_file_guard -protect lab-files/app.key (auto -> ENFORCE)](screenshots/week10-4-enforce-guard.png)
+
+*ภาพที่ 4: Terminal 1 — sudo ./bin/lsm_file_guard -protect lab-files/app.key (auto -> ENFORCE)*
+
+<!-- screenshots:end -->
+
 ### 4.1 Audit mode: `sudo ./bin/lsm_file_guard -protect lab-files/app.key` แล้วรันคำสั่งในขั้นตอนที่ 4
 (ตัดบรรทัดของ process อื่นในเครื่องออก: `go` build ของงานอื่นเปิด `/usr/share/go-1.26/src/runtime/secret.go`, `secret_asm.go`, `secret_amd64.s` และถูกรายงานเป็น `name` match ด้วย -- อีกหนึ่ง false positive จริง)
 ```text

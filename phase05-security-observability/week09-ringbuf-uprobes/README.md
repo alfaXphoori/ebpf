@@ -278,6 +278,26 @@ wget -q -O /dev/null https://example.com             # GnuTLS: ไม่คว�
 
 > **Environment**: Ubuntu 26.04.1 LTS (`Linux ce-desk 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), OpenSSL `libssl.so.3`, curl 8.18.0, Python 3.14, clang 21, Go 1.26, cilium/ebpf v0.16.0
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week09.sh`](../../scripts/screenshots/week09.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal 2 — สร้าง exec และ TLS traffic (ขั้นตอนที่ 3–4)](screenshots/week09-1-traffic.png)
+
+*ภาพที่ 1: Terminal 2 — สร้าง exec และ TLS traffic (ขั้นตอนที่ 3–4)*
+
+![Terminal 1 — sudo ./bin/ringbuf_events (sched_process_exec + SSL_write uprobes)](screenshots/week09-2-ringbuf-events.png)
+
+*ภาพที่ 2: Terminal 1 — sudo ./bin/ringbuf_events (sched_process_exec + SSL_write uprobes)*
+
+![sys_enter_execve + taskset ทุก CPU (ข้อสังเกต Linux 7.0)](screenshots/week09-3-syscall-hook.png)
+
+*ภาพที่ 3: sys_enter_execve + taskset ทุก CPU (ข้อสังเกต Linux 7.0)*
+
+<!-- screenshots:end -->
+
 ### 4.1 `sudo ./bin/ringbuf_events` (exec hook = `sched_process_exec`) ขณะรันคำสั่งในขั้นตอนที่ 3–4
 เครื่อง lab มี process อื่นทำงานอยู่พร้อมกัน จึง **ตัดบรรทัด `[EXECVE]` ของ process อื่นที่ไม่เกี่ยวข้องออก** (บรรทัดที่เหลือไม่ได้แก้ไข)
 ```text

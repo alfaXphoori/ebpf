@@ -260,6 +260,34 @@ Part 1 ต้องผ่านปกติ ส่วน Part 2 ต้องล�
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 (8 CPUs), clang 21.1.8, Go 1.26, bpftool v7.7.0 (libbpf v1.7), cilium/ebpf v0.22.0 + patch ในหัวข้อ 2.5
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week24.sh`](../../scripts/screenshots/week24.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (kfunc + verifier + arena, BPF_PROG_TEST_RUN)](screenshots/week24-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test (kfunc + verifier + arena, BPF_PROG_TEST_RUN)*
+
+![Terminal — sudo ./bin/kfunc-arena](screenshots/week24-2-kfunc-arena.png)
+
+*ภาพที่ 2: Terminal — sudo ./bin/kfunc-arena*
+
+![Terminal — verifier log เต็มของ leak_task](screenshots/week24-3-verifier-log.png)
+
+*ภาพที่ 3: Terminal — verifier log เต็มของ leak_task*
+
+![Terminal — ค้นหา kfunc บนเครื่อง (หัวข้อ 1.5)](screenshots/week24-4-kfunc-discovery.png)
+
+*ภาพที่ 4: Terminal — ค้นหา kfunc บนเครื่อง (หัวข้อ 1.5)*
+
+![Terminal — addr_space_cast ใน arena_bpfel.o](screenshots/week24-5-addr-space-cast.png)
+
+*ภาพที่ 5: Terminal — addr_space_cast ใน arena_bpfel.o*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test`
 ```text
 === RUN   TestQueryTaskSelf

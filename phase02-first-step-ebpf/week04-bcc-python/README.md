@@ -313,6 +313,26 @@ eBPF session concluded safely. All kernel maps freed.
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), BCC / python3-bpfcc 0.35.0, linux-headers-7.0.0-38-generic
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week04.sh`](../../scripts/screenshots/week04.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — ตรวจความพร้อมของ BCC](screenshots/week04-1-prereq.png)
+
+*ภาพที่ 1: Terminal — ตรวจความพร้อมของ BCC*
+
+![Terminal 2 — สร้าง Outbound TCP connections](screenshots/week04-2-traffic.png)
+
+*ภาพที่ 2: Terminal 2 — สร้าง Outbound TCP connections*
+
+![Terminal 1 — sudo python3 tcp_v4_latency.py](screenshots/week04-3-tracker.png)
+
+*ภาพที่ 3: Terminal 1 — sudo python3 tcp_v4_latency.py*
+
+<!-- screenshots:end -->
+
 ### 4.1 ผลลัพธ์การรัน `sudo python3 tcp_v4_latency.py` และสร้าง Outbound TCP Connections
 คำสั่งทดสอบใน Terminal 2: `curl` ไปยัง `http://1.1.1.1`, `https://example.com`, `https://www.google.com`, `https://github.com` และ Python เชื่อมต่อ `127.0.0.1:22` พร้อมพิมพ์ `getsockname()` ออกมาเทียบ (`ACTUAL local ('127.0.0.1', 55002)` — ตรงกับ SRC port ที่ eBPF รายงาน)
 ```text

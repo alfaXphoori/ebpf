@@ -370,6 +370,38 @@ pgrep -f 'ext-run' || echo "no workload left"
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), 12th Gen Intel Core i3-12100 (8 logical CPUs), clang 21.1.8, Go 1.26, cilium/ebpf v0.22.0 — เครื่องมีงานอื่นรันอยู่ระหว่างทดลอง ตัวเลขจึงต่างกันในแต่ละรอบ
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week25.sh`](../../scripts/screenshots/week25.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (attach จริงในโหมด SWITCH_PARTIAL แล้ว detach)](screenshots/week25-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test (attach จริงในโหมด SWITCH_PARTIAL แล้ว detach)*
+
+![Terminal — sudo ./bin/scx-w25 -duration 5s (FIFO)](screenshots/week25-2-fifo-run.png)
+
+*ภาพที่ 2: Terminal — sudo ./bin/scx-w25 -duration 5s (FIFO)*
+
+![Terminal 2 — มุมมองจาก bpftool ระหว่าง scheduler ทำงาน](screenshots/week25-3-bpftool-view.png)
+
+*ภาพที่ 3: Terminal 2 — มุมมองจาก bpftool ระหว่าง scheduler ทำงาน*
+
+![Terminal — make demo-nice (FIFO vs vtime, spinner 4 ตัวบน CPU 3)](screenshots/week25-4-demo-nice.png)
+
+*ภาพที่ 4: Terminal — make demo-nice (FIFO vs vtime, spinner 4 ตัวบน CPU 3)*
+
+![Terminal — make demo-stall (watchdog eject)](screenshots/week25-5-demo-stall.png)
+
+*ภาพที่ 5: Terminal — make demo-stall (watchdog eject)*
+
+![Terminal — make demo-error (scx_bpf_error eject) + ยืนยันว่าเครื่องกลับสู่สภาพเดิม](screenshots/week25-6-demo-error.png)
+
+*ภาพที่ 6: Terminal — make demo-error (scx_bpf_error eject) + ยืนยันว่าเครื่องกลับสู่สภาพเดิม*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test`
 
 ```text

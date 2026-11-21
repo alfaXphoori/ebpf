@@ -167,6 +167,26 @@ sudo ip netns exec w11cli curl -s http://10.211.0.2:2112/metrics | grep ebpf_xdp
 
 > **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 — รันบน veth `w11b` ใน Namespace `w11srv` ตามขั้นตอนที่ 3
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week11.sh`](../../scripts/screenshots/week11.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week11-1-unit-tests.png)
+
+*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
+
+![Terminal 2 — สร้างทราฟฟิกจาก w11cli และดึง /metrics](screenshots/week11-2-metrics.png)
+
+*ภาพที่ 2: Terminal 2 — สร้างทราฟฟิกจาก w11cli และดึง /metrics*
+
+![Terminal 1 — sudo ip netns exec w11srv ./bin/metrics_exporter (หลัง Ctrl+C)](screenshots/week11-3-exporter-log.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ip netns exec w11srv ./bin/metrics_exporter (หลัง Ctrl+C)*
+
+<!-- screenshots:end -->
+
 ### 4.1 ผลลัพธ์ `make test`
 ```text
 go generate ./...

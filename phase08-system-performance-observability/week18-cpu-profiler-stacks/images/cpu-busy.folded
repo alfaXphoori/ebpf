@@ -1,2 +1,3 @@
-busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin 402
-busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;spin 192
+busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin 378
+busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin;asm_common_interrupt_[k];common_interrupt_[k];irq_exit_rcu_[k];__irq_exit_rcu_[k];handle_softirqs_[k];net_rx_action_[k];__napi_poll_[k];rtl8169_poll_[k];napi_complete_done_[k];netif_receive_skb_list_internal_[k];__netif_receive_skb_list_core_[k];ip_list_rcv_[k];ip_sublist_rcv_[k];nf_hook_slow_list_[k];nf_hook_slow_[k];ipv4_conntrack_in_[k];nf_conntrack_in_[k] 1
+busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;spin 198

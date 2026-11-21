@@ -263,6 +263,34 @@ sudo rmdir /sys/fs/cgroup/w20-sockops-lab  # ลบได้เมื่อไ�
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 (8 threads), clang 21, Go 1.26, cilium/ebpf v0.16.0
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week20.sh`](../../scripts/screenshots/week20.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (load/attach + end-to-end redirect)](screenshots/week20-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test (load/attach + end-to-end redirect)*
+
+![Terminal 2 — nc ใน cgroup + bpftool ขณะ connection เปิดอยู่](screenshots/week20-2-nc-bpftool.png)
+
+*ภาพที่ 2: Terminal 2 — nc ใน cgroup + bpftool ขณะ connection เปิดอยู่*
+
+![Terminal 1 — sudo ./bin/sockops-accelerator (ระหว่างขั้นตอนที่ 3-5)](screenshots/week20-3-agent-dashboard.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ./bin/sockops-accelerator (ระหว่างขั้นตอนที่ 3-5)*
+
+![Terminal 2 — tcpdump -i lo: baseline vs accelerated](screenshots/week20-4-tcpdump-lo.png)
+
+*ภาพที่ 4: Terminal 2 — tcpdump -i lo: baseline vs accelerated*
+
+![Terminal 2 — tcpbench/iperf3 ใน cgroup w20-sockops-lab: baseline vs accelerated](screenshots/week20-5-benchmark.png)
+
+*ภาพที่ 5: Terminal 2 — tcpbench/iperf3 ใน cgroup w20-sockops-lab: baseline vs accelerated*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test`
 ```text
 === RUN   TestLoadPrograms

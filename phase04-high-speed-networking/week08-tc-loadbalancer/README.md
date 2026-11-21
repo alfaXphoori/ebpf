@@ -500,6 +500,26 @@ rm -rf /tmp/w08-www-b0 /tmp/w08-www-b1
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, bpftool 7.7, cilium/ebpf v0.16.0
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week08.sh`](../../scripts/screenshots/week08.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week08-1-unit-tests.png)
+
+*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
+
+![Terminal 2 — curl ไปยัง VIP จาก client (w08-client) และตรวจจุดแนบ](screenshots/week08-2-client-curl.png)
+
+*ภาพที่ 2: Terminal 2 — curl ไปยัง VIP จาก client (w08-client) และตรวจจุดแนบ*
+
+![Terminal 1 — sudo ip netns exec w08-lb ./bin/xdp-tc-lb (หลัง Ctrl+C)](screenshots/week08-3-lb-dashboard.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ip netns exec w08-lb ./bin/xdp-tc-lb (หลัง Ctrl+C)*
+
+<!-- screenshots:end -->
+
 ### 4.1 ผลลัพธ์ Unit Tests (`make test`)
 ```text
 ===> Generating Go bindings from xdp_lb.c and tc_egress.c via bpf2go...

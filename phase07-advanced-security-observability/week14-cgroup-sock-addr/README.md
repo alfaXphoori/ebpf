@@ -262,6 +262,30 @@ ls -d /sys/fs/cgroup/w14-* 2>/dev/null || echo "clean"
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-10-28)
 > สคริปต์ที่ใช้ตอนบันทึกชื่อ `w14_client.py` ซึ่งเป็นรุ่นก่อนของ `client.py` ในข้อ 3 (ยังไม่มี flag `--in-cgroup` จึงทดสอบ 10.99.99.99 ทุกรอบ) ในรอบ baseline เราตัดบรรทัด 10.99.99.99 ออกจากการแสดงผลด้วย `grep -v` ส่วนเนื้อหาบรรทัดอื่นไม่ได้แก้ไข
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week14.sh`](../../scripts/screenshots/week14.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal 3 — client.py นอก/ใน cgroup w14-sock-enforce](screenshots/week14-1-client.png)
+
+*ภาพที่ 1: Terminal 3 — client.py นอก/ใน cgroup w14-sock-enforce*
+
+![Terminal 2 — sudo ./bin/sock-enforce](screenshots/week14-2-enforcer.png)
+
+*ภาพที่ 2: Terminal 2 — sudo ./bin/sock-enforce*
+
+![Terminal 3 — socket ที่สร้างก่อนเข้า cgroup (ไม่มี listener ที่ 2323)](screenshots/week14-3-precreate.png)
+
+*ภาพที่ 3: Terminal 3 — socket ที่สร้างก่อนเข้า cgroup (ไม่มี listener ที่ 2323)*
+
+![Terminal 2 — ด่านป้องกัน root cgroup](screenshots/week14-4-root-guard.png)
+
+*ภาพที่ 4: Terminal 2 — ด่านป้องกัน root cgroup*
+
+<!-- screenshots:end -->
+
 ### 4.1 ไคลเอนต์ (Terminal 3)
 ```text
 ### baseline: client OUTSIDE the test cgroup

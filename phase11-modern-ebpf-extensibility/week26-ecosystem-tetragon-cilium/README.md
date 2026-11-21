@@ -393,6 +393,50 @@ sudo bpftool prog show | grep -c 'name cil_' # ต้องเป็น 0
 >
 > เครื่องแล็บมีงานอื่นรันพร้อมกัน event ที่ไม่เกี่ยวข้องจึงถูกกรองออกด้วย `--process` / `--policy-names` / `grep lab-files` ตามที่ระบุในแต่ละหัวข้อ
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week26.sh`](../../scripts/screenshots/week26.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test + unit test ของ validator (ไม่ต้อง root)](screenshots/week26-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test + unit test ของ validator (ไม่ต้อง root)*
+
+![Terminal — make up และโหลด policy 01–03](screenshots/week26-2-up-apply.png)
+
+*ภาพที่ 2: Terminal — make up และโหลด policy 01–03*
+
+![Terminal 2 — สร้างเหตุการณ์ (exec / เปิดไฟล์ / TCP connect)](screenshots/week26-3-terminal2-activity.png)
+
+*ภาพที่ 3: Terminal 2 — สร้างเหตุการณ์ (exec / เปิดไฟล์ / TCP connect)*
+
+![Terminal 1 — event ของ policy 01–03 (tetra getevents -o compact)](screenshots/week26-4-events.png)
+
+*ภาพที่ 4: Terminal 1 — event ของ policy 01–03 (tetra getevents -o compact)*
+
+![Terminal — make progs + make list (policy 01–03 ทำงานอยู่)](screenshots/week26-5-progs.png)
+
+*ภาพที่ 5: Terminal — make progs + make list (policy 01–03 ทำงานอยู่)*
+
+![Terminal — Policy 04: Sigkill (monitor ก่อน แล้วค่อย enforce)](screenshots/week26-6-sigkill.png)
+
+*ภาพที่ 6: Terminal — Policy 04: Sigkill (monitor ก่อน แล้วค่อย enforce)*
+
+![Terminal — Policy 05: Override ผ่าน BPF LSM (EPERM แทน SIGKILL)](screenshots/week26-7-override-lsm.png)
+
+*ภาพที่ 7: Terminal — Policy 05: Override ผ่าน BPF LSM (EPERM แทน SIGKILL)*
+
+![Terminal — Override บน kprobe: ทำไมต้อง --disable-kprobe-multi](screenshots/week26-8-fmodret.png)
+
+*ภาพที่ 8: Terminal — Override บน kprobe: ทำไมต้อง --disable-kprobe-multi*
+
+![Terminal — make down และตรวจว่าไม่มีอะไรค้าง](screenshots/week26-9-down.png)
+
+*ภาพที่ 9: Terminal — make down และตรวจว่าไม่มีอะไรค้าง*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test` (ไม่ต้อง root, ไม่เริ่มคอนเทนเนอร์)
 ```text
 ===> Validating TracingPolicy YAML (policies/*.yaml)...

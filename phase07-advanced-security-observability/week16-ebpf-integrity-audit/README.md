@@ -307,6 +307,26 @@ sudo sh -c 'rm -f /sys/fs/bpf/w16_*'   # unpin -> โปรแกรมถูก
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`, 8 CPUs), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-10-28, `-hook auto` เลือก `fentry/__sys_bpf`)
 > ตัด ANSI color code ออก
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week16.sh`](../../scripts/screenshots/week16.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal 2 — โหลดโปรแกรมทดสอบ (ก่อน/ระหว่าง auditor ทำงาน)](screenshots/week16-1-terminal2.png)
+
+*ภาพที่ 1: Terminal 2 — โหลดโปรแกรมทดสอบ (ก่อน/ระหว่าง auditor ทำงาน)*
+
+![Terminal 1 — sudo ./bin/bpf-audit](screenshots/week16-2-auditor.png)
+
+*ภาพที่ 2: Terminal 1 — sudo ./bin/bpf-audit*
+
+![ยืนยันการจับครบทุก CPU ของแต่ละ hook (fentry / raw)](screenshots/week16-3-per-cpu.png)
+
+*ภาพที่ 3: ยืนยันการจับครบทุก CPU ของแต่ละ hook (fentry / raw)*
+
+<!-- screenshots:end -->
+
 ### 4.1 Terminal 2
 ```text
 $ sudo bpftool prog load week13-kfree-skb-dropwatch/bpf_bpfel.o /sys/fs/bpf/w16_preloaded   # ก่อนเริ่ม auditor

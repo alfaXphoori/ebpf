@@ -335,6 +335,26 @@ sudo bpftool map dump name page_fault_coun | head      # ชื่อแมป�
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`, 8 CPUs, RAM 15 GB, swap 4 GB) — เครื่องทดสอบมีงานพื้นหลังอื่นทำงานอยู่ด้วย จึงเห็นโปรเซสอย่าง `sleep`, `bash`, `bpftrace` ในอันดับ page fault
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week19.sh`](../../scripts/screenshots/week19.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal 2 — กระตุ้น OOM ใน scope ที่จำกัดแรม 50M](screenshots/week19-1-trigger-oom.png)
+
+*ภาพที่ 1: Terminal 2 — กระตุ้น OOM ใน scope ที่จำกัดแรม 50M*
+
+![Terminal 1 — sudo ./bin/oom-watcher -duration 10s](screenshots/week19-2-watcher.png)
+
+*ภาพที่ 2: Terminal 1 — sudo ./bin/oom-watcher -duration 10s*
+
+![Terminal 2 — เทียบกับ kernel log และ bpftool](screenshots/week19-3-kernel-log.png)
+
+*ภาพที่ 3: Terminal 2 — เทียบกับ kernel log และ bpftool*
+
+<!-- screenshots:end -->
+
 ### 4.1 เทอร์มินัลที่กระตุ้น OOM
 ```text
 Running as unit: run-p4124218-i4141391.scope; invocation ID: fc9f230a0b7c4cf78984dfe9a1e686b5

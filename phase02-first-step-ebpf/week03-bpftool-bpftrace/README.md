@@ -281,6 +281,34 @@ sudo bpftool prog show | grep -A2 -E "tracepoint|kprobe"
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), bpftrace v0.25.0, bpftool v7.7 — เครื่องทดสอบมีงานอื่นรันพร้อมกันจำนวนมาก (build, Docker, agent อื่นๆ) ผลจึงยาวกว่า 2,000 บรรทัด ด้านล่างเป็นส่วนที่ตัดมาโดยไม่แก้ไขเนื้อหา
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week03.sh`](../../scripts/screenshots/week03.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — ตรวจเครื่องมือ bpftrace / bpftool / BTF](screenshots/week03-1-versions.png)
+
+*ภาพที่ 1: Terminal — ตรวจเครื่องมือ bpftrace / bpftool / BTF*
+
+![Terminal 2 — สร้าง exec และทราฟฟิก TCP](screenshots/week03-2-workload.png)
+
+*ภาพที่ 2: Terminal 2 — สร้าง exec และทราฟฟิก TCP*
+
+![Terminal 3 — bpftool ขณะ bpftrace ทำงาน](screenshots/week03-3-bpftool.png)
+
+*ภาพที่ 3: Terminal 3 — bpftool ขณะ bpftrace ทำงาน*
+
+![Terminal 1 — sudo bpftrace trace_exec_and_tcp.bt](screenshots/week03-4-bpftrace-live.png)
+
+*ภาพที่ 4: Terminal 1 — sudo bpftrace trace_exec_and_tcp.bt*
+
+![Terminal 1 — กด Ctrl+C: FINAL OBSERVABILITY SUMMARY](screenshots/week03-5-bpftrace-summary.png)
+
+*ภาพที่ 5: Terminal 1 — กด Ctrl+C: FINAL OBSERVABILITY SUMMARY*
+
+<!-- screenshots:end -->
+
 ### 4.1 ผลลัพธ์การรัน `sudo bpftrace trace_exec_and_tcp.bt` (ประมาณ 12 วินาที) ขณะรัน `ls`, `whoami`, `curl` สองครั้ง และ `bpftool`
 ```text
 Attached 6 probes

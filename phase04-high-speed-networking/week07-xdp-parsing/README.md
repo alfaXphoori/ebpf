@@ -359,6 +359,26 @@ sudo ip netns del w07-server
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, bpftool 7.7, cilium/ebpf v0.16.0
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week07.sh`](../../scripts/screenshots/week07.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week07-1-unit-tests.png)
+
+*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
+
+![Terminal 2 — ping จาก client (w07-client)](screenshots/week07-2-client-ping.png)
+
+*ภาพที่ 2: Terminal 2 — ping จาก client (w07-client)*
+
+![Terminal 1 — sudo ip netns exec w07-server ./bin/xdp-firewall](screenshots/week07-3-firewall-dashboard.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ip netns exec w07-server ./bin/xdp-firewall*
+
+<!-- screenshots:end -->
+
 ### 4.1 ผลลัพธ์ Unit Tests (`make test`)
 ```text
 ===> Generating Go bindings from xdp_firewall.c via bpf2go...

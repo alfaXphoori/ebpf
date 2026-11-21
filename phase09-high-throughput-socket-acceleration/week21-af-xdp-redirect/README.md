@@ -339,6 +339,30 @@ sudo ip netns del w21-tx     # veth ทั้งคู่ถูกลบตา�
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100, clang 21, Go 1.26, cilium/ebpf v0.16.0
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week21.sh`](../../scripts/screenshots/week21.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week21-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
+
+![Terminal 2 — ตรวจสถานะ + ส่งทราฟฟิกจาก w21-tx](screenshots/week21-2-status-traffic.png)
+
+*ภาพที่ 2: Terminal 2 — ตรวจสถานะ + ส่งทราฟฟิกจาก w21-tx*
+
+![Terminal 1 — sudo ip netns exec w21-rx ./bin/af-xdp-pipeline -iface w21-xsk0](screenshots/week21-3-pipeline-output.png)
+
+*ภาพที่ 3: Terminal 1 — sudo ip netns exec w21-rx ./bin/af-xdp-pipeline -iface w21-xsk0*
+
+![Terminal 1 — ขอ Zero-Copy บน veth (ขั้นตอนที่ 3)](screenshots/week21-4-zerocopy.png)
+
+*ภาพที่ 4: Terminal 1 — ขอ Zero-Copy บน veth (ขั้นตอนที่ 3)*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test`
 ```text
 === RUN   TestVerdictsWithoutSocket

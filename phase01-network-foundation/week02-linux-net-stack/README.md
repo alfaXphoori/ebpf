@@ -211,6 +211,30 @@ ip netns list | grep w02 || echo "clean"   # ต้องไม่เหลื�
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), iproute2, strace, perf (linux-tools-7.0.0-38)
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week02.sh`](../../scripts/screenshots/week02.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — sudo ./bridge_router_lab.sh setup](screenshots/week02-1-setup.png)
+
+*ภาพที่ 1: Terminal — sudo ./bridge_router_lab.sh setup*
+
+![Terminal — sudo ./bridge_router_lab.sh test](screenshots/week02-2-test.png)
+
+*ภาพที่ 2: Terminal — sudo ./bridge_router_lab.sh test*
+
+![Terminal — ตรวจตาราง FDB ของ br0](screenshots/week02-3-fdb.png)
+
+*ภาพที่ 3: Terminal — ตรวจตาราง FDB ของ br0*
+
+![Terminal — sudo ./bridge_router_lab.sh trace](screenshots/week02-4-trace.png)
+
+*ภาพที่ 4: Terminal — sudo ./bridge_router_lab.sh trace*
+
+<!-- screenshots:end -->
+
 ### 4.1 การสร้าง Linux Bridge Topology และตรวจสอบตาราง FDB (`setup`, `test`)
 ```text
 ===> Building Multi-Namespace Bridge Topology (w02-ns1 w02-ns2 w02-ns3 <-> w02-sw/br0)...

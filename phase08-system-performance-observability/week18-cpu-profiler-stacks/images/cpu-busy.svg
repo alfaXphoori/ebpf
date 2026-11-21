@@ -1,38 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="202" viewBox="0 0 1000 202">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="474" viewBox="0 0 1200 474">
 <rect width="100%" height="100%" fill="#f8f8f8"/>
-<text x="500.0" y="18" text-anchor="middle" font-size="15" font-family="Verdana, sans-serif">busy (PID) on-CPU profile — Linux 7.0.0-38, 99 Hz, 6 s</text>
-<text x="500.0" y="30" text-anchor="middle" font-size="10" fill="#555" font-family="Verdana, sans-serif">594 samples · width = share of on-CPU samples · orange = kernel frame (_[k]) · yellow = user frame</text>
-<g><title>all (594 samples, 100.00%)</title><rect x="10.00" y="162" width="980.00" height="15" fill="#ccc" rx="2"/>
-<text x="13.00" y="174" font-size="11" font-family="Verdana, sans-serif">all</text>
+<text x="600.0" y="18" text-anchor="middle" font-size="15" font-family="Verdana, sans-serif">busy (PID) on-CPU profile — Linux 7.0.0-43, 99 Hz, 6 s</text>
+<text x="600.0" y="30" text-anchor="middle" font-size="10" fill="#555" font-family="Verdana, sans-serif">577 samples · width = share of on-CPU samples · orange = kernel frame (_[k]) · yellow = user frame</text>
+<g><title>all (577 samples, 100.00%)</title><rect x="10.00" y="434" width="1180.00" height="15" fill="#ccc" rx="2"/>
+<text x="13.00" y="446" font-size="11" font-family="Verdana, sans-serif">all</text>
 </g>
-<g><title>busy (594 samples, 100.00%)</title><rect x="10.00" y="146" width="980.00" height="15" fill="rgb(241,202,56)" rx="2"/>
-<text x="13.00" y="158" font-size="11" font-family="Verdana, sans-serif">busy</text>
+<g><title>busy (577 samples, 100.00%)</title><rect x="10.00" y="418" width="1180.00" height="15" fill="rgb(241,202,56)" rx="2"/>
+<text x="13.00" y="430" font-size="11" font-family="Verdana, sans-serif">busy</text>
 </g>
-<g><title>_start (594 samples, 100.00%)</title><rect x="10.00" y="130" width="980.00" height="15" fill="rgb(233,187,48)" rx="2"/>
-<text x="13.00" y="142" font-size="11" font-family="Verdana, sans-serif">_start</text>
+<g><title>_start (577 samples, 100.00%)</title><rect x="10.00" y="402" width="1180.00" height="15" fill="rgb(233,187,48)" rx="2"/>
+<text x="13.00" y="414" font-size="11" font-family="Verdana, sans-serif">_start</text>
 </g>
-<g><title>__libc_start_main (594 samples, 100.00%)</title><rect x="10.00" y="114" width="980.00" height="15" fill="rgb(244,209,59)" rx="2"/>
-<text x="13.00" y="126" font-size="11" font-family="Verdana, sans-serif">__libc_start_main</text>
+<g><title>__libc_start_main (577 samples, 100.00%)</title><rect x="10.00" y="386" width="1180.00" height="15" fill="rgb(244,209,59)" rx="2"/>
+<text x="13.00" y="398" font-size="11" font-family="Verdana, sans-serif">__libc_start_main</text>
 </g>
-<g><title>[libc.so.6+0x2a601] (594 samples, 100.00%)</title><rect x="10.00" y="98" width="980.00" height="15" fill="rgb(236,192,51)" rx="2"/>
-<text x="13.00" y="110" font-size="11" font-family="Verdana, sans-serif">[libc.so.6+0x2a601]</text>
+<g><title>[libc.so.6+0x2a601] (577 samples, 100.00%)</title><rect x="10.00" y="370" width="1180.00" height="15" fill="rgb(236,192,51)" rx="2"/>
+<text x="13.00" y="382" font-size="11" font-family="Verdana, sans-serif">[libc.so.6+0x2a601]</text>
 </g>
-<g><title>main (594 samples, 100.00%)</title><rect x="10.00" y="82" width="980.00" height="15" fill="rgb(254,228,69)" rx="2"/>
-<text x="13.00" y="94" font-size="11" font-family="Verdana, sans-serif">main</text>
+<g><title>main (577 samples, 100.00%)</title><rect x="10.00" y="354" width="1180.00" height="15" fill="rgb(254,228,69)" rx="2"/>
+<text x="13.00" y="366" font-size="11" font-family="Verdana, sans-serif">main</text>
 </g>
-<g><title>run_workload (594 samples, 100.00%)</title><rect x="10.00" y="66" width="980.00" height="15" fill="rgb(251,223,66)" rx="2"/>
-<text x="13.00" y="78" font-size="11" font-family="Verdana, sans-serif">run_workload</text>
+<g><title>run_workload (577 samples, 100.00%)</title><rect x="10.00" y="338" width="1180.00" height="15" fill="rgb(251,223,66)" rx="2"/>
+<text x="13.00" y="350" font-size="11" font-family="Verdana, sans-serif">run_workload</text>
 </g>
-<g><title>hot_path_a (402 samples, 67.68%)</title><rect x="10.00" y="50" width="663.23" height="15" fill="rgb(229,179,44)" rx="2"/>
-<text x="13.00" y="62" font-size="11" font-family="Verdana, sans-serif">hot_path_a</text>
+<g><title>hot_path_a (379 samples, 65.68%)</title><rect x="10.00" y="322" width="775.08" height="15" fill="rgb(229,179,44)" rx="2"/>
+<text x="13.00" y="334" font-size="11" font-family="Verdana, sans-serif">hot_path_a</text>
 </g>
-<g><title>spin (402 samples, 67.68%)</title><rect x="10.00" y="34" width="663.23" height="15" fill="rgb(232,185,47)" rx="2"/>
-<text x="13.00" y="46" font-size="11" font-family="Verdana, sans-serif">spin</text>
+<g><title>spin (379 samples, 65.68%)</title><rect x="10.00" y="306" width="775.08" height="15" fill="rgb(232,185,47)" rx="2"/>
+<text x="13.00" y="318" font-size="11" font-family="Verdana, sans-serif">spin</text>
 </g>
-<g><title>hot_path_b (192 samples, 32.32%)</title><rect x="673.23" y="50" width="316.77" height="15" fill="rgb(230,180,45)" rx="2"/>
-<text x="676.23" y="62" font-size="11" font-family="Verdana, sans-serif">hot_path_b</text>
+<g><title>asm_common_interrupt_[k] (1 samples, 0.17%)</title><rect x="10.00" y="290" width="2.05" height="15" fill="rgb(239,131,40)" rx="2"/>
 </g>
-<g><title>spin (192 samples, 32.32%)</title><rect x="673.23" y="34" width="316.77" height="15" fill="rgb(232,185,47)" rx="2"/>
-<text x="676.23" y="46" font-size="11" font-family="Verdana, sans-serif">spin</text>
+<g><title>common_interrupt_[k] (1 samples, 0.17%)</title><rect x="10.00" y="274" width="2.05" height="15" fill="rgb(242,135,40)" rx="2"/>
+</g>
+<g><title>irq_exit_rcu_[k] (1 samples, 0.17%)</title><rect x="10.00" y="258" width="2.05" height="15" fill="rgb(213,99,40)" rx="2"/>
+</g>
+<g><title>__irq_exit_rcu_[k] (1 samples, 0.17%)</title><rect x="10.00" y="242" width="2.05" height="15" fill="rgb(208,94,40)" rx="2"/>
+</g>
+<g><title>handle_softirqs_[k] (1 samples, 0.17%)</title><rect x="10.00" y="226" width="2.05" height="15" fill="rgb(242,134,40)" rx="2"/>
+</g>
+<g><title>net_rx_action_[k] (1 samples, 0.17%)</title><rect x="10.00" y="210" width="2.05" height="15" fill="rgb(219,107,40)" rx="2"/>
+</g>
+<g><title>__napi_poll_[k] (1 samples, 0.17%)</title><rect x="10.00" y="194" width="2.05" height="15" fill="rgb(220,108,40)" rx="2"/>
+</g>
+<g><title>rtl8169_poll_[k] (1 samples, 0.17%)</title><rect x="10.00" y="178" width="2.05" height="15" fill="rgb(210,96,40)" rx="2"/>
+</g>
+<g><title>napi_complete_done_[k] (1 samples, 0.17%)</title><rect x="10.00" y="162" width="2.05" height="15" fill="rgb(238,130,40)" rx="2"/>
+</g>
+<g><title>netif_receive_skb_list_internal_[k] (1 samples, 0.17%)</title><rect x="10.00" y="146" width="2.05" height="15" fill="rgb(205,91,40)" rx="2"/>
+</g>
+<g><title>__netif_receive_skb_list_core_[k] (1 samples, 0.17%)</title><rect x="10.00" y="130" width="2.05" height="15" fill="rgb(215,102,40)" rx="2"/>
+</g>
+<g><title>ip_list_rcv_[k] (1 samples, 0.17%)</title><rect x="10.00" y="114" width="2.05" height="15" fill="rgb(228,117,40)" rx="2"/>
+</g>
+<g><title>ip_sublist_rcv_[k] (1 samples, 0.17%)</title><rect x="10.00" y="98" width="2.05" height="15" fill="rgb(231,121,40)" rx="2"/>
+</g>
+<g><title>nf_hook_slow_list_[k] (1 samples, 0.17%)</title><rect x="10.00" y="82" width="2.05" height="15" fill="rgb(223,112,40)" rx="2"/>
+</g>
+<g><title>nf_hook_slow_[k] (1 samples, 0.17%)</title><rect x="10.00" y="66" width="2.05" height="15" fill="rgb(222,111,40)" rx="2"/>
+</g>
+<g><title>ipv4_conntrack_in_[k] (1 samples, 0.17%)</title><rect x="10.00" y="50" width="2.05" height="15" fill="rgb(241,133,40)" rx="2"/>
+</g>
+<g><title>nf_conntrack_in_[k] (1 samples, 0.17%)</title><rect x="10.00" y="34" width="2.05" height="15" fill="rgb(206,91,40)" rx="2"/>
+</g>
+<g><title>hot_path_b (198 samples, 34.32%)</title><rect x="785.08" y="322" width="404.92" height="15" fill="rgb(230,180,45)" rx="2"/>
+<text x="788.08" y="334" font-size="11" font-family="Verdana, sans-serif">hot_path_b</text>
+</g>
+<g><title>spin (198 samples, 34.32%)</title><rect x="785.08" y="306" width="404.92" height="15" fill="rgb(232,185,47)" rx="2"/>
+<text x="788.08" y="318" font-size="11" font-family="Verdana, sans-serif">spin</text>
 </g>
 </svg>

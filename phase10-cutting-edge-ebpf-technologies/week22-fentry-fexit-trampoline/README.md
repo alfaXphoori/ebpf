@@ -257,6 +257,32 @@ sysctl kernel.bpf_stats_enabled    # ต้องกลับเป็น 0 ห�
 
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 (8 threads), CPU governor `powersave`, bpftrace v0.25.0 — เครื่องมีงานอื่นรันอยู่ระหว่างวัด (load average ~2)
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week22.sh`](../../scripts/screenshots/week22.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+> **หมายเหตุภาพ benchmark:** รอบที่ถ่ายภาพรัน `REPS=3` ขณะเครื่องมีโหลดสูง (load average ~10–12 จากการ capture แล็บอื่นพร้อมกัน) baseline จึงสูงกว่าในหัวข้อ 4.4 (~1200 ns เทียบ ~590 ns) และตัวเลขมี noise มาก ใช้ดูลำดับเท่านั้น (kretprobe แพงสุดชัดเจน) ตัวเลขอ้างอิงให้ดูหัวข้อ 4.4–4.5 ที่วัดบนเครื่องว่าง
+
+![Terminal — make test (fexit อ่านค่า return)](screenshots/week22-1-make-test.png)
+
+*ภาพที่ 1: Terminal — make test (fexit อ่านค่า return)*
+
+![Terminal 1 — sudo ./bin/trampoline-tracer -comm gnucat (gnucat /etc/hosts + /nonexistent_file)](screenshots/week22-2-tracer-cat.png)
+
+*ภาพที่ 2: Terminal 1 — sudo ./bin/trampoline-tracer -comm gnucat (gnucat /etc/hosts + /nonexistent_file)*
+
+![Terminal 2 — ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)](screenshots/week22-3-trampoline-inspect.png)
+
+*ภาพที่ 3: Terminal 2 — ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)*
+
+![Terminal — วัด overhead: REPS=3 ./bench/run_bench.sh (เครื่องมีงานอื่นรันพร้อมกัน)](screenshots/week22-4-bench.png)
+
+*ภาพที่ 4: Terminal — วัด overhead: REPS=3 ./bench/run_bench.sh (เครื่องมีงานอื่นรันพร้อมกัน)*
+
+<!-- screenshots:end -->
+
 ### 4.1 `make test`
 ```text
 === RUN   TestFexitReturnValue

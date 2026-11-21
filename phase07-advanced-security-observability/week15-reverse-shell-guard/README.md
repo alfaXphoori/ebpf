@@ -281,6 +281,30 @@ pgrep -af "listener.py|threat-guard" || echo "clean"   # หลังจบต�
 > **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-10-28)
 > ตัด ANSI color code ออกเพื่อให้อ่านง่าย ระหว่างบันทึกมีเครื่องมืออื่นบนเครื่อง (agent ที่รัน `bash`, `gmake` ของแล็บอื่น) จึงมี `INFO-SHELL` พื้นหลังปนอยู่ ตอนบันทึกไฟล์ `x` อยู่ในไดเรกทอรี scratch ชั่วคราว
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week15.sh`](../../scripts/screenshots/week15.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal 3 — จำลองเหตุการณ์ (a)-(d) + Terminal 1 listener](screenshots/week15-1-attacks.png)
+
+*ภาพที่ 1: Terminal 3 — จำลองเหตุการณ์ (a)-(d) + Terminal 1 listener*
+
+![Terminal 2 — sudo ./bin/threat-guard -all](screenshots/week15-2-guard.png)
+
+*ภาพที่ 2: Terminal 2 — sudo ./bin/threat-guard -all*
+
+![Daemon-spawned shell (CRITICAL-RCE)](screenshots/week15-3-rce.png)
+
+*ภาพที่ 3: Daemon-spawned shell (CRITICAL-RCE)*
+
+![Terminal 3 — ตรวจ map และสภาพแวดล้อม](screenshots/week15-4-cleanup-check.png)
+
+*ภาพที่ 4: Terminal 3 — ตรวจ map และสภาพแวดล้อม*
+
+<!-- screenshots:end -->
+
 ### 4.1 Terminal 3 และ listener
 ```text
 $ bash -c "echo benign"

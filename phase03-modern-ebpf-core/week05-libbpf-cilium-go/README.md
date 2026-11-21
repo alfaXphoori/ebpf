@@ -305,6 +305,34 @@ sudo bpftool map dump name exec_count
 
 > **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), Go 1.26, clang 21, cilium/ebpf v0.16.0 — เครื่องทดสอบมีงานอื่น (build/script วนลูป) รันอยู่ จึงมี exec ราว 190 ครั้ง/วินาที
 
+<!-- screenshots:begin -->
+
+### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
+
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week05.sh`](../../scripts/screenshots/week05.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+
+![Terminal — make generate build](screenshots/week05-1-build.png)
+
+*ภาพที่ 1: Terminal — make generate build*
+
+![Terminal — make test (go test -exec sudo)](screenshots/week05-2-test.png)
+
+*ภาพที่ 2: Terminal — make test (go test -exec sudo)*
+
+![Terminal — sudo ./bin/exec-counter](screenshots/week05-3-run.png)
+
+*ภาพที่ 3: Terminal — sudo ./bin/exec-counter*
+
+![Terminal 2 — bpftool ขณะ exec-counter ทำงาน](screenshots/week05-4-bpftool.png)
+
+*ภาพที่ 4: Terminal 2 — bpftool ขณะ exec-counter ทำงาน*
+
+![Terminal 2 — ตรวจว่าจับ exec ได้ครบทุก CPU](screenshots/week05-5-all-cpus.png)
+
+*ภาพที่ 5: Terminal 2 — ตรวจว่าจับ exec ได้ครบทุก CPU*
+
+<!-- screenshots:end -->
+
 ### 4.1 การคอมไพล์ด้วย `bpf2go` (`make generate build`) และรัน `sudo timeout -s INT 6 ./bin/exec-counter`
 ```text
 ===> Generating Go bindings from counter.c via bpf2go...

@@ -8,6 +8,8 @@
 #   make clean        # remove bin/ and bpf2go generated files in every lab
 #   make list         # list all lab directories
 #   make vmlinux      # (re)generate ./vmlinux.h from the running kernel's BTF
+#   make screenshots  # re-run every lab for real and refresh README terminal screenshots (sudo + docker)
+#   make screenshots WEEKS="week07 week08"  # only some weeks
 #   make diagrams     # re-render docs/diagrams/src/*.mmd into docs/diagrams/*.svg (needs docker)
 #   make docs-check   # verify markdown links, diagram parity, and script permissions
 #   make week07       # build a single week (week01..week26)
@@ -17,7 +19,7 @@
 LABS := $(sort $(patsubst %/Makefile,%,$(wildcard phase*/week*/Makefile)))
 GO_MODULES := $(sort $(patsubst %/go.mod,%,$(wildcard phase*/week*/go.mod)))
 
-.PHONY: all test check vet fmt-check docs-check py-test clean list vmlinux diagrams $(LABS)
+.PHONY: all test check vet fmt-check docs-check py-test clean list vmlinux diagrams screenshots $(LABS)
 
 all: vmlinux.h
 	@set -e; for d in $(LABS); do \
@@ -46,6 +48,16 @@ fmt-check:
 		echo "Unformatted Go files:"; echo "$$unformatted"; exit 1; \
 	fi
 	@echo "fmt-check OK"
+
+# Run each lab's capture script (real run), render PNGs, and refresh README galleries
+WEEKS ?= $(sort $(patsubst scripts/screenshots/%.sh,%,$(wildcard scripts/screenshots/week*.sh)))
+screenshots: vmlinux.h
+	@set -e; for w in $(WEEKS); do \
+		echo "===> [screenshots] $$w"; \
+		./scripts/screenshots/$$w.sh > /dev/null; \
+	done
+	@python3 scripts/screenshots/render.py $(WEEKS)
+	@python3 scripts/screenshots/embed.py $(WEEKS)
 
 docs-check:
 	@python3 scripts/check_docs.py
