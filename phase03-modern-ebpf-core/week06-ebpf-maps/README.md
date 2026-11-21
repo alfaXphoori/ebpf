@@ -456,7 +456,7 @@ invalid access to packet, off=12 size=1, R1(id=0,off=12,r=0)
 - `R1=pkt(r=0)` = R1 เป็น Pointer ชี้เข้า Packet แต่ช่วงที่พิสูจน์แล้วว่าอ่านได้ (`r=`) คือ 0 ไบต์ เพราะยังไม่มีการเทียบกับ `data_end`
 - บรรทัดสุดท้ายก่อนสถิติคือ **สาเหตุ** ที่ถูกปฏิเสธ — การอ่านไบต์ที่ offset 12 (`h_proto`) ทั้งที่ `r=0`
 - บรรทัด `; ... @ verifier_fail.c:48` คือ Source Line ที่ได้จาก BTF (ต้องคอมไพล์ด้วย `-g` ซึ่ง bpf2go ใส่ให้อัตโนมัติ)
-- บรรทัดสถิติท้าย Log: `processed N insns (limit 1000000)` = จำนวน Instruction ที่ Verifier จำลองรวมทุก Path, `stack depth` = ขนาด Stack ที่ใช้ (สูงสุด 512 ไบต์)
+- บรรทัดสถิติท้าย Log: `processed N insns (limit 1000000)` = จำนวน Instruction ที่ Verifier จำลองรวมทุก Path, `stack depth` = ขนาด Stack ที่ใช้ (สูงสุด 512 ไบต์; ตั้งแต่ 7.0.0-43 แสดงเป็น `stack depth N max M` และมีบรรทัด `insns processed N` เพิ่ม — ข้อความเปลี่ยนตามเวอร์ชันเคอร์เนล อย่าเขียนสคริปต์ที่ parse บรรทัดเหล่านี้แบบตายตัว)
 
 ทางเลือกด้วย `bpftool`: เปิด Debug Output ของ libbpf ด้วย `-d` แล้ว libbpf จะพิมพ์ Verifier Log ระหว่าง `-- BEGIN PROG LOAD LOG --` ... `-- END PROG LOAD LOG --` เมื่อโหลดไม่ผ่าน (bpftool โหลดทุกโปรแกรมในไฟล์ `.o` จึงหยุดที่โปรแกรมแรกที่ไม่ผ่าน ในที่นี้คือ `xdp_no_bounds_check`):
 ```bash
@@ -521,7 +521,7 @@ sudo ./bin/verifier_fail -case fixed
 
 ### 5.6 ผลลัพธ์จริง (Verifier Log จริง)
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21.1.8, Go 1.26, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21.1.8, Go 1.26, cilium/ebpf v0.16.0 (จับใหม่ 2026-11-21: ตั้งแต่ 7.0.0-43 ท้าย Log มีบรรทัด `stack depth N max M` และ `insns processed N` เพิ่มขึ้น)
 
 `make verifier-demo` (ตัดบรรทัด `go build` ด้านบนออก):
 ```text
@@ -535,10 +535,11 @@ load program: permission denied:
 	1: (71) r2 = *(u8 *)(r1 +12)
 	invalid access to packet, off=12 size=1, R1(id=0,off=12,r=0)
 	R1 offset is outside of the packet
-	verification time 26 usec
-	stack depth 0
+	verification time 38 usec
+	stack depth 0 max 0
+	insns processed 2
 	processed 2 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
-make: [Makefile:33: verifier-demo] Error 1 (ignored)
+make: [Makefile:32: verifier-demo] Error 1 (ignored)
 sudo ./bin/verifier_fail -case nullcheck
 [VERIFIER] program "xdp_no_null_check" REJECTED
 load program: permission denied:
@@ -549,20 +550,22 @@ load program: permission denied:
 	2: (bf) r2 = r10                      ; R2=fp0 R10=fp0
 	3: (07) r2 += -4                      ; R2=fp-4
 	; __u64 *count = bpf_map_lookup_elem(&pkt_count, &key); @ verifier_fail.c:62
-	4: (18) r1 = 0xffff8a9b68f41c00       ; R1=map_ptr(map=pkt_count,ks=4,vs=8)
+	4: (18) r1 = 0xffff8c87a2e14c00       ; R1=map_ptr(map=pkt_count,ks=4,vs=8)
 	6: (85) call bpf_map_lookup_elem#1    ; R0=map_value_or_null(id=1,map=pkt_count,ks=4,vs=8)
 	7: (b7) r1 = 1                        ; R1=1
 	; __sync_fetch_and_add(count, 1); @ verifier_fail.c:65
 	8: (db) lock *(u64 *)(r0 +0) += r1
 	R0 invalid mem access 'map_value_or_null'
-	verification time 37 usec
-	stack depth 8
+	verification time 41 usec
+	stack depth 8 max 0
+	insns processed 8
 	processed 8 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
-make: [Makefile:34: verifier-demo] Error 1 (ignored)
+make: [Makefile:33: verifier-demo] Error 1 (ignored)
 sudo ./bin/verifier_fail -case fixed
 [VERIFIER] program "xdp_fixed" ACCEPTED
-verification time 58 usec
-stack depth 16
+verification time 56 usec
+stack depth 16 max 16
+insns processed 37
 processed 37 insns (limit 1000000) max_states_per_insn 0 total_states 3 peak_states 3 mark_read 0
 ```
 
@@ -571,9 +574,9 @@ processed 37 insns (limit 1000000) max_states_per_insn 0 total_states 3 peak_sta
 $ sudo ./bin/verifier_fail -case nullcheck -lines 3
 [VERIFIER] program "xdp_no_null_check" REJECTED
 load program: permission denied:
-	(13 line(s) omitted)
-	verification time 87 usec
-	stack depth 8
+	(14 line(s) omitted)
+	stack depth 8 max 0
+	insns processed 8
 	processed 8 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
 ```
 > ข้อควรระวัง: 3 บรรทัดสุดท้ายเป็น **สถิติล้วน** ไม่มีสาเหตุของ Error เลย ในทางปฏิบัติให้ใช้ `-lines 8` ขึ้นไป หรืออ่านทั้ง Log
@@ -599,8 +602,9 @@ Live regs before insn:
 1: (71) r2 = *(u8 *)(r1 +12)
 invalid access to packet, off=12 size=1, R1(id=0,off=12,r=0)
 R1 offset is outside of the packet
-verification time 119 usec
-stack depth 0
+verification time 43 usec
+stack depth 0 max 0
+insns processed 2
 processed 2 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
 -- END PROG LOAD LOG --
 ```

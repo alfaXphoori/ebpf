@@ -9,65 +9,12 @@ LOG=$(mktemp); LST=""
 cleanup() {
     sudo pkill -INT -f '^./bin/sock-enforce' 2>/dev/null
     [ -n "$LST" ] && kill "$LST" 2>/dev/null
-    rm -f "$LOG" "$LAB_DIR/client.py" "$LAB_DIR/precreate.py"
+    rm -f "$LOG"
     sleep 1; sudo rmdir /sys/fs/cgroup/w14-sock-enforce 2>/dev/null
 }
 trap cleanup EXIT
 
-# client.py exactly as in README section 3, step 4 (temporary, removed on exit)
-cat > client.py <<'PY'
-import socket, errno, sys
-def tryit(label, fn):
-    try: fn(); print(f"  {label:<48} -> OK (not blocked)")
-    except OSError as e: print(f"  {label:<48} -> {errno.errorcode.get(e.errno)} ({e.strerror})")
-def tcp4(h, p):
-    def f():
-        s = socket.socket(); s.settimeout(1)
-        try: s.connect((h, p))
-        finally: s.close()
-    return f
-def udp4_connect(h, p):
-    def f():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try: s.connect((h, p))
-        finally: s.close()
-    return f
-def udp4_sendto(h, p):
-    def f():
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try: s.sendto(b"x", (h, p))
-        finally: s.close()
-    return f
-def tcp6_mapped(h, p):
-    def f():
-        s = socket.socket(socket.AF_INET6); s.settimeout(1)
-        try: s.connect(("::ffff:" + h, p))
-        finally: s.close()
-    return f
-print("cgroup of client:", open("/proc/self/cgroup").read().strip())
-tryit("TCP  connect 127.0.0.1:2323 (blocked port)", tcp4("127.0.0.1", 2323))
-tryit("TCP  connect 127.0.0.1:8080 (allowed port)", tcp4("127.0.0.1", 8080))
-if "--in-cgroup" in sys.argv:   # ไม่ทดสอบ IP ภายนอกจากนอก cgroup เพื่อไม่ให้มี SYN ออกไปจริง
-    tryit("TCP  connect 10.99.99.99:80 (blocked IP)", tcp4("10.99.99.99", 80))
-tryit("UDP  connect 127.0.0.1:2323 (blocked port)", udp4_connect("127.0.0.1", 2323))
-if "--bypass" in sys.argv:
-    tryit("UDP  sendto 127.0.0.1:2323 without connect()", udp4_sendto("127.0.0.1", 2323))
-    tryit("TCP6 connect [::ffff:127.0.0.1]:2323 (v4-mapped)", tcp6_mapped("127.0.0.1", 2323))
-PY
 
-# precreate.py: README 4.3 experiment (socket created before vs after joining)
-cat > precreate.py <<'PY'
-import os, socket
-CG = "/sys/fs/cgroup/w14-sock-enforce/cgroup.procs"
-before = socket.socket()                       # created while still outside
-open(CG, "w").write(str(os.getpid()))          # join the test cgroup
-after = socket.socket()                        # created inside the cgroup
-print("now in:", open("/proc/self/cgroup").read().strip())
-for label, s in (("socket created BEFORE joining cgroup", before),
-                 ("socket created AFTER joining cgroup", after)):
-    try: s.connect(("127.0.0.1", 2323)); print(f"  {label:<40} -> connected")
-    except OSError as e: print(f"  {label:<40} -> {e}")
-PY
 
 # Terminal 1: loopback listeners on 2323 and 8080 (README step 2)
 python3 -c "

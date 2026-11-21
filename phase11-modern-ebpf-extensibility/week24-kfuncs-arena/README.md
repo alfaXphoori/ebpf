@@ -239,9 +239,14 @@ sudo ./bin/kfunc-arena -pid $$ -n 5000 -keys 300
 
 ### ขั้นตอนที่ 4: ดู verifier log เต็มของโปรแกรมที่พัง
 ```bash
-go test -exec sudo -run 'TestBrokenProgramsRejected/leak_task' -v .   # ผ่าน = ถูกปฏิเสธจริง
+# ยืนยันว่าถูกปฏิเสธจริง (แสดงแค่ PASS ไม่แสดง log)
+go test -exec sudo -run 'TestBrokenProgramsRejected/leak_task' -v .
+
+# ดู verifier log เต็ม: ให้ bpftool (libbpf) โหลด object ที่พัง แล้วอ่าน log ที่ libbpf พิมพ์ออกมา
+sudo bpftool prog load broken_bpfel.o /sys/fs/bpf/w24_leak
+sudo rm -f /sys/fs/bpf/w24_leak   # เผื่อกรณีโหลดผ่าน (ไม่ควรเกิด)
 ```
-หรือแก้ `verifierTail(err, 2)` ใน `main.go` เป็นค่าที่มากขึ้น แล้ว `make run`
+`go test` ตรวจแค่ว่าถูกปฏิเสธด้วยข้อความที่คาดไว้ จึงไม่พิมพ์ log ออกมา ส่วน `bpftool prog load` พิมพ์ log ของ `leak_task` ครบเหมือนหัวข้อ 4.3 (อีกทางคือแก้ `verifierTail(err, 2)` ใน `main.go` เป็นค่าที่มากขึ้น แล้ว `make run`)
 
 ### ขั้นตอนที่ 5: ดู `addr_space_cast` ที่ clang แทรกให้
 ```bash
@@ -419,7 +424,7 @@ load program: invalid argument:
 	BPF_EXIT instruction in main prog would lead to reference leak
 	processed 8 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
 ```
-อ่าน log ได้ดังนี้: หลัง `call bpf_task_from_pid#99570` (99570 คือ BTF ID เดียวกับในหัวข้อ 4.4) R0 มีชนิด `trusted_ptr_or_null_task_struct` และสถานะ `refs=2`; หลัง `if r0 == 0` ในเส้นทางที่ไม่ใช่ NULL ชนิดกลายเป็น `trusted_ptr_task_struct`; ที่ `exit` ยังมี `refs=2` ค้าง จึงถูกปฏิเสธ (เส้นทาง NULL ไม่มีปัญหาเพราะ reference ถูกยกเลิกไปแล้ว)
+อ่าน log ได้ดังนี้: หลัง `call bpf_task_from_pid#99570` (99570 คือ BTF ID เดียวกับในหัวข้อ 4.4 บน 7.0.0-38; BTF ID เปลี่ยนทุกครั้งที่ build kernel ใหม่ เช่นบน 7.0.0-43 เป็น 99745 ตามภาพหน้าจอ — นี่คือเหตุผลที่ kfunc ต้องอ้างผ่าน BTF ไม่ใช่หมายเลขคงที่) R0 มีชนิด `trusted_ptr_or_null_task_struct` และสถานะ `refs=2`; หลัง `if r0 == 0` ในเส้นทางที่ไม่ใช่ NULL ชนิดกลายเป็น `trusted_ptr_task_struct`; ที่ `exit` ยังมี `refs=2` ค้าง จึงถูกปฏิเสธ (เส้นทาง NULL ไม่มีปัญหาเพราะ reference ถูกยกเลิกไปแล้ว)
 
 ### 4.4 ค้นหา kfunc บนเครื่องทดสอบ
 ```text

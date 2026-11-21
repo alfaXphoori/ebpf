@@ -201,7 +201,7 @@ sudo bpftool cgroup show /sys/fs/cgroup                    # root cgroup ต้�
 ```
 
 ### ขั้นตอนที่ 4: ทดสอบจาก "นอก" และ "ใน" cgroup (Terminal 3)
-สร้างสคริปต์ทดสอบ `client.py` (ทุกปลายทางเป็น loopback หรือ IP ที่ถูกบล็อกก่อนส่ง SYN):
+ใช้สคริปต์ทดสอบ [`client.py`](client.py) ที่มากับแล็บ (โค้ดเดียวกับด้านล่าง; ทุกปลายทางเป็น loopback หรือ IP ที่ถูกบล็อกก่อนส่ง SYN):
 ```python
 import socket, errno, sys
 def tryit(label, fn):
@@ -336,12 +336,12 @@ Final denies on IP 10.99.99.99: 1
 
 ### 4.3 การทดลองเสริม: socket ที่สร้างก่อนเข้า cgroup
 ```text
-$ sudo python3 w14_precreate.py
+$ sudo python3 w14_precreate.py   # = precreate.py ในแล็บนี้
 now in: 0::/w14-sock-enforce
   socket created BEFORE joining cgroup     -> [Errno 111] Connection refused
   socket created AFTER joining cgroup      -> [Errno 1] Operation not permitted
 ```
-(สคริปต์สร้าง socket หนึ่งตัวก่อนเขียน PID ตัวเองลง `cgroup.procs` และอีกตัวหลังจากนั้น แล้ว `connect()` ไปที่ 127.0.0.1:2323 ขณะที่ไม่มี listener: ตัวแรก "ผ่าน" hook จึงได้ `ECONNREFUSED` จาก TCP ปกติ ตัวที่สองถูกบล็อกด้วย `EPERM`)
+(สคริปต์ [`precreate.py`](precreate.py) สร้าง socket หนึ่งตัวก่อนเขียน PID ตัวเองลง `cgroup.procs` และอีกตัวหลังจากนั้น แล้ว `connect()` ไปที่ 127.0.0.1:2323 ขณะที่ไม่มี listener: ตัวแรก "ผ่าน" hook จึงได้ `ECONNREFUSED` จาก TCP ปกติ ตัวที่สองถูกบล็อกด้วย `EPERM`)
 
 ### 4.4 ด่านป้องกัน root cgroup
 ```text

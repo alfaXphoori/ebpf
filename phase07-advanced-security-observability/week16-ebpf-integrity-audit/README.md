@@ -113,7 +113,7 @@ struct trace_bpf_args {
 | `net.core.bpf_jit_harden` | 0/1/2 | ปิด / เปิดสำหรับ unprivileged / เปิดทุกโปรแกรม (constant blinding ป้องกัน JIT spraying) |
 | `/sys/kernel/security/lsm` มี `bpf` | — | BPF LSM เปิดอยู่ จึงเขียนนโยบาย `lsm/bpf` เพื่อ **บังคับ** ว่าใครโหลดอะไรได้ |
 
-บนเครื่องทดลอง: `unprivileged_bpf_disabled = 2`, `bpf_jit_harden = 0` และ LSM ที่เปิดคือ `lockdown,capability,landlock,yama,apparmor,ima,evm` (**ไม่มี `bpf`**) แปลว่าเครื่องนี้ทำได้เพียง "ตรวจจับ" ยังไม่สามารถใช้ BPF LSM บังคับได้หากไม่แก้ kernel command line
+บนเครื่องทดลอง: `unprivileged_bpf_disabled = 2`, `bpf_jit_harden = 0` ตอนบันทึก output ข้อความในหัวข้อ 4.2 (Linux 7.0.0-38) LSM ที่เปิดคือ `lockdown,capability,landlock,yama,apparmor,ima,evm` (**ไม่มี `bpf`**) เครื่องจึงทำได้เพียง "ตรวจจับ" ต่อมาเราเปิด BPF LSM ด้วย kernel command line `lsm=landlock,lockdown,yama,integrity,apparmor,bpf` (ใช้ใน Week 10) ตอนนี้ `/sys/kernel/security/lsm` จึงเป็น `lockdown,capability,landlock,yama,apparmor,bpf,ima,evm` และ auditor รายงาน `BPF LSM ... : ACTIVE` (ดูภาพหน้าจอในหัวข้อ 4) พร้อมเห็นโปรแกรม LSM `restrict_filesy` ของ systemd ใน inventory — ผลบรรทัดนี้จึงขึ้นกับการตั้งค่าการบูตของแต่ละเครื่อง
 
 ---
 
@@ -340,6 +340,7 @@ $ sudo bpftool prog show pinned /sys/fs/bpf/w16_cpu7
 ```
 
 ### 4.2 Auditor (`sudo ./bin/bpf-audit`)
+> output ข้อความชุดนี้บันทึกก่อนเปิด BPF LSM จึงขึ้น `NOT ACTIVE` บนเครื่องที่บูตด้วย `lsm=...,bpf` (เช่นภาพหน้าจอด้านบน) จะขึ้น `ACTIVE` และมีโปรแกรม `restrict_filesy` (LSM ของ systemd) เพิ่มใน inventory
 ```text
 ======================================================================
  eBPF Integrity Auditor: bpf() syscall monitor + program inventory
@@ -464,7 +465,7 @@ TIME      PID     UID   COMM             BPF COMMAND              RISK        DE
 | **ชื่อโปรแกรมปลอมได้** | ชื่อ (สูงสุด 15 ตัวอักษร) ถูกกำหนดโดยผู้โหลด rootkit ตั้งชื่อเลียนแบบ `sd_fw_egress` ได้ ควรเทียบ **tag** กับ baseline แทนชื่อ |
 
 **แนวทางป้องกันที่ควรใช้ร่วมกัน (Defense-in-depth):**
-1. **BPF LSM** (`lsm/bpf`, `lsm/bpf_prog_load` ฯลฯ): บังคับนโยบาย ณ จุดที่เคอร์เนลเห็น attr หลัง copy แล้ว เช่น อนุญาตให้เฉพาะ binary ของ agent ที่รู้จักโหลดโปรแกรม (ต้องเปิด `bpf` ใน LSM list ตอนบูต; เครื่องทดลองนี้ยังไม่ได้เปิด)
+1. **BPF LSM** (`lsm/bpf`, `lsm/bpf_prog_load` ฯลฯ): บังคับนโยบาย ณ จุดที่เคอร์เนลเห็น attr หลัง copy แล้ว เช่น อนุญาตให้เฉพาะ binary ของ agent ที่รู้จักโหลดโปรแกรม (ต้องเปิด `bpf` ใน LSM list ตอนบูต; เครื่องทดลองเปิดแล้วตั้งแต่ Week 10 แต่บทนี้ยังไม่ได้เขียนนโยบาย `lsm/bpf` — ดูแบบฝึกหัดระดับท้าทาย)
 2. **BPF token** (เคอร์เนลรุ่นใหม่ราว 6.9 ขึ้นไป): มอบสิทธิ์ใช้ eBPF แบบจำกัดคำสั่ง/ชนิดโปรแกรมให้ container แทนการให้ `CAP_SYS_ADMIN`/`CAP_BPF` เต็มรูปแบบ
 3. **การลงนามโปรแกรม (BPF program signing):** เป็นงานที่กำลังพัฒนา/เพิ่งเริ่มเข้าสู่ mainline ในรุ่นหลัง ๆ (ควรตรวจสอบสถานะกับเอกสารของเคอร์เนลเวอร์ชันที่ใช้)
 4. **ลดผู้มีสิทธิ์:** ตั้ง `kernel.unprivileged_bpf_disabled=1`, ไม่ให้ container มี `CAP_BPF`/`CAP_SYS_ADMIN`, ใช้ kernel lockdown
