@@ -498,94 +498,27 @@ rm -rf /tmp/w08-www-b0 /tmp/w08-www-b1
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, bpftool 7.7, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, bpftool 7.7, cilium/ebpf v0.16.0 — ภาพหน้าจอทั้งหมดรันบน `7.0.0-43-generic`; มีเพียงผลการคอมไพล์ (`make all`) แบบข้อความในหัวข้อ 4.2 ที่มาจาก `7.0.0-38`
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week08.sh`](../../scripts/screenshots/week08.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week08.sh`](../../scripts/screenshots/week08.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week08-1-unit-tests.png)
-
-*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
-
-![Terminal 2 — curl ไปยัง VIP จาก client (w08-client) และตรวจจุดแนบ](screenshots/week08-2-client-curl.png)
-
-*ภาพที่ 2: Terminal 2 — curl ไปยัง VIP จาก client (w08-client) และตรวจจุดแนบ*
-
-![Terminal 1 — sudo ip netns exec w08-lb ./bin/xdp-tc-lb (หลัง Ctrl+C)](screenshots/week08-3-lb-dashboard.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ip netns exec w08-lb ./bin/xdp-tc-lb (หลัง Ctrl+C)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 ผลลัพธ์ Unit Tests (`make test`)
-```text
-===> Generating Go bindings from xdp_lb.c and tc_egress.c via bpf2go...
-go generate ./...
-Compiled phase04-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfel.o
-Stripped phase04-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfel.o
-Wrote phase04-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfel.go
-Compiled phase04-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfeb.o
-Stripped phase04-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfeb.o
-Wrote phase04-high-speed-networking/week08-tc-loadbalancer/xdplb_bpfeb.go
-Compiled phase04-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfel.o
-Stripped phase04-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfel.o
-Wrote phase04-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfel.go
-Compiled phase04-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfeb.o
-Stripped phase04-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfeb.o
-Wrote phase04-high-speed-networking/week08-tc-loadbalancer/tcegress_bpfeb.go
-===> Running BPF_PROG_TEST_RUN unit tests (main_test.go)...
-go test -exec sudo -v ./...
-=== RUN   TestXDPForwardRewritesToBackend
-=== RUN   TestXDPForwardRewritesToBackend/flow_hashed_to_backend_0
-=== RUN   TestXDPForwardRewritesToBackend/flow_hashed_to_backend_1
-=== RUN   TestXDPForwardRewritesToBackend/data_segment_keeps_valid_checksum
---- PASS: TestXDPForwardRewritesToBackend (0.00s)
-    --- PASS: TestXDPForwardRewritesToBackend/flow_hashed_to_backend_0 (0.00s)
-    --- PASS: TestXDPForwardRewritesToBackend/flow_hashed_to_backend_1 (0.00s)
-    --- PASS: TestXDPForwardRewritesToBackend/data_segment_keeps_valid_checksum (0.00s)
-=== RUN   TestXDPEvenPortsAreBalanced
-    main_test.go:340: 1000 even-port flows -> backend0=500 backend1=500
---- PASS: TestXDPEvenPortsAreBalanced (0.00s)
-=== RUN   TestXDPForwardWithIPOptions
---- PASS: TestXDPForwardWithIPOptions (0.00s)
-=== RUN   TestXDPPassesNonLBTraffic
-=== RUN   TestXDPPassesNonLBTraffic/tcp_to_non-vip_address
-=== RUN   TestXDPPassesNonLBTraffic/backend_reply_(handled_by_TC,_not_XDP)
-=== RUN   TestXDPPassesNonLBTraffic/udp_to_vip
-=== RUN   TestXDPPassesNonLBTraffic/truncated_tcp_header_to_vip
-=== RUN   TestXDPPassesNonLBTraffic/ip_fragment_to_vip
-=== RUN   TestXDPPassesNonLBTraffic/ethernet-only_frame
-=== RUN   TestXDPPassesNonLBTraffic/ipv6_frame
---- PASS: TestXDPPassesNonLBTraffic (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/tcp_to_non-vip_address (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/backend_reply_(handled_by_TC,_not_XDP) (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/udp_to_vip (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/truncated_tcp_header_to_vip (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/ip_fragment_to_vip (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/ethernet-only_frame (0.00s)
-    --- PASS: TestXDPPassesNonLBTraffic/ipv6_frame (0.00s)
-=== RUN   TestTCReverseNATRestoresVIP
-=== RUN   TestTCReverseNATRestoresVIP/syn-ack
-=== RUN   TestTCReverseNATRestoresVIP/http_response
---- PASS: TestTCReverseNATRestoresVIP (0.00s)
-    --- PASS: TestTCReverseNATRestoresVIP/syn-ack (0.00s)
-    --- PASS: TestTCReverseNATRestoresVIP/http_response (0.00s)
-=== RUN   TestTCReverseNATIgnoresUnknownFlows
-=== RUN   TestTCReverseNATIgnoresUnknownFlows/backend_traffic_without_flow_entry
-=== RUN   TestTCReverseNATIgnoresUnknownFlows/unrelated_host
---- PASS: TestTCReverseNATIgnoresUnknownFlows (0.00s)
-    --- PASS: TestTCReverseNATIgnoresUnknownFlows/backend_traffic_without_flow_entry (0.00s)
-    --- PASS: TestTCReverseNATIgnoresUnknownFlows/unrelated_host (0.00s)
-=== RUN   TestTCEgressPortStats
---- PASS: TestTCEgressPortStats (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase04-high-speed-networking/week08-tc-loadbalancer	0.020s
-```
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week08-1-unit-tests.png)
+
+*ภาพ: Terminal — make test (BPF_PROG_TEST_RUN) ทุก Test ขึ้น `--- PASS` และ `TestXDPEvenPortsAreBalanced` รายงาน `1000 even-port flows -> backend0=500 backend1=500`*
 
 ### 4.2 ผลลัพธ์การคอมไพล์และรัน XDP Load Balancer + TC (`./bin/xdp-tc-lb -iface eth0 -xdp-mode generic ...`)
+
+**การคอมไพล์ (`make all`)** — ไม่มีภาพหน้าจอ ข้อความด้านล่างมาจากการรันครั้งก่อนบน `7.0.0-38`:
 ```text
 $ make all
 ===> Generating Go bindings from xdp_lb.c and tc_egress.c via bpf2go...
@@ -606,90 +539,24 @@ Wrote /mnt/sda/ebpf/phase04-high-speed-networking/week08-tc-loadbalancer/tcegres
 mkdir -p bin
 go build -v -o bin/xdp-tc-lb .
 ebpf-noob-to-hero/phase04-high-speed-networking/week08-tc-loadbalancer
-
---- LB STARTUP (sudo ip netns exec w08-lb ./bin/xdp-tc-lb -iface eth0 -xdp-mode generic -vip 10.10.1.100 ...) ---
-======================================================================
- eBPF Dual Pipeline: High-Speed XDP Load Balancer & TC Egress Marker
-======================================================================
-2026/10/28 22:08:41 [LB Config] Backend #0 registered: IP=10.10.1.2 MAC=02:00:00:00:02:00
-2026/10/28 22:08:41 [LB Config] Backend #1 registered: IP=10.10.1.3 MAC=02:00:00:00:03:00
-2026/10/28 22:08:41 [LB Config] VIP: 10.10.1.100 (MAC: 02:00:00:00:01:00) active.
-2026/10/28 22:08:41 [TC] Attached Reverse NAT (TCX ingress) to eth0 (index 2)
-2026/10/28 22:08:41 [XDP] Attached Load Balancer program to eth0 (index 2, mode generic)
-2026/10/28 22:08:41 [TC] Attached Egress Classifier (TCX) to eth0 (index 2)
-
---- CLIENT (10 x curl -s --connect-timeout 2 -m 3 http://10.10.1.100/) ---
-Hello from Backend 0
-Hello from Backend 1
-Hello from Backend 0
-Hello from Backend 1
-Hello from Backend 0
-Hello from Backend 0
-Hello from Backend 0
-Hello from Backend 0
-Hello from Backend 0
-Hello from Backend 1
-
---- BPFTOOL MAP DUMP (sudo bpftool map dump name lb_stats) ---
-[{
-        "key": 0,
-        "value": {
-            "rx_packets": 70,
-            "forwarded_backend_0": 49,
-            "forwarded_backend_1": 21,
-            "reverse_nat_packets": 51
-        }
-    }
-]
-
---- XDP / TCX ATTACHMENTS (ip link show eth0 + bpftool net show dev eth0, in w08-lb) ---
-2: eth0@if4: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 xdpgeneric qdisc noqueue state UP mode DEFAULT group default qlen 1000
-    link/ether 02:00:00:00:01:00 brd ff:ff:ff:ff:ff:ff link-netns w08-sw
-    prog/xdp id 10350 name xdp_load_balanc tag 61cdf8e14ec46d44 jited
-xdp:
-eth0(2) generic id 10350
-
-tc:
-eth0(2) tcx/ingress tc_reverse_nat prog_id 10349 link_id 3948
-eth0(2) tcx/egress tc_egress_prog prog_id 10351 link_id 3950
-
-flow_dissector:
-
-netfilter:
-
---- DASHBOARD AFTER Ctrl+C / SIGTERM ---
-Received signal 'terminated'. Detaching XDP and TC hooks...
-=================================================================================
- eBPF XDP Load Balancer & TC Monitor | Interface: eth0 | Time: 22:08:45
-=================================================================================
- [ VIP: 10.10.1.100 (XDP_TX Hairpin Forwarding) ]
-  Total Ingress Packets:       70
-  Forwarded to Backend #0:     49
-  Forwarded to Backend #1:     21
-  Replies SNAT'd to VIP (TC):  51
-  Tracked Flows (LRU):         10
-
- [ TC Egress Port Telemetry (BPF_MAP_TYPE_HASH) ]
-  DEST PORT         PACKETS           BYTES
-  ----------------------------------------------------
-  Port 58552        5                 544
-  Port 58542        6                 610
-  Port 58512        5                 544
-  Port 58536        5                 544
-  Port 58526        5                 544
-  Port 58544        5                 544
-  Port 58550        5                 544
-  Port 58502        5                 544
-  Port 58568        5                 544
-  Port 58548        5                 544
-=================================================================================
- Press Ctrl+C to terminate and detach hooks.
-Cleanup complete. Load Balancer and TC Egress stopped.
 ```
+
+**Terminal 2 — curl ไปยัง VIP, ตรวจจุดแนบ และ `bpftool map dump name lb_stats`**
+
+![Terminal 2 — curl ไปยัง VIP จาก client (w08-client) และตรวจจุดแนบ](screenshots/week08-2-client-curl.png)
+
+*ภาพ: Terminal 2 — curl 10 ครั้งไปยัง VIP สำเร็จทั้งหมด, `ip link show eth0` เห็น `xdpgeneric`, `bpftool net show dev eth0` เห็น `tcx/ingress` และ `tcx/egress`, และแมป `lb_stats`*
+
+**Terminal 1 — log ตอนเริ่มต้นและ Dashboard ของ LB (หลัง Ctrl+C)**
+
+![Terminal 1 — sudo ip netns exec w08-lb ./bin/xdp-tc-lb (หลัง Ctrl+C)](screenshots/week08-3-lb-dashboard.png)
+
+*ภาพ: Terminal 1 — LB ลงทะเบียน Backend ทั้งสอง แนบ TC Reverse NAT, XDP และ TC Egress แล้วแสดง Dashboard เฟรมสุดท้าย*
+
 สังเกตว่า:
-- `curl` ทั้ง 10 ครั้งสำเร็จ (7 ครั้งไป Backend 0, 3 ครั้งไป Backend 1 — ขึ้นกับพอร์ตที่สุ่มได้ในรอบนั้น)
-- `Total Ingress Packets` = 70 คือทุกแพ็กเก็ตจาก Client (SYN, ACK, HTTP GET, FIN ฯลฯ ≈ 7 แพ็กเก็ตต่อการเชื่อมต่อ) และแต่ละการเชื่อมต่อไป Backend เดียวกันตลอด (49 = 7 × 7, 21 = 3 × 7)
-- `Replies SNAT'd to VIP (TC)` = 51 คือแพ็กเก็ตขากลับที่ถูกเปลี่ยน Source IP เป็น VIP และ `Tracked Flows` = 10 ตรงกับจำนวนการเชื่อมต่อ
+- `curl` ทั้ง 10 ครั้งสำเร็จ (3 ครั้งไป Backend 0, 7 ครั้งไป Backend 1 — ขึ้นกับพอร์ตที่สุ่มได้ในรอบนั้น)
+- `Total Ingress Packets` = 70 คือทุกแพ็กเก็ตจาก Client (SYN, ACK, HTTP GET, FIN ฯลฯ ≈ 7 แพ็กเก็ตต่อการเชื่อมต่อ) และแต่ละการเชื่อมต่อไป Backend เดียวกันตลอด (21 = 3 × 7, 49 = 7 × 7)
+- `Replies SNAT'd to VIP (TC)` = 58 คือแพ็กเก็ตขากลับที่ถูกเปลี่ยน Source IP เป็น VIP และ `Tracked Flows` = 10 ตรงกับจำนวนการเชื่อมต่อ
 - ตาราง TC Egress แสดงพอร์ตปลายทางเป็น Ephemeral Port ของ Client เพราะแพ็กเก็ต `XDP_TX` ไม่ผ่าน TC Egress มีแต่คำตอบขากลับที่ถูก Forward
 
 ---

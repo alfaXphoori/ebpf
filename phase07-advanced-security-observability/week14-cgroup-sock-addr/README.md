@@ -259,100 +259,52 @@ ls -d /sys/fs/cgroup/w14-* 2>/dev/null || echo "clean"
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-10-28)
-> สคริปต์ที่ใช้ตอนบันทึกชื่อ `w14_client.py` ซึ่งเป็นรุ่นก่อนของ `client.py` ในข้อ 3 (ยังไม่มี flag `--in-cgroup` จึงทดสอบ 10.99.99.99 ทุกรอบ) ในรอบ baseline เราตัดบรรทัด 10.99.99.99 ออกจากการแสดงผลด้วย `grep -v` ส่วนเนื้อหาบรรทัดอื่นไม่ได้แก้ไข
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-11-21)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week14.sh`](../../scripts/screenshots/week14.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week14.sh`](../../scripts/screenshots/week14.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal 3 — client.py นอก/ใน cgroup w14-sock-enforce](screenshots/week14-1-client.png)
-
-*ภาพที่ 1: Terminal 3 — client.py นอก/ใน cgroup w14-sock-enforce*
-
-![Terminal 2 — sudo ./bin/sock-enforce](screenshots/week14-2-enforcer.png)
-
-*ภาพที่ 2: Terminal 2 — sudo ./bin/sock-enforce*
-
-![Terminal 3 — socket ที่สร้างก่อนเข้า cgroup (ไม่มี listener ที่ 2323)](screenshots/week14-3-precreate.png)
-
-*ภาพที่ 3: Terminal 3 — socket ที่สร้างก่อนเข้า cgroup (ไม่มี listener ที่ 2323)*
-
-![Terminal 2 — ด่านป้องกัน root cgroup](screenshots/week14-4-root-guard.png)
-
-*ภาพที่ 4: Terminal 2 — ด่านป้องกัน root cgroup*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 ไคลเอนต์ (Terminal 3)
-```text
-### baseline: client OUTSIDE the test cgroup
-cgroup of client: 0::/user.slice/user-1000.slice/user@1000.service/tmux-spawn-9ef4b967-05d2-4658-80c9-513e01e0eaac.scope
-  TCP  connect 127.0.0.1:2323 (blocked port)       -> OK (not blocked)
-  TCP  connect 127.0.0.1:8080 (allowed port)       -> OK (not blocked)
-  UDP  connect 127.0.0.1:2323 (blocked port)       -> OK (not blocked)
 
-### client INSIDE /sys/fs/cgroup/w14-sock-enforce
-$ sudo sh -c 'echo $$ > /sys/fs/cgroup/w14-sock-enforce/cgroup.procs && exec sudo -u ce python3 w14_client.py --bypass'
-cgroup of client: 0::/w14-sock-enforce
-  TCP  connect 127.0.0.1:2323 (blocked port)       -> EPERM (Operation not permitted)
-  TCP  connect 127.0.0.1:8080 (allowed port)       -> OK (not blocked)
-  TCP  connect 10.99.99.99:80 (blocked IP)         -> EPERM (Operation not permitted)
-  UDP  connect 127.0.0.1:2323 (blocked port)       -> EPERM (Operation not permitted)
-  UDP  sendto 127.0.0.1:2323 without connect()     -> OK (not blocked)
-  TCP6 connect [::ffff:127.0.0.1]:2323 (v4-mapped) -> OK (not blocked)
+![Terminal 3 — client.py นอก/ใน cgroup w14-sock-enforce และ bpftool cgroup show](screenshots/week14-1-client.png)
 
-$ sudo bpftool cgroup show /sys/fs/cgroup/w14-sock-enforce
-ID       AttachType      AttachFlags     Name           
-9863     cgroup_inet4_connect multi           sock4_connect                  
-$ sudo bpftool cgroup show /sys/fs/cgroup
-(ไม่มีผลลัพธ์: root cgroup ไม่มีโปรแกรมของเราผูกอยู่)
-```
+*ภาพ: Terminal 3 — client.py นอก/ใน cgroup w14-sock-enforce และ bpftool cgroup show*
+
+> `bpftool cgroup show /sys/fs/cgroup | wc -l` ได้ `0` แปลว่า root cgroup ไม่มีโปรแกรมของเราผูกอยู่ โปรแกรม `sock4_connect` ผูกเฉพาะที่ `w14-sock-enforce`
 
 ### 4.2 Enforcer (Terminal 2)
-```text
-======================================================================
- eBPF Socket Egress Enforcer (cgroup/connect4)
-======================================================================
-2026/10/28 22:02:55 [INFO] Created dedicated test cgroup /sys/fs/cgroup/w14-sock-enforce
-2026/10/28 22:02:55 [POLICY] Deny destination port: 2323 (TCP + connected UDP)
-2026/10/28 22:02:55 [POLICY] Deny destination IPv4: 10.99.99.99
-2026/10/28 22:02:55 [INFO] Attached cgroup/connect4 to /sys/fs/cgroup/w14-sock-enforce
-2026/10/28 22:02:55 [INFO] Policy applies ONLY to processes inside this cgroup. Run a client with:
-2026/10/28 22:02:55        sudo sh -c 'echo $$ > /sys/fs/cgroup/w14-sock-enforce/cgroup.procs && exec <command>'
-2026/10/28 22:02:55 [INFO] Press Ctrl+C to detach and exit.
 
-[22:02:57] DENY connect() pid=4052785 comm=python3      dst=127.0.0.1:2323/TCP (matched port) -> EPERM
-[22:02:57] DENY connect() pid=4052785 comm=python3      dst=10.99.99.99:80/TCP (matched ip) -> EPERM
-[22:02:57] DENY connect() pid=4052785 comm=python3      dst=127.0.0.1:2323/UDP (matched port) -> EPERM
+![Terminal 2 — sudo ./bin/sock-enforce](screenshots/week14-2-enforcer.png)
 
-[INFO] Detaching from cgroup and stopping...
-Final denies on port 2323: 2
-Final denies on IP 10.99.99.99: 1
-2026/10/28 22:03:04 [INFO] Removed test cgroup /sys/fs/cgroup/w14-sock-enforce
-```
+*ภาพ: Terminal 2 — sudo ./bin/sock-enforce*
+
+> DENY บรรทัดสุดท้าย (pid ต่างออกไป) มาจากการทดลองเสริมในหัวข้อ 4.3 (`precreate.py`) ซึ่งรันขณะที่ enforcer ตัวเดียวกันยังทำงานอยู่
 
 ### 4.3 การทดลองเสริม: socket ที่สร้างก่อนเข้า cgroup
-```text
-$ sudo python3 w14_precreate.py   # = precreate.py ในแล็บนี้
-now in: 0::/w14-sock-enforce
-  socket created BEFORE joining cgroup     -> [Errno 111] Connection refused
-  socket created AFTER joining cgroup      -> [Errno 1] Operation not permitted
-```
+
+![Terminal 3 — socket ที่สร้างก่อนเข้า cgroup (ไม่มี listener ที่ 2323)](screenshots/week14-3-precreate.png)
+
+*ภาพ: Terminal 3 — socket ที่สร้างก่อนเข้า cgroup (ไม่มี listener ที่ 2323)*
+
 (สคริปต์ [`precreate.py`](precreate.py) สร้าง socket หนึ่งตัวก่อนเขียน PID ตัวเองลง `cgroup.procs` และอีกตัวหลังจากนั้น แล้ว `connect()` ไปที่ 127.0.0.1:2323 ขณะที่ไม่มี listener: ตัวแรก "ผ่าน" hook จึงได้ `ECONNREFUSED` จาก TCP ปกติ ตัวที่สองถูกบล็อกด้วย `EPERM`)
 
 ### 4.4 ด่านป้องกัน root cgroup
-```text
-$ sudo ./bin/sock-enforce -cgroup /sys/fs/cgroup
-2026/10/28 22:03:16 [ERROR] refusing to attach to the ROOT cgroup /sys/fs/cgroup (affects every process on the host); use a dedicated cgroup or pass -allow-root
-```
+
+![Terminal 2 — ด่านป้องกัน root cgroup (exit=1)](screenshots/week14-4-root-guard.png)
+
+*ภาพ: Terminal 2 — ด่านป้องกัน root cgroup (exit=1)*
 
 **วิเคราะห์ผล:**
 - นโยบายมีผล **เฉพาะ** โปรเซสใน cgroup ทดลอง (baseline นอก cgroup เชื่อมต่อพอร์ต 2323 ได้ตามปกติ)
 - `connect()` ที่ถูกบล็อกล้มเหลวทันทีด้วย `EPERM` ทั้ง TCP และ UDP ส่วนพอร์ตที่ไม่อยู่ใน blocklist (8080) ใช้ได้ปกติ
-- ตัวนับ `Final denies on port 2323: 2` (TCP 1 + UDP 1) ตรงกับ audit event
+- ตัวนับ `Final denies on port 2323: 3` (TCP 1 + UDP 1 จาก `client.py` และ TCP 1 จาก `precreate.py` ในหัวข้อ 4.3) และ `Final denies on IP 10.99.99.99: 1` ตรงกับ audit event ทั้ง 4 บรรทัด
 - **พบ bypass จริง 2 ทาง:** `sendto()` ของ UDP โดยไม่ `connect()` และ socket `AF_INET6` ที่ใช้ IPv4-mapped address (`::ffff:127.0.0.1`) ทั้งสองไม่ผ่าน hook `connect4` (ดูข้อ 5)
 
 ---

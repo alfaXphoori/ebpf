@@ -165,71 +165,40 @@ sudo ip netns exec w11cli curl -s http://10.211.0.2:2112/metrics | grep ebpf_xdp
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 — รันบน veth `w11b` ใน Namespace `w11srv` ตามขั้นตอนที่ 3
+> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 — รันบน veth `w11b` ใน Namespace `w11srv` ตามขั้นตอนที่ 3
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week11.sh`](../../scripts/screenshots/week11.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week11.sh`](../../scripts/screenshots/week11.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week11-1-unit-tests.png)
-
-*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
-
-![Terminal 2 — สร้างทราฟฟิกจาก w11cli และดึง /metrics](screenshots/week11-2-metrics.png)
-
-*ภาพที่ 2: Terminal 2 — สร้างทราฟฟิกจาก w11cli และดึง /metrics*
-
-![Terminal 1 — sudo ip netns exec w11srv ./bin/metrics_exporter (หลัง Ctrl+C)](screenshots/week11-3-exporter-log.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ip netns exec w11srv ./bin/metrics_exporter (หลัง Ctrl+C)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 ผลลัพธ์ `make test`
-```text
-go generate ./...
-go test -exec sudo -v ./...
-=== RUN   TestXDPMetricsCounting
---- PASS: TestXDPMetricsCounting (0.00s)
-PASS
-ok  	week11-verifier-prometheus	0.007s
-```
-(ตัดบรรทัด `Compiled/Stripped/Wrote` ของ bpf2go ออก)
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week11-1-unit-tests.png)
+
+*ภาพ: Terminal — make test (BPF_PROG_TEST_RUN) (กรองบรรทัด `Compiled/Stripped/Wrote` ของ bpf2go ออกด้วย `grep -vE`)*
 
 ### 4.2 ผลลัพธ์การรัน Exporter และดึง Metrics
-```text
-$ sudo ip netns exec w11cli ping -c 5 -q 10.211.0.2
-5 packets transmitted, 5 received, 0% packet loss, time 4108ms
-rtt min/avg/max/mdev = 0.060/0.079/0.123/0.022 ms
-$ sudo ip netns exec w11cli curl -s -o /dev/null -w "curl http_code=%{http_code}\n" http://10.211.0.2:2112/
-curl http_code=200
-$ echo "eBPF test" | sudo ip netns exec w11cli nc -u -w1 10.211.0.2 9999
-$ sudo ip netns exec w11cli curl -s http://10.211.0.2:2112/metrics | grep ebpf_xdp
-# HELP ebpf_xdp_bytes_total Total number of bytes observed by eBPF XDP hook aggregated across all CPU cores
-# TYPE ebpf_xdp_bytes_total counter
-ebpf_xdp_bytes_total{interface="w11b",protocol="icmp"} 490
-ebpf_xdp_bytes_total{interface="w11b",protocol="other"} 362
-ebpf_xdp_bytes_total{interface="w11b",protocol="tcp"} 775
-ebpf_xdp_bytes_total{interface="w11b",protocol="udp"} 52
-# HELP ebpf_xdp_packets_total Total number of packets observed by eBPF XDP hook aggregated across all CPU cores
-# TYPE ebpf_xdp_packets_total counter
-ebpf_xdp_packets_total{interface="w11b",protocol="icmp"} 5
-ebpf_xdp_packets_total{interface="w11b",protocol="other"} 5
-ebpf_xdp_packets_total{interface="w11b",protocol="tcp"} 9
-ebpf_xdp_packets_total{interface="w11b",protocol="udp"} 1
-```
-Log ของ Exporter (กด `Ctrl+C` / ส่ง `SIGINT` ตอนท้าย):
-```text
-2026/10/28 22:06:07 [INFO] Attached XDP metrics program to interface w11b (index 1578)
-2026/10/28 22:06:07 [INFO] Starting Prometheus metrics exporter at http://0.0.0.0:2112/metrics
-2026/10/28 22:06:13 
-[INFO] Termination signal received. Stopping HTTP server and detaching XDP...
-2026/10/28 22:06:13 [INFO] Server stopped gracefully. Cleaned up.
-```
+
+**Terminal 2 — สร้างทราฟฟิกจาก `w11cli` และดึง `/metrics`**
+
+![Terminal 2 — สร้างทราฟฟิกจาก w11cli และดึง /metrics](screenshots/week11-2-metrics.png)
+
+*ภาพ: Terminal 2 — สร้างทราฟฟิกจาก w11cli และดึง /metrics*
+
+**Terminal 1 — Log ของ Exporter** (กด `Ctrl+C` / ส่ง `SIGINT` ตอนท้าย):
+
+![Terminal 1 — sudo ip netns exec w11srv ./bin/metrics_exporter (หลัง Ctrl+C)](screenshots/week11-3-exporter-log.png)
+
+*ภาพ: Terminal 1 — sudo ip netns exec w11srv ./bin/metrics_exporter (หลัง Ctrl+C)*
+
 - ICMP 5 แพ็กเก็ต × 98 ไบต์ = 490 ไบต์ ตรงกับ `ping -c 5` (นับเฉพาะขาเข้า `w11b` เพราะ XDP เป็น Ingress Hook)
-- `other` = 5 แพ็กเก็ต คือ ARP และ IPv6 (Neighbor Discovery) ที่เกิดขึ้นเองบนลิงก์
+- `other` = 7 แพ็กเก็ต (538 ไบต์) คือ ARP และ IPv6 (Neighbor Discovery) ที่เกิดขึ้นเองบนลิงก์
 
 ---
 

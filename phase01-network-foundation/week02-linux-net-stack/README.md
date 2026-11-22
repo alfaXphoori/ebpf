@@ -209,144 +209,37 @@ ip netns list | grep w02 || echo "clean"   # ต้องไม่เหลื�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), iproute2, strace, perf (linux-tools-7.0.0-38)
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), iproute2, strace, perf (linux-tools-7.0.0-43)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week02.sh`](../../scripts/screenshots/week02.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week02.sh`](../../scripts/screenshots/week02.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — sudo ./bridge_router_lab.sh setup](screenshots/week02-1-setup.png)
-
-*ภาพที่ 1: Terminal — sudo ./bridge_router_lab.sh setup*
-
-![Terminal — sudo ./bridge_router_lab.sh test](screenshots/week02-2-test.png)
-
-*ภาพที่ 2: Terminal — sudo ./bridge_router_lab.sh test*
-
-![Terminal — ตรวจตาราง FDB ของ br0](screenshots/week02-3-fdb.png)
-
-*ภาพที่ 3: Terminal — ตรวจตาราง FDB ของ br0*
-
-![Terminal — sudo ./bridge_router_lab.sh trace](screenshots/week02-4-trace.png)
-
-*ภาพที่ 4: Terminal — sudo ./bridge_router_lab.sh trace*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 การสร้าง Linux Bridge Topology และตรวจสอบตาราง FDB (`setup`, `test`)
-```text
-===> Building Multi-Namespace Bridge Topology (w02-ns1 w02-ns2 w02-ns3 <-> w02-sw/br0)...
 
-===> Tearing down Bridge and Namespaces...
-[SUCCESS] Cleanup finished cleanly.
-[INFO] Step 1: Creating switch namespace 'w02-sw' and Linux Bridge 'br0' inside it
-[INFO] Step 2: Creating namespaces and interconnecting with veth pairs
-[INFO]   - Provisioning w02-ns1 (10.20.0.11/24) connected via veth-ns1 <---> veth-br1
-[INFO]   - Provisioning w02-ns2 (10.20.0.12/24) connected via veth-ns2 <---> veth-br2
-[INFO]   - Provisioning w02-ns3 (10.20.0.13/24) connected via veth-ns3 <---> veth-br3
-[SUCCESS] Bridge topology provisioned successfully!
+![Terminal — sudo ./bridge_router_lab.sh setup](screenshots/week02-1-setup.png)
 
-===> Current Topology and Bridge Forwarding Database (FDB)
-Linux Bridge [br0] in netns w02-sw:
-br0              UP             10.20.0.1/24 fe80::bc26:a5ff:fe5e:b3d5/64 
+*ภาพ: Terminal — sudo ./bridge_router_lab.sh setup*
 
-Interfaces attached to br0:
-veth-br1@if2     UP             1e:a1:28:90:82:af <BROADCAST,MULTICAST,UP,LOWER_UP> 
-veth-br2@if2     UP             ca:0c:0a:dc:27:16 <BROADCAST,MULTICAST,UP,LOWER_UP> 
-veth-br3@if2     UP             6a:92:5f:1c:3e:86 <BROADCAST,MULTICAST,UP,LOWER_UP> 
+![Terminal — sudo ./bridge_router_lab.sh test](screenshots/week02-2-test.png)
 
-Bridge Forwarding Database (FDB) Entries (learned, non-permanent):
-7e:dc:d1:01:6c:66 dev veth-br1 master br0 
-1e:0e:11:d8:3a:3d dev veth-br2 master br0 
-9a:9a:cd:b4:bc:3c dev veth-br3 master br0 
+*ภาพ: Terminal — sudo ./bridge_router_lab.sh test*
 
-Namespace Status:
-  [w02-ns1]: veth-ns1@if3     UP             10.20.0.11/24 fe80::7cdc:d1ff:fe01:6c66/64 
-  [w02-ns2]: veth-ns2@if4     UP             10.20.0.12/24 fe80::1c0e:11ff:fed8:3a3d/64 
-  [w02-ns3]: veth-ns3@if5     UP             10.20.0.13/24 fe80::989a:cdff:feb4:bc3c/64 
-===> Testing Cross-Namespace and Bridge Gateway Connectivity...
-[INFO] Testing w02-ns1 -> Bridge Gateway (10.20.0.1)...
-[SUCCESS] w02-ns1 -> Bridge Gateway (10.20.0.1) reached!
-[INFO] Testing w02-ns1 (10.20.0.11) -> w02-ns2 (10.20.0.12)...
-[SUCCESS] w02-ns1 (10.20.0.11) -> w02-ns2 (10.20.0.12) reached!
-[INFO] Testing w02-ns2 (10.20.0.12) -> w02-ns3 (10.20.0.13)...
-[SUCCESS] w02-ns2 (10.20.0.12) -> w02-ns3 (10.20.0.13) reached!
-[INFO] Testing w02-ns3 (10.20.0.13) -> w02-ns1 (10.20.0.11)...
-[SUCCESS] w02-ns3 (10.20.0.13) -> w02-ns1 (10.20.0.11) reached!
-[SUCCESS] All bridge L2 switching tests succeeded!
+![Terminal — ตรวจตาราง FDB ของ br0](screenshots/week02-3-fdb.png)
 
-===> Current Topology and Bridge Forwarding Database (FDB)
-Linux Bridge [br0] in netns w02-sw:
-br0              UP             10.20.0.1/24 fe80::bc26:a5ff:fe5e:b3d5/64 
-
-Interfaces attached to br0:
-veth-br1@if2     UP             1e:a1:28:90:82:af <BROADCAST,MULTICAST,UP,LOWER_UP> 
-veth-br2@if2     UP             ca:0c:0a:dc:27:16 <BROADCAST,MULTICAST,UP,LOWER_UP> 
-veth-br3@if2     UP             6a:92:5f:1c:3e:86 <BROADCAST,MULTICAST,UP,LOWER_UP> 
-
-Bridge Forwarding Database (FDB) Entries (learned, non-permanent):
-7e:dc:d1:01:6c:66 dev veth-br1 master br0 
-1e:0e:11:d8:3a:3d dev veth-br2 master br0 
-9a:9a:cd:b4:bc:3c dev veth-br3 master br0 
-
-Namespace Status:
-  [w02-ns1]: veth-ns1@if3     UP             10.20.0.11/24 fe80::7cdc:d1ff:fe01:6c66/64 
-  [w02-ns2]: veth-ns2@if4     UP             10.20.0.12/24 fe80::1c0e:11ff:fed8:3a3d/64 
-  [w02-ns3]: veth-ns3@if5     UP             10.20.0.13/24 fe80::989a:cdff:feb4:bc3c/64 
-```
+*ภาพ: Terminal — ตรวจตาราง FDB ของ br0 เทียบกับ MAC ของ veth-ns1/2/3 ในแต่ละ namespace*
 
 ### 4.2 การตรวจสอบ Kernel Network Stack, SoftIRQ, `strace` และ `perf stat` (`./bridge_router_lab.sh trace`)
-```text
-===> Diagnostic Tracing: Kernel Network Stack & SoftIRQ Traversal
-[1. /proc/net/softnet_stat Inspection]
-Values are hex, per CPU (system-wide: /proc/net/softnet_stat is not per-namespace).
-Shown: col1=Processed col2=Dropped col3=TimeSqueeze (col13 = CPU id on newer kernels)
-------------------------------------------------------------------------------------------------
-  CPU  0 : Processed=0x0008b1a4 Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  1 : Processed=0x00052d25 Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  2 : Processed=0x000bc569 Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  3 : Processed=0x00116880 Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  4 : Processed=0x000fadd6 Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  5 : Processed=0x000b8e89 Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  6 : Processed=0x0009a98c Dropped=0x00000000 TimeSqueeze=0x00000000
-  CPU  7 : Processed=0x0046d260 Dropped=0x00000000 TimeSqueeze=0x00000002
-Note: 'TimeSqueeze' increments when net_rx_action() runs out of budget (netdev_budget packets or netdev_budget_usecs) with work still pending.
 
-[2. /proc/softirqs (NET_RX / NET_TX Activity)]
-      NET_TX:        823        721        789        686        738        686        704      20695
-      NET_RX:     477215     272136     685574    1060882     933840     688529     564919   10937643
+![Terminal — sudo ./bridge_router_lab.sh trace](screenshots/week02-4-trace.png)
 
-[3. Bridge Device Interface Counters (ip -s link, netns w02-sw)]
-2: br0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP mode DEFAULT group default qlen 1000
-    link/ether 1e:a1:28:90:82:af brd ff:ff:ff:ff:ff:ff
-    RX:  bytes packets errors dropped  missed   mcast           
-          1576      24      0       0       0      18 
-    TX:  bytes packets errors dropped carrier collsns           
-          1052      12      0       0       0       0 
-
-[4. System Call Tracing with strace (Socket Send & Recv)]
-[INFO] Executing strace on a 1-packet ICMP ping from w02-ns1 to w02-ns2...
-  [syscall] socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP) = -1 EACCES (Permission denied) <0.000040>
-  [syscall] socket(AF_INET, SOCK_RAW, IPPROTO_ICMP) = 3 <0.000032>
-  [syscall] socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6) = -1 EACCES (Permission denied) <0.000030>
-  [syscall] socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6) = 4 <0.000028>
-  [syscall] socket(AF_INET, SOCK_DGRAM, IPPROTO_IP) = 5 <0.000028>
-  [syscall] sendto(3, "\10\0\311\353\3476\0\0014\22\342j\0\0\0\0d\214\r\0\0\0\0\0\20\21\22\23\24\25\26\27"..., 64, 0, {sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("10.20.0.12")}, 16) = 64 <0.000080>
-  [syscall] recvmsg(3, {msg_name={sa_family=AF_INET, sin_port=htons(0), sin_addr=inet_addr("10.20.0.12")}, msg_namelen=128 => 16, msg_iov=[{iov_base="E\0\0T+\267\0\0@\1:\264\n\24\0\f\n\24\0\v\0\0\321\353\3476\0\0014\22\342j"..., iov_len=192}], msg_iovlen=1, msg_control=[{cmsg_len=32, cmsg_level=SOL_SOCKET, cmsg_type=SO_TIMESTAMP_OLD, cmsg_data={tv_sec=1793200692, tv_usec=888143}}], msg_controllen=32, msg_flags=0}, 0) = 84 <0.000016>
-
-[5. Kernel Tracepoint Inspection (perf stat / trace)]
-[INFO] Running perf stat tracking net:* events during cross-bridge traffic...
-  [perf]                 12      net:net_dev_queue                                                     
-  [perf]                 12      net:net_dev_xmit                                                      
-  [perf]                 12      net:netif_rx                                                          
-  [perf]                 12      net:netif_receive_skb                                                 
-  [perf]        2.030807196 seconds time elapsed
-  [perf]        0.000000000 seconds user
-  [perf]        0.004558000 seconds sys
-[SUCCESS] Diagnostic trace complete.
-```
+*ภาพ: Terminal — sudo ./bridge_router_lab.sh trace (softnet_stat, softirqs, ip -s link, strace และ perf stat)*
 
 ข้อสังเกตจากผลจริง:
 - `perf stat` นับได้ 12 ครั้งต่อ tracepoint สำหรับ `ping -c 3` — ทุก Echo Request/Reply ต้องผ่าน veth และ bridge หลายช่วง แต่ละช่วงคือการ "ส่ง" (`net_dev_queue`/`net_dev_xmit`) และ "รับ" (`netif_rx`/`netif_receive_skb`) หนึ่งครั้ง

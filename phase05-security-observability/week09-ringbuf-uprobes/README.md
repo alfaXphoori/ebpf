@@ -276,69 +276,50 @@ wget -q -O /dev/null https://example.com             # GnuTLS: ไม่คว�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux ce-desk 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), OpenSSL `libssl.so.3`, curl 8.18.0, Python 3.14, clang 21, Go 1.26, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04.1 LTS (`Linux ce-desk 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), OpenSSL `libssl.so.3`, curl 8.18.0, Python 3.14, clang 21, Go 1.26, cilium/ebpf v0.16.0
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week09.sh`](../../scripts/screenshots/week09.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week09.sh`](../../scripts/screenshots/week09.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal 2 — สร้าง exec และ TLS traffic (ขั้นตอนที่ 3–4)](screenshots/week09-1-traffic.png)
-
-*ภาพที่ 1: Terminal 2 — สร้าง exec และ TLS traffic (ขั้นตอนที่ 3–4)*
-
-![Terminal 1 — sudo ./bin/ringbuf_events (sched_process_exec + SSL_write uprobes)](screenshots/week09-2-ringbuf-events.png)
-
-*ภาพที่ 2: Terminal 1 — sudo ./bin/ringbuf_events (sched_process_exec + SSL_write uprobes)*
-
-![sys_enter_execve + taskset ทุก CPU (ข้อสังเกต Linux 7.0)](screenshots/week09-3-syscall-hook.png)
-
-*ภาพที่ 3: sys_enter_execve + taskset ทุก CPU (ข้อสังเกต Linux 7.0)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `sudo ./bin/ringbuf_events` (exec hook = `sched_process_exec`) ขณะรันคำสั่งในขั้นตอนที่ 3–4
+ตอนถ่ายภาพ ใช้เซิร์ฟเวอร์ HTTPS ทดสอบในเครื่อง (`python3` + OpenSSL, self-signed ที่ `https://127.0.0.1:18409`) แทน `https://example.com` สำหรับ `curl --http1.1`, `python3` และ `wget` เพื่อไม่ให้ผลขึ้นกับเน็ตเวิร์กภายนอก (ยังมี `curl` ค่าเริ่มต้นไป `https://example.com` หนึ่งครั้งเพื่อแสดงกรณี HTTP/2)
+
+**Terminal 2 — คำสั่งที่สร้าง exec และ TLS traffic**
+
+![Terminal 2 — สร้าง exec และ TLS traffic (ขั้นตอนที่ 3–4)](screenshots/week09-1-traffic.png)
+
+*ภาพ: Terminal 2 — สร้าง exec และ TLS traffic (ขั้นตอนที่ 3–4)*
+
+**Terminal 1 — event ที่ `ringbuf_events` รับจาก Ring Buffer**
+
 เครื่อง lab มี process อื่นทำงานอยู่พร้อมกัน จึง **ตัดบรรทัด `[EXECVE]` ของ process อื่นที่ไม่เกี่ยวข้องออก** (บรรทัดที่เหลือไม่ได้แก้ไข)
-```text
-2026/10/28 22:09:44 [INFO] Tracepoint attached: sched/sched_process_exec
-2026/10/28 22:09:44 [INFO] /lib/x86_64-linux-gnu/libssl.so.3 resolves to /usr/lib/x86_64-linux-gnu/libssl.so.3
-2026/10/28 22:09:44 [INFO] Uprobe attached: SSL_write on /lib/x86_64-linux-gnu/libssl.so.3
-2026/10/28 22:09:44 [INFO] Uprobe attached: SSL_write_ex on /lib/x86_64-linux-gnu/libssl.so.3
-2026/10/28 22:09:44 [INFO] Successfully listening for events from eBPF Ring Buffer (16MB)...
-EVENT_TYPE      PID     PPID    UID    COMM             DETAILS
-----------------------------------------------------------------------------------------
-[EXECVE]        4147955 4147720 1000   echo             binary=/bin/echo
-[EXECVE]        4147956 4147720 1000   id               binary=/usr/bin/id
-[EXECVE]        4147961 4147720 1000   curl             binary=/usr/bin/curl
-[TLS_PLAINTEXT] 4147961 4147720 1000   curl             len=75 plaintext="GET / HTTP/1.1  Host: example.com  User-Agent: curl/8.18.0  Accept: */*"
-[EXECVE]        4147971 4147720 1000   curl             binary=/usr/bin/curl
-[TLS_PLAINTEXT] 4147971 4147720 1000   curl             len=101 plaintext="PRI * HTTP/2.0    SM    ..............d.....................>..............A./..].\\...z.%.P.....S.*/*"
-[TLS_PLAINTEXT] 4147971 4147720 1000   curl             len=26 plaintext=".........................."
-[TLS_PLAINTEXT] 4147971 4147720 1000   curl             len=9 plaintext="........."
-[TLS_PLAINTEXT] 4147971 4147720 1000   curl             len=26 plaintext=".................shutdown."
-[EXECVE]        4148006 4147720 1000   python3          binary=/usr/bin/python3
-[TLS_PLAINTEXT] 4148006 4147720 1000   python3          len=115 plaintext="GET / HTTP/1.1  Accept-Encoding: identity  Host: example.com  User-Agent: Python-urllib/3.14  Connection: close"
-[EXECVE]        4148032 4147720 1000   wget             binary=/usr/bin/wget
-2026/10/28 22:10:00 [INFO] Received termination signal. Closing ring buffer reader...
-2026/10/28 22:10:00 [INFO] Ringbuf reader closed. Exiting.
-```
+
+![Terminal 1 — sudo ./bin/ringbuf_events (sched_process_exec + SSL_write uprobes)](screenshots/week09-2-ringbuf-events.png)
+
+*ภาพ: Terminal 1 — sudo ./bin/ringbuf_events (sched_process_exec + SSL_write uprobes)*
+
 สิ่งที่ยืนยันได้จากผลนี้:
-- exec ทุกคำสั่งของเราถูกจับครบ (`echo`, `id`, `curl` x2, `python3`, `wget`)
-- `curl --http1.1` เห็น HTTP request เป็นข้อความ; `curl` ค่าเริ่มต้นเป็น HTTP/2 จึงเห็น binary frame (event สุดท้ายที่มีคำว่า `shutdown` น่าจะเป็น HTTP/2 GOAWAY frame ตอนปิด connection)
-- `python3` ถูกจับผ่าน `SSL_write_ex` (ก่อนเพิ่ม probe นี้ไม่เห็นเลย)
-- `wget` (GnuTLS) มีแค่ `[EXECVE]` ไม่มี `[TLS_PLAINTEXT]`
+- exec ทุกคำสั่งของเราถูกจับครบ (`echo`, `id`, `curl` x2, `python3`, `wget`) ในภาพ `PPID` ของแต่ละคำสั่งต่างกัน เพราะสคริปต์ถ่ายภาพรันแต่ละคำสั่งผ่าน shell ตัวใหม่
+- `curl --http1.1` เห็น HTTP request เป็นข้อความ (`len=79 plaintext="GET / HTTP/1.1  Host: 127.0.0.1:18409 ..."`); `curl` ค่าเริ่มต้นเป็น HTTP/2 (Terminal 2 พิมพ์ `http_version` = `2`) จึงเห็น binary frame (event สุดท้ายที่มีคำว่า `shutdown` น่าจะเป็น HTTP/2 GOAWAY frame ตอนปิด connection)
+- `python3` (client) ถูกจับผ่าน `SSL_write_ex` (`len=119 ... User-Agent: Python-urllib/3.14`) — ก่อนเพิ่ม probe นี้ไม่เห็นเลย
+- `python3` PID 1221996 คือเซิร์ฟเวอร์ทดสอบ ซึ่งใช้ `libssl.so.3` ตัวเดียวกัน uprobe จึงเห็น response ฝั่ง server ด้วย (`HTTP/1.0 200 OK ...` และ `hello from w09 local https`) หนึ่งชุดต่อหนึ่ง request
+- `wget` (GnuTLS) มีแค่ `[EXECVE]` ไม่มี `[TLS_PLAINTEXT]` ของตัวเอง (บรรทัด `python3` ที่ตามมาคือ response ฝั่ง server)
 
 ### 4.2 `sudo ./bin/ringbuf_events -exec-hook=syscall` + `taskset` ทุก CPU (ข้อสังเกต Linux 7.0)
 คำสั่งทดสอบ: `for c in 0 1 2 3 4 5 6 7; do taskset -c $c /bin/echo cpu$c; done` (exec 8 ครั้ง บน 8 CPU) ผลที่กรองเฉพาะ `/bin/echo`:
-```text
-2026/10/28 22:05:05 [INFO] Tracepoint attached: syscalls/sys_enter_execve
-...
-EVENT_TYPE      PID     PPID    UID    COMM             DETAILS
-----------------------------------------------------------------------------------------
-[EXECVE]        4083633 4083501 1000   taskset          binary=/bin/echo
-```
-จาก 8 ครั้งเห็นเพียง 1 ครั้ง (ครั้งที่รันบน CPU 0; `COMM` = `taskset` เพราะ hook นี้ยิงก่อน exec เปลี่ยนชื่อ process) สอดคล้องกับการวัดด้วย `bpftrace` ในหัวข้อ 1.7 (output ของ build/run ที่ตัดด้วย `...` คือบรรทัด INFO ของ uprobe ที่เหมือนหัวข้อ 4.1)
+
+![sys_enter_execve + taskset ทุก CPU (ข้อสังเกต Linux 7.0)](screenshots/week09-3-syscall-hook.png)
+
+*ภาพ: sys_enter_execve + taskset ทุก CPU (ข้อสังเกต Linux 7.0)*
+
+จาก 8 ครั้งเห็นเพียง 1 ครั้ง (ครั้งที่รันบน CPU 0; `COMM` = `taskset` เพราะ hook นี้ยิงก่อน exec เปลี่ยนชื่อ process) สอดคล้องกับการวัดด้วย `bpftrace` ในหัวข้อ 1.7 (ภาพกรองเฉพาะบรรทัด tracepoint, header และ `/bin/echo` จึงไม่มีบรรทัด INFO ของ uprobe ที่เหมือนหัวข้อ 4.1)
 
 ---
 

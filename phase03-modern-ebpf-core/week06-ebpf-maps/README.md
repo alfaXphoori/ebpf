@@ -303,94 +303,38 @@ make test            # go generate + go test -exec sudo -v ./...  (หัวข�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), Go 1.26, clang 21, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), Go 1.26, clang 21, cilium/ebpf v0.16.0
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week06.sh`](../../scripts/screenshots/week06.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week06.sh`](../../scripts/screenshots/week06.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make clean && make all](screenshots/week06-1-build.png)
-
-*ภาพที่ 1: Terminal — make clean && make all*
-
-![Terminal 2 — สร้างโหลด getpid() 50,000 ครั้ง + bpftool](screenshots/week06-2-load.png)
-
-*ภาพที่ 2: Terminal 2 — สร้างโหลด getpid() 50,000 ครั้ง + bpftool*
-
-![Terminal 1 — sudo ./bin/syscall-top (กด Ctrl+C)](screenshots/week06-3-syscall-top.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ./bin/syscall-top (กด Ctrl+C)*
-
-![Terminal — Verifier Log จริง (verifier_fail)](screenshots/week06-4-verifier.png)
-
-*ภาพที่ 4: Terminal — Verifier Log จริง (verifier_fail)*
-
-![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week06-5-test.png)
-
-*ภาพที่ 5: Terminal — make test (BPF_PROG_TEST_RUN)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 การคอมไพล์ (`make clean && make all`)
 `go generate ./...` สร้าง Bindings ให้ทั้ง 3 Package (โฟลเดอร์หลัก, `maps_testrun/`, `verifier_fail/`) — สังเกตว่า `verifier_fail.c` ซึ่งมีบั๊กถูก **คอมไพล์ผ่าน** ตามปกติ บั๊กจะถูกพบตอนโหลดเข้าเคอร์เนลเท่านั้น
-```text
-===> Generating Go bindings via bpf2go...
-go generate ./...
-Compiled /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/bpf_bpfel.o
-Stripped /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/bpf_bpfel.o
-Wrote /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/bpf_bpfel.go
-Compiled /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/bpf_bpfeb.o
-Stripped /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/bpf_bpfeb.o
-Wrote /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/bpf_bpfeb.go
-Compiled /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/maps_testrun/maptypes_bpf.o
-Stripped /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/maps_testrun/maptypes_bpf.o
-Wrote /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/maps_testrun/maptypes_bpf.go
-Compiled /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/verifier_fail/bpf_bpf.o
-Stripped /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/verifier_fail/bpf_bpf.o
-Wrote /mnt/sda/ebpf/phase03-modern-ebpf-core/week06-ebpf-maps/verifier_fail/bpf_bpf.go
-===> Building userspace binaries bin/syscall-top and bin/verifier_fail...
-mkdir -p bin
-go build -v -o bin/syscall-top .
-ebpf-noob-to-hero/phase03-modern-ebpf-core/week06-ebpf-maps
-go build -v -o bin/verifier_fail ./verifier_fail
-ebpf-noob-to-hero/phase03-modern-ebpf-core/week06-ebpf-maps/verifier_fail
-```
 
-### 4.2 ผลลัพธ์การรัน `sudo timeout -s INT 5 ./bin/syscall-top` ขณะรัน Python `getpid()` 50,000 ครั้ง
-(แสดงเฉพาะส่วนหัวและรายงานสุดท้าย; รอบกลางถูกล้างหน้าจอด้วย ANSI escape)
-```text
-======================================================================
- eBPF Syscall Top Monitor (BPF_MAP_TYPE_HASH + Cilium ebpf-go)
-======================================================================
-2026/10/28 22:29:21 Successfully attached to tracepoint 'raw_syscalls/sys_enter'!
-2026/10/28 22:29:21 Collecting syscall frequencies across all processes... (Press Ctrl+C to stop)
-...
-Received signal 'interrupt'. Rendering final report...
+![Terminal — make clean && make all](screenshots/week06-1-build.png)
 
-=================================================================================
- eBPF Syscall Monitor | Time: 22:29:26 | Total Invocations: 230233
-=================================================================================
-RANK   PID       COMM                SYSCALLS          SHARE (%)   
----------------------------------------------------------------------------------
-#1     189550    python3             50412              21.90%
-#2     190016    pgrep               5482                2.38%
-#3     189933    pgrep               5482                2.38%
-#4     189352    syscall-top         4259                1.85%
-#5     3760745   mi-scavenger        4207                1.83%
-#6     183726    bash                3686                1.60%
-#7     183728    bash                3667                1.59%
-#8     183724    bash                3667                1.59%
-#9     183722    bash                3667                1.59%
-#10    187858    python3             1726                0.75%
----------------------------------------------------------------------------------
- Tracking 1011 active processes in BPF_MAP_TYPE_HASH
+*ภาพ: Terminal — make clean && make all*
 
-Shutting down eBPF monitor cleanly.
-```
-- `python3` ขึ้นอันดับ 1 ด้วยชื่อที่ถูกต้อง (50,412 syscalls ≈ 50,000 `getpid()` + syscall ของการเริ่ม interpreter)
-- `syscall-top` เองก็ติดอันดับ เพราะการวนอ่าน map ทุก 2 วินาทีใช้ `bpf()` syscall หลายพันครั้ง (`BPF_MAP_GET_NEXT_KEY` + `BPF_MAP_LOOKUP_ELEM` ต่อ 1 entry) — ต้นทุนของการ iterate แบบทีละ key ที่หัวข้อ 1.3 อธิบาย
+### 4.2 ผลลัพธ์การรัน `sudo ./bin/syscall-top` (กด Ctrl+C) ขณะรัน Python `getpid()` 50,000 ครั้ง
+
+![Terminal 2 — สร้างโหลด getpid() 50,000 ครั้ง + bpftool](screenshots/week06-2-load.png)
+
+*ภาพ: Terminal 2 — สร้างโหลด `getpid()` 50,000 ครั้ง (`python3 PID 1244135`) แล้วดู `syscall_map` ด้วย bpftool*
+
+![Terminal 1 — sudo ./bin/syscall-top (กด Ctrl+C)](screenshots/week06-3-syscall-top.png)
+
+*ภาพ: Terminal 1 — sudo ./bin/syscall-top (กด Ctrl+C) แสดงรายงานสุดท้าย (รอบกลางถูกล้างหน้าจอด้วย ANSI escape)*
+
+- `python3` PID 1244135 จาก Terminal 2 ปรากฏด้วยชื่อที่ถูกต้องที่อันดับ #9 (50,573 syscalls ≈ 50,000 `getpid()` + syscall ของการเริ่ม interpreter) — อันดับ 1–8 เป็น `python3` ของงานอื่นบนเครื่อง เพราะ `raw_syscalls/sys_enter` เห็นทุกโปรเซสในระบบ
+- `bpftool map list` ยืนยันว่า `syscall_map` เป็น `hash` ขนาด key 4B / value 24B (`count` + `comm[16]`) และ `max_entries 4096`; ใน `map dump` ช่อง `comm` เป็นไบต์ดิบ เช่น `[103,114,101,112,...]` = `"grep"`
+- `syscall-top` เองก็เรียก syscall จำนวนมาก (ในตัวอย่างขั้นตอนที่ 3 ติดอันดับ #4 ด้วย 4,259 ครั้ง แต่ในภาพนี้หลุด Top 10 เพราะงานอื่นหนักกว่า) เพราะการวนอ่าน map ทุก 2 วินาทีใช้ `bpf()` syscall หลายพันครั้ง (`BPF_MAP_GET_NEXT_KEY` + `BPF_MAP_LOOKUP_ELEM` ต่อ 1 entry) — ต้นทุนของการ iterate แบบทีละ key ที่หัวข้อ 1.3 อธิบาย
 
 ---
 
@@ -523,51 +467,9 @@ sudo ./bin/verifier_fail -case fixed
 
 > **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21.1.8, Go 1.26, cilium/ebpf v0.16.0 (จับใหม่ 2026-11-21: ตั้งแต่ 7.0.0-43 ท้าย Log มีบรรทัด `stack depth N max M` และ `insns processed N` เพิ่มขึ้น)
 
-`make verifier-demo` (ตัดบรรทัด `go build` ด้านบนออก):
-```text
-sudo ./bin/verifier_fail -case bounds
-[VERIFIER] program "xdp_no_bounds_check" REJECTED
-load program: permission denied:
-	0: R1=ctx() R10=fp0
-	; void *data = (void *)(long)ctx->data; @ verifier_fail.c:44
-	0: (61) r1 = *(u32 *)(r1 +0)          ; R1=pkt(r=0)
-	; if (eth->h_proto != bpf_htons(ETH_P_IP)) @ verifier_fail.c:48
-	1: (71) r2 = *(u8 *)(r1 +12)
-	invalid access to packet, off=12 size=1, R1(id=0,off=12,r=0)
-	R1 offset is outside of the packet
-	verification time 38 usec
-	stack depth 0 max 0
-	insns processed 2
-	processed 2 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
-make: [Makefile:32: verifier-demo] Error 1 (ignored)
-sudo ./bin/verifier_fail -case nullcheck
-[VERIFIER] program "xdp_no_null_check" REJECTED
-load program: permission denied:
-	0: R1=ctx() R10=fp0
-	; __u32 key = ctx->ingress_ifindex; @ verifier_fail.c:61
-	0: (61) r1 = *(u32 *)(r1 +12)         ; R1=scalar(smin=0,smax=umax=0xffffffff,var_off=(0x0; 0xffffffff))
-	1: (63) *(u32 *)(r10 -4) = r1         ; R1=scalar(smin=0,smax=umax=0xffffffff,var_off=(0x0; 0xffffffff)) R10=fp0 fp-8=mmmm????
-	2: (bf) r2 = r10                      ; R2=fp0 R10=fp0
-	3: (07) r2 += -4                      ; R2=fp-4
-	; __u64 *count = bpf_map_lookup_elem(&pkt_count, &key); @ verifier_fail.c:62
-	4: (18) r1 = 0xffff8c87a2e14c00       ; R1=map_ptr(map=pkt_count,ks=4,vs=8)
-	6: (85) call bpf_map_lookup_elem#1    ; R0=map_value_or_null(id=1,map=pkt_count,ks=4,vs=8)
-	7: (b7) r1 = 1                        ; R1=1
-	; __sync_fetch_and_add(count, 1); @ verifier_fail.c:65
-	8: (db) lock *(u64 *)(r0 +0) += r1
-	R0 invalid mem access 'map_value_or_null'
-	verification time 41 usec
-	stack depth 8 max 0
-	insns processed 8
-	processed 8 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
-make: [Makefile:33: verifier-demo] Error 1 (ignored)
-sudo ./bin/verifier_fail -case fixed
-[VERIFIER] program "xdp_fixed" ACCEPTED
-verification time 56 usec
-stack depth 16 max 16
-insns processed 37
-processed 37 insns (limit 1000000) max_states_per_insn 0 total_states 3 peak_states 3 mark_read 0
-```
+![Terminal — Verifier Log จริง (verifier_fail)](screenshots/week06-4-verifier.png)
+
+*ภาพ: รัน `verifier_fail` ทั้ง 3 กรณี (bounds, nullcheck ถูกปฏิเสธ / fixed ผ่าน) — ผลเดียวกับ `make verifier-demo`*
 
 `-lines 3` (ใช้ `%-3v`) — cilium/ebpf บอกจำนวนบรรทัดที่ถูกตัดทิ้งให้:
 ```text
@@ -731,43 +633,11 @@ go test -v ./maps_testrun/                  # ไม่ใช้ sudo -> ทุ�
 
 ### 6.6 ผลลัพธ์จริง
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), clang 21.1.8, Go 1.26, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), clang 21.1.8, Go 1.26, cilium/ebpf v0.16.0
 
-`make test` (ตัดบรรทัด `Compiled/Stripped/Wrote` ของ bpf2go ออก):
-```text
-===> Generating Go bindings via bpf2go...
-go generate ./...
-go test -exec sudo -v ./...
-=== RUN   TestSyscallStatsLoads
-    main_test.go:48: syscall_map: Hash key=4B value=24B max_entries=4096
-    main_test.go:55: BPF_PROG_TEST_RUN on TracePoint program: run program: kernel doesn't support running TracePoint: not supported
---- PASS: TestSyscallStatsLoads (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase03-modern-ebpf-core/week06-ebpf-maps	0.006s
-=== RUN   TestSameKeyCounts
-    maps_test.go:131: percpu_map[42] on CPU 1 = 1000
---- PASS: TestSameKeyCounts (0.02s)
-=== RUN   TestFullMapHashVsLRU
-    maps_test.go:160: hash_map: 8 entries, 12 failed inserts, last_err=-7 (-E2BIG)
-    maps_test.go:160: percpu_map: 8 entries, 12 failed inserts, last_err=-7 (-E2BIG)
-    maps_test.go:178: lru_map: 8 entries after 20 distinct keys, newest key 20 present, 0 failed inserts
---- PASS: TestFullMapHashVsLRU (0.00s)
-=== RUN   TestTooShortPacketRejected
-    maps_test.go:190: 13-byte packet: run program: invalid argument
---- PASS: TestTooShortPacketRejected (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase03-modern-ebpf-core/week06-ebpf-maps/maps_testrun	0.029s
-=== RUN   TestVerifierRejectsBrokenPrograms
-=== RUN   TestVerifierRejectsBrokenPrograms/bounds
-=== RUN   TestVerifierRejectsBrokenPrograms/nullcheck
-=== RUN   TestVerifierRejectsBrokenPrograms/fixed
---- PASS: TestVerifierRejectsBrokenPrograms (0.00s)
-    --- PASS: TestVerifierRejectsBrokenPrograms/bounds (0.00s)
-    --- PASS: TestVerifierRejectsBrokenPrograms/nullcheck (0.00s)
-    --- PASS: TestVerifierRejectsBrokenPrograms/fixed (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase03-modern-ebpf-core/week06-ebpf-maps/verifier_fail	0.006s
-```
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week06-5-test.png)
+
+*ภาพ: `make test` (ตัดบรรทัด `Compiled/Stripped/Wrote` ของ bpf2go ออก)*
 
 รันโดยไม่ใช้ `sudo` (`go test -v ./maps_testrun/`):
 ```text

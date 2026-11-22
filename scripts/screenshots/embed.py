@@ -20,21 +20,30 @@ RAW = os.path.join(ROOT, "scripts", "screenshots", "raw")
 BEGIN, END = "<!-- screenshots:begin -->", "<!-- screenshots:end -->"
 
 
-def block(lab, week):
+def outside_block(text):
+    return re.sub(re.escape(BEGIN) + ".*?" + re.escape(END), "", text, flags=re.S)
+
+
+def block(lab, week, text):
     pngs = sorted(glob.glob(os.path.join(lab, "screenshots", week + "-*.png")))
     if not pngs:
         return None
+    # images already placed inside a 4.x subsection are not repeated here
+    rest = outside_block(text)
+    gallery = [p for p in pngs if "screenshots/%s" % os.path.basename(p) not in rest]
     day = time.strftime("%Y-%m-%d", time.localtime(max(os.path.getmtime(p) for p in pngs)))
     out = [BEGIN, "", "### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)", "",
            "> รันจริงบน `Linux %s` (Ubuntu 26.04) เมื่อ %s ด้วยสคริปต์ "
            "[`scripts/screenshots/%s.sh`](../../scripts/screenshots/%s.sh) "
            "ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) "
-           "ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย"
+           "ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน"
            % (platform.release(), day, week, week), ""]
     note = os.path.join(ROOT, "scripts", "screenshots", week + ".note")
     if os.path.exists(note):  # optional per-week caveat, e.g. a busy-machine benchmark
         out += ["> " + open(note, encoding="utf-8").read().strip(), ""]
-    for i, p in enumerate(pngs, 1):
+    if len(gallery) < len(pngs):
+        out += ["ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม", ""]
+    for i, p in enumerate(gallery, 1):
         name = os.path.basename(p)[:-4]
         tfile = os.path.join(RAW, name + ".title")
         title = open(tfile, encoding="utf-8").read().strip() if os.path.exists(tfile) else name
@@ -52,11 +61,11 @@ def main():
         if len(labs) != 1:
             continue
         lab = labs[0]
-        b = block(lab, week)
-        if not b:
-            continue
         readme = os.path.join(lab, "README.md")
         text = open(readme, encoding="utf-8").read()
+        b = block(lab, week, text)
+        if not b:
+            continue
         if BEGIN in text:
             text = re.sub(re.escape(BEGIN) + ".*?" + re.escape(END), lambda _: b, text, flags=re.S)
         else:

@@ -255,133 +255,68 @@ sysctl kernel.bpf_stats_enabled    # ต้องกลับเป็น 0 ห�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 (8 threads), CPU governor `powersave`, bpftrace v0.25.0 — เครื่องมีงานอื่นรันอยู่ระหว่างวัด (load average ~2)
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), Intel Core i3-12100 (8 threads), CPU governor `powersave`, bpftrace v0.25.0 — ภาพหน้าจอทั้งหมดรันบน 7.0.0-43 (benchmark ในหัวข้อ 4.4 รันบนเครื่องว่าง) ยกเว้นรอบ 1–4 ในตารางหัวข้อ 4.5 ที่วัดก่อนหน้าบน `Linux 7.0.0-38-generic` ขณะเครื่องมีงานอื่นรันอยู่ (load average ~2)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week22.sh`](../../scripts/screenshots/week22.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week22.sh`](../../scripts/screenshots/week22.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (fexit อ่านค่า return)](screenshots/week22-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test (fexit อ่านค่า return)*
-
-![Terminal 1 — sudo ./bin/trampoline-tracer -comm cat (cat /etc/hosts + /nonexistent_file)](screenshots/week22-2-tracer-cat.png)
-
-*ภาพที่ 2: Terminal 1 — sudo ./bin/trampoline-tracer -comm cat (cat /etc/hosts + /nonexistent_file)*
-
-![Terminal 2 — ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)](screenshots/week22-3-trampoline-inspect.png)
-
-*ภาพที่ 3: Terminal 2 — ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)*
-
-![Terminal — วัด overhead: REPS=9 ./bench/run_bench.sh (เครื่องว่าง)](screenshots/week22-4-bench.png)
-
-*ภาพที่ 4: Terminal — วัด overhead: REPS=9 ./bench/run_bench.sh (เครื่องว่าง)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test`
-```text
-=== RUN   TestFexitReturnValue
-    main_test.go:113: pid=4102186 ret=14 latency=6.54us file=/tmp/w222918798131/exists.txt
-    main_test.go:113: pid=4102186 ret=14 latency=0.90us file=/tmp/w222918798131/exists.txt
-    main_test.go:113: pid=4102186 ret=-2 latency=1.58us file=/tmp/w222918798131/does-not-exist
---- PASS: TestFexitReturnValue (0.23s)
-PASS
-ok  	ebpf-noob-to-hero/phase10-cutting-edge-ebpf-technologies/week22-fentry-fexit-trampoline	0.239s
-```
+
+![Terminal — make test (fexit อ่านค่า return)](screenshots/week22-1-make-test.png)
+
+*ภาพ: `make test` — fexit อ่านค่า return ของ `do_sys_openat2` ได้ทั้งกรณีสำเร็จ (`ret=14`) และล้มเหลว (`ret=-2`)*
+
 (`exists.txt` ปรากฏ 2 ครั้งเพราะเทสต์เปิดไฟล์นี้ทั้งตอน `os.WriteFile` และ `os.Open`)
 
-### 4.2 `sudo ./bin/trampoline-tracer -comm cat` + `cat /etc/hosts` (2 ครั้ง ตัดแสดงเฉพาะรอบแรก)
-```text
-======================================================================
- eBPF Trampoline (fentry & fexit) do_sys_openat2 Latency Tracer
-======================================================================
-2026/10/28 22:06:26 [INFO] Attached BPF Trampoline fentry to 'do_sys_openat2'
-2026/10/28 22:06:26 [INFO] Attached BPF Trampoline fexit to 'do_sys_openat2'
-2026/10/28 22:06:26 [INFO] Filtering events: comm == "cat" (filter applied in userspace)
-2026/10/28 22:06:26 [INFO] Tracing do_sys_openat2 latency (fentry -> fexit). Press Ctrl+C to stop.
+### 4.2 `sudo ./bin/trampoline-tracer -comm cat` + คำสั่ง `cat` จาก Terminal 2
 
-TIME      PID      COMM             FD / RET   LATENCY    FILENAME
----------------------------------------------------------------------------------------------------
-22:06:28  4102636  cat              3          2.18us     /etc/ld.so.cache
-22:06:28  4102636  cat              3          1.65us     /usr/lib/x86_64-linux-gnu/libsystemd.so.0
-22:06:28  4102636  cat              3          0.80us     /usr/lib/x86_64-linux-gnu/libselinux.so.1
-22:06:28  4102636  cat              3          0.70us     /usr/lib/x86_64-linux-gnu/libgcc_s.so.1
-22:06:28  4102636  cat              3          0.79us     /usr/lib/x86_64-linux-gnu/libm.so.6
-22:06:28  4102636  cat              3          0.77us     /usr/lib/x86_64-linux-gnu/libc.so.6
-22:06:28  4102636  cat              3          1.40us     /usr/lib/x86_64-linux-gnu/libpcre2-8.so.0
-22:06:28  4102636  cat              3          3.98us     /proc/filesystems
-22:06:28  4102636  cat              3          10.05us    /proc/self/maps
-22:06:28  4102636  cat              3          1.31us     /usr/share/coreutils/locales/uucore/en-US.ftl
-22:06:28  4102636  cat              ERR(-2)    1.08us     /usr/share/coreutils/locales/cat/en-US.ftl
-22:06:28  4102636  cat              3          0.85us     /etc/hosts
-...
+![Terminal 1 — sudo ./bin/trampoline-tracer -comm cat (cat /etc/hosts + /nonexistent_file)](screenshots/week22-2-tracer-cat.png)
 
-[INFO] Detaching trampoline links...
-[SUCCESS] BPF Trampoline detached safely.
-```
+*ภาพ: Terminal 1 — `trampoline-tracer -comm cat` ขณะ Terminal 2 รัน `cat` 3 ครั้ง (`/etc/hosts`, `/nonexistent_file` และ `enabled_functions` ในหัวข้อ 4.3)*
 
 ### 4.3 ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)
-```text
-$ sudo bpftool prog show name trace_openat2_entry
-10434: tracing  name trace_openat2_entry  tag ce50c9874ea1917c  gpl
-	loaded_at 2026-10-28T22:11:58+0700  uid 0
-	xlated 112B  jited 73B  memlock 4096B  map_ids 4730
-$ sudo bpftool link show | grep -A1 tracing
-3968: tracing  prog 10434  
-	prog_type tracing  attach_type trace_fentry  
-	target_obj_id 1  target_btf_id 110317  
-3969: tracing  prog 10435  
-	prog_type tracing  attach_type trace_fexit  
-	target_obj_id 1  target_btf_id 110317  
-$ sudo cat /sys/kernel/tracing/enabled_functions | grep -A1 openat2
-do_sys_openat2 (1) R   D   M 	tramp: ftrace_regs_caller+0x0/0x77 (call_direct_funcs+0x0/0x30)
-	direct(jmp)-->bpf_trampoline_6442561261+0x0/0x124
-```
-- `target_btf_id 110317` คือ BTF ID ของ `FUNC 'do_sys_openat2'` ใน `/sys/kernel/btf/vmlinux` (`target_obj_id 1` = vmlinux)
-- fentry + fexit ทั้งสองใช้ trampoline เดียวกัน (`bpf_trampoline_6442561261`) ขนาดใหญ่ขึ้นจากตอนมีแค่ fentry (0xb4 → 0x124 ไบต์) เพราะต้องมีโค้ดเรียกฟังก์ชันจริงและส่วนของ fexit
+
+![Terminal 2 — ตรวจ trampoline ขณะ tracer รัน (ขั้นตอนที่ 4)](screenshots/week22-3-trampoline-inspect.png)
+
+*ภาพ: Terminal 2 — ตรวจ trampoline ด้วย `bpftool` และ `enabled_functions` ขณะ tracer รัน*
+
+- `target_btf_id 110511` คือ BTF ID ของ `FUNC 'do_sys_openat2'` ใน `/sys/kernel/btf/vmlinux` (`target_obj_id 1` = vmlinux) — ค่านี้ขึ้นกับ build ของเคอร์เนล
+- fentry + fexit ทั้งสองใช้ trampoline เดียวกัน (`bpf_trampoline_6442561455`, ขนาด 0x129 ไบต์) ซึ่งใหญ่กว่าตอนมีแค่ fentry เพราะต้องมีโค้ดเรียกฟังก์ชันจริงและส่วนของ fexit
 - หลัง Ctrl+C บรรทัด `do_sys_openat2` หายไปจาก `enabled_functions` (นับได้ 0)
 
-### 4.4 ผลวัด overhead (`bench/run_bench.sh`, `REPS=9`) — รอบที่ noise ต่ำที่สุด
-```text
-== (1) End-to-end: openat()+close() on /dev/null, 1000000 iters, best of 9, pinned CPU 2 ==
-probe          baseline   with-probe      delta
-kprobe         594.6 ns     639.4 ns   +44.8 ns
-kretprobe      595.9 ns     744.3 ns  +148.4 ns
-fentry         592.9 ns     605.7 ns   +12.8 ns
-fexit          587.3 ns     623.5 ns   +36.2 ns
+### 4.4 ผลวัด overhead (`bench/run_bench.sh`, `REPS=9`) บนเครื่องว่าง
 
-== (2) bpf_stats: average BPF program run time (run_time_ns / run_cnt) ==
-kprobe_	kprobe	run_cnt=1045108	run_time_ns=21670211	avg=20.7 ns
-kretprobe_	kprobe	run_cnt=1048148	run_time_ns=21749414	avg=20.7 ns
-fentry_	tracing	run_cnt=1016291	run_time_ns=23113427	avg=22.7 ns
-fexit_	tracing	run_cnt=1025165	run_time_ns=22806309	avg=22.2 ns
+![Terminal — วัด overhead: REPS=9 ./bench/run_bench.sh (เครื่องว่าง)](screenshots/week22-4-bench.png)
 
-kernel.bpf_stats_enabled restored to 0
-```
+*ภาพ: `REPS=9 ./bench/run_bench.sh` บนเครื่องว่าง (Linux 7.0.0-43)*
 
-### 4.5 สรุปจาก 4 รอบการวัด (หน่วย ns ต่อการเรียก)
+### 4.5 สรุปจาก 5 รอบการวัด (หน่วย ns ต่อการเรียก)
 
-รอบ 1–3 ใช้ `REPS=9` (รอบ 3 คือผลในหัวข้อ 4.4) รอบ 4 คือ `make bench` ค่าเริ่มต้น (`REPS=5`)
+รอบ 1–4 วัดก่อนหน้าบน `Linux 7.0.0-38-generic` ขณะเครื่องมีงานอื่นรันอยู่ (load average ~2): รอบ 1–3 ใช้ `REPS=9` รอบ 4 คือ `make bench` ค่าเริ่มต้น (`REPS=5`) ส่วน **รอบ 5 คือภาพในหัวข้อ 4.4** (`REPS=9` บนเครื่องว่าง, `Linux 7.0.0-43-generic`)
 
-| Probe | delta รอบ 1 | delta รอบ 2 | delta รอบ 3 | delta รอบ 4 | `bpf_stats` avg (รอบ 1 / 2 / 3 / 4) |
-|---|---|---|---|---|---|
-| kprobe | +44.2 | −9.6 * | +44.8 | +49.7 | 20.3 / 20.1 / 20.7 / 21.1 |
-| kretprobe | −67.1 * | +159.3 | +148.4 | +143.4 | 28.2 / 20.6 / 20.7 / 21.2 |
-| fentry | +25.6 | −19.5 * | +12.8 | +17.5 | 28.3 / 22.5 / 22.7 / 23.3 |
-| fexit | +34.0 | +84.1 | +36.2 | +43.9 | 39.1 / 22.5 / 22.2 / 22.8 |
+| Probe | delta รอบ 1 | delta รอบ 2 | delta รอบ 3 | delta รอบ 4 | delta รอบ 5 (4.4) | `bpf_stats` avg (รอบ 1 / 2 / 3 / 4 / 5) |
+|---|---|---|---|---|---|---|
+| kprobe | +44.2 | −9.6 * | +44.8 | +49.7 | +54.9 | 20.3 / 20.1 / 20.7 / 21.1 / 18.9 |
+| kretprobe | −67.1 * | +159.3 | +148.4 | +143.4 | +146.8 | 28.2 / 20.6 / 20.7 / 21.2 / 18.5 |
+| fentry | +25.6 | −19.5 * | +12.8 | +17.5 | +24.1 | 28.3 / 22.5 / 22.7 / 23.3 / 21.4 |
+| fexit | +34.0 | +84.1 | +36.2 | +43.9 | +35.2 | 39.1 / 22.5 / 22.2 / 22.8 / 20.0 |
 
-\* ค่าติดลบเกิดเมื่อ baseline รอบนั้นถูกรบกวน (baseline พุ่งเป็น 637–802 ns จากปกติ ~590 ns) จึงไม่ควรนำมาตีความ
+\* ค่าติดลบเกิดเมื่อ baseline รอบนั้นถูกรบกวน (baseline พุ่งเป็น 637–802 ns จากปกติ ~590 ns ในรอบ 1–4) จึงไม่ควรนำมาตีความ — ค่า baseline สัมบูรณ์ของรอบ 5 (~641–645 ns) ต่างจากรอบ 1–4 เพราะวัดบนเคอร์เนลคนละ build จึงควรเทียบเฉพาะ delta
 
 **การตีความ (อย่างระมัดระวัง):**
 - **kretprobe แพงที่สุดอย่างชัดเจนและสม่ำเสมอ** (~+145–160 ns ต่อการเรียกเมื่อ baseline นิ่ง) ขณะที่ **fexit** ซึ่งให้ข้อมูลเดียวกัน (ค่า return) ใช้ราว +35–45 ns → นี่คือข้อได้เปรียบที่ชัดที่สุดของ trampoline
-- **fentry vs kprobe** ที่ต้นฟังก์ชัน: fentry ต่ำกว่า (~+13–26 ns เทียบ ~+45–50 ns) แต่ส่วนต่างอยู่ในระดับเดียวกับ noise ของเครื่องที่วัด เพราะ kprobe บนเคอร์เนลนี้ใช้ ftrace (`[FTRACE]`) ไม่ใช่ `int3` แล้ว
-- **`bpf_stats`** แสดงว่าตัวโปรแกรม BPF เองใช้เวลาใกล้เคียงกันทุกชนิด (~20–23 ns ในรอบที่นิ่ง; รอบ 1 สูงกว่าเพราะ noise) ความต่างจริงจึงอยู่ที่ **กลไกการเข้า/ออก** ซึ่ง `bpf_stats` มองไม่เห็น
+- **fentry vs kprobe** ที่ต้นฟังก์ชัน: fentry ต่ำกว่า (~+13–26 ns เทียบ ~+45–55 ns) แต่ส่วนต่างอยู่ในระดับเดียวกับ noise ของเครื่องที่วัด เพราะ kprobe บนเคอร์เนลนี้ใช้ ftrace (`[FTRACE]`) ไม่ใช่ `int3` แล้ว
+- **`bpf_stats`** แสดงว่าตัวโปรแกรม BPF เองใช้เวลาใกล้เคียงกันทุกชนิด (~19–23 ns ในรอบที่นิ่ง; รอบ 1 สูงกว่าเพราะ noise) ความต่างจริงจึงอยู่ที่ **กลไกการเข้า/ออก** ซึ่ง `bpf_stats` มองไม่เห็น
 - **ไม่มีกลไกใดเป็น "zero overhead" หรือ "< 5ns"** — แค่ตัวโปรแกรม BPF ที่เล็กที่สุดก็ใช้ ~20 ns แล้ว
 
-**ข้อควรระวังของตัวเลขชุดนี้:** วัดบนเครื่องเดียว, CPU governor `powersave` (ความถี่ไม่คงที่), มีงานอื่นรันพร้อมกัน, ฟังก์ชันเดียว (`do_sys_openat2`) และ body เดียว (`count()`) ตัวเลขจะเปลี่ยนตาม CPU, เคอร์เนล config (เช่น mitigations), และชนิดงานในโปรแกรม BPF ควรวัดซ้ำบนเครื่องของตัวเองก่อนนำไปอ้างอิง
+**ข้อควรระวังของตัวเลขชุดนี้:** วัดบนเครื่องเดียว, CPU governor `powersave` (ความถี่ไม่คงที่), รอบ 1–4 มีงานอื่นรันพร้อมกัน, ฟังก์ชันเดียว (`do_sys_openat2`) และ body เดียว (`count()`) ตัวเลขจะเปลี่ยนตาม CPU, เคอร์เนล config (เช่น mitigations), และชนิดงานในโปรแกรม BPF ควรวัดซ้ำบนเครื่องของตัวเองก่อนนำไปอ้างอิง
 
 ---
 

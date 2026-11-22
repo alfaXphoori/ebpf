@@ -332,185 +332,52 @@ sudo bpftool link show | grep -A1 perf_event # ต้องมี 1 link ต่�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`, 8 CPUs) — เครื่องทดสอบมีงานอื่นทำงานพร้อมกัน (เช่น การคอมไพล์ของผู้ใช้อื่น)
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`, 8 CPUs) — เครื่องทดสอบมีงานอื่นทำงานพร้อมกัน (เช่น การคอมไพล์ของผู้ใช้อื่น)
 >
-> หมายเหตุ: path ของไฟล์ `-folded` ในบรรทัด `Wrote ...`/`Render: ...` ถูกย่อจากไดเรกทอรีชั่วคราวบนเครื่องทดสอบให้เหลือแค่ชื่อไฟล์ ส่วนอื่นเป็นผลลัพธ์จริงทั้งหมด
+> ผลลัพธ์ทั้งหมดบันทึกบน 7.0.0-43 (ภาพหน้าจอ) ยกเว้นตารางสรุปจำนวน sample ต่อโปรเซสในหัวข้อ 4.3 และ Flame Graph (ข) ในหัวข้อ 4.5 ซึ่งมาจากการบันทึกรอบก่อนบน `Linux 7.0.0-38-generic`
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week18.sh`](../../scripts/screenshots/week18.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week18.sh`](../../scripts/screenshots/week18.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
+
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 ![Terminal — ตรวจ frame pointer ของ workload](screenshots/week18-1-objdump.png)
 
 *ภาพที่ 1: Terminal — ตรวจ frame pointer ของ workload*
 
-![Terminal — profile เฉพาะ PID ของ busy](screenshots/week18-2-pid-profile.png)
-
-*ภาพที่ 2: Terminal — profile เฉพาะ PID ของ busy*
-
-![Terminal — profile ทั้งระบบขณะ busy ทำงาน](screenshots/week18-3-system-wide.png)
-
-*ภาพที่ 3: Terminal — profile ทั้งระบบขณะ busy ทำงาน*
-
-![Terminal — สร้าง Flame Graph ด้วย flamegraph.py](screenshots/week18-4-flamegraph.png)
-
-*ภาพที่ 4: Terminal — สร้าง Flame Graph ด้วย flamegraph.py*
-
 <!-- screenshots:end -->
 
 ### 4.1 Profile เฉพาะ PID (`./bin/busy 10 &` แล้ว `sudo ./bin/cpu-profiler -p $! -d 6s -folded out.txt`)
-```text
-busy: pid=4077337, burning one CPU for 10 s (hot_path_a:hot_path_b = 2:1)
-======================================================================
- eBPF On-CPU Profiler & Stack Collector (perf_event + Flame Graph)
-======================================================================
-2026/10/28 22:04:41 [INFO] Loaded 266310 text symbols from /proc/kallsyms
-2026/10/28 22:04:41 [INFO] Sampling on-CPU stacks at 99 Hz on 8 CPUs (PID 4077337) via PERF_COUNT_SW_CPU_CLOCK
-2026/10/28 22:04:41 [INFO] Profile collecting. Press Ctrl+C to terminate and view top stacks.
 
-[22:04:43] On-CPU Samples: 198      | Unique Call Chains: 4     
-[22:04:45] On-CPU Samples: 396      | Unique Call Chains: 5     
+![Terminal — profile เฉพาะ PID ของ busy](screenshots/week18-2-pid-profile.png)
 
-[INFO] Sampler detached. Rendering top on-CPU call chains...
-[STATS] perf samples fired: 4752 | recorded (after idle/PID filter): 594 | unique chains: 6
-[STATS] stack-id collisions (-EEXIST): kernel=0 user=0 | stack_counts full: 0
+*ภาพ: Terminal — profile เฉพาะ PID ของ busy*
 
-=================== TOP ON-CPU CALL CHAINS ===================
+ไฟล์ `out.txt` ที่ได้ (อินพุตของ flame graph) และการ render ด้วย `flamegraph.py`:
 
-#1 [busy (PID: 4077337)] - Sample Count: 388
-    [u] spin
-    [u] hot_path_a
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
+![Terminal — สร้าง Flame Graph ด้วย flamegraph.py](screenshots/week18-4-flamegraph.png)
 
-#2 [busy (PID: 4077337)] - Sample Count: 201
-    [u] spin
-    [u] hot_path_b
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
+*ภาพ: Terminal — สร้าง Flame Graph ด้วย flamegraph.py*
 
-#3 [busy (PID: 4077337)] - Sample Count: 2
-    [u] spin
-    [u] hot_path_b
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
-
-#4 [busy (PID: 4077337)] - Sample Count: 1
-    [u] spin
-    [u] hot_path_a
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
-
-#5 [busy (PID: 4077337)] - Sample Count: 1
-    [k] build_detached_freelist
-    [k] __kmem_cache_free_bulk.part.0
-    [k] rcu_free_sheaf
-    [k] rcu_do_batch
-    [k] rcu_core
-    [k] rcu_core_si
-    [k] handle_softirqs
-    [k] __irq_exit_rcu
-    [k] irq_exit_rcu
-    [k] sysvec_apic_timer_interrupt
-    [k] asm_sysvec_apic_timer_interrupt
-    [u] spin
-    [u] hot_path_a
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
-==============================================================
-2026/10/28 22:04:47 [INFO] Wrote 4 folded stack lines to out.txt
-2026/10/28 22:04:47 [INFO] Render: ./flamegraph.pl out.txt > cpu.svg
-```
-
-ไฟล์ `out.txt` ที่ได้ (อินพุตของ `flamegraph.pl`):
-```text
-busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin 389
-busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin;asm_sysvec_apic_timer_interrupt_[k];sysvec_apic_timer_interrupt_[k];irq_exit_rcu_[k];__irq_exit_rcu_[k];handle_softirqs_[k] 1
-busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_a;spin;asm_sysvec_apic_timer_interrupt_[k];sysvec_apic_timer_interrupt_[k];irq_exit_rcu_[k];__irq_exit_rcu_[k];handle_softirqs_[k];rcu_core_si_[k];rcu_core_[k];rcu_do_batch_[k];rcu_free_sheaf_[k];__kmem_cache_free_bulk.part.0_[k];build_detached_freelist_[k] 1
-busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;spin 203
-```
-
-> ผู้จัดทำไม่ได้แนบไฟล์ SVG ที่เรนเดอร์จากเครื่องทดสอบ ให้ผู้เรียนรันขั้นตอนที่ 5 เองแล้วตรวจว่า `hot_path_a` กว้างประมาณ 2 เท่าของ `hot_path_b`
+> Flame Graph ที่ render จาก `out.txt` ชุดนี้แสดงไว้ในหัวข้อ 4.5 (ก) ให้ผู้เรียนรันขั้นตอนที่ 5 เองแล้วตรวจว่า `hot_path_a` กว้างประมาณ 2 เท่าของ `hot_path_b`
 
 ### 4.2 การตีความผลลัพธ์ (4.1)
-- **ความถี่ถูกต้อง:** `perf samples fired: 4752` ≈ 8 CPUs × 99 Hz × 6 s (= 4752) และ `busy` ซึ่งใช้ 1 core เต็มได้ 594 samples ≈ 99 Hz × 6 s
-- **สัดส่วนตรงกับที่ออกแบบไว้:** `hot_path_a` = 389 + 1 + 1 = 391, `hot_path_b` = 203 → อัตราส่วน ≈ 1.93 : 1 ใกล้ 2 : 1 ตามที่ออกแบบใน `busy.c` (ความคลาดเคลื่อนเกิดจากธรรมชาติของการสุ่ม)
-- **#1 กับ #4 symbolize ออกมาเหมือนกัน** แต่เป็นคนละ stack id เพราะ IP ของ leaf อยู่คนละตำแหน่งในลูป `spin` — ไฟล์ folded รวมให้เป็นบรรทัดเดียวแล้ว
-- **#5 มี kernel frames บน user stack:** timer interrupt เข้ามาตอน `spin` รัน แล้วเคอร์เนลทำงาน RCU softirq ต่อในบริบทของ `busy` — On-CPU profiler นับเวลานี้ให้ `busy` เพราะเป็นงานที่อยู่บน CPU จริง
+- **ความถี่ถูกต้อง:** `perf samples fired: 4752` ≈ 8 CPUs × 99 Hz × 6 s (= 4752) และ `busy` ซึ่งใช้ 1 core เต็มได้ 577 samples ≈ 99 Hz × 6 s (594)
+- **สัดส่วนตรงกับที่ออกแบบไว้:** `hot_path_a` = 366 + 12 + 1 = 379, `hot_path_b` = 193 + 5 = 198 → อัตราส่วน ≈ 1.91 : 1 ใกล้ 2 : 1 ตามที่ออกแบบใน `busy.c` (ความคลาดเคลื่อนเกิดจากธรรมชาติของการสุ่ม)
+- **#1 กับ #3 (และ #2 กับ #4) symbolize ออกมาเหมือนกัน** แต่เป็นคนละ stack id เพราะ IP ของ leaf อยู่คนละตำแหน่งในลูป `spin` — ไฟล์ folded รวมให้เป็นบรรทัดเดียวแล้ว (`hot_path_a;spin 378` = 366 + 12 และ `hot_path_b;spin 198` = 193 + 5)
+- **#5 มี kernel frames บน user stack:** hardware interrupt ของการ์ดเครือข่าย (`asm_common_interrupt` → `rtl8169_poll`) เข้ามาตอน `spin` รัน แล้วเคอร์เนลประมวลผล NET_RX softirq (`net_rx_action` ไปจนถึง `nf_conntrack_in`) ต่อในบริบทของ `busy` — On-CPU profiler นับเวลานี้ให้ `busy` เพราะเป็นงานที่อยู่บน CPU จริง
 - `[libc.so.6+0x2a601]` คือฟังก์ชันภายในของ glibc (เช่น `__libc_start_call_main`) ที่ไม่อยู่ใน `.dynsym` และไฟล์ libc ของดิสโทรถูก strip `.symtab` ออก ต้องใช้ debug symbols (`debuginfod`/`libc6-dbg`) จึงจะได้ชื่อ
 
 ### 4.3 Profile ทั้งระบบ (`sudo ./bin/cpu-profiler -d 5s -top 3 -folded all.txt` ขณะ `busy` ทำงาน)
-```text
-======================================================================
- eBPF On-CPU Profiler & Stack Collector (perf_event + Flame Graph)
-======================================================================
-2026/10/28 22:04:59 [INFO] Loaded 266306 text symbols from /proc/kallsyms
-2026/10/28 22:04:59 [INFO] Sampling on-CPU stacks at 99 Hz on 8 CPUs (all processes) via PERF_COUNT_SW_CPU_CLOCK
-2026/10/28 22:04:59 [INFO] Profile collecting. Press Ctrl+C to terminate and view top stacks.
 
-[22:05:02] On-CPU Samples: 327      | Unique Call Chains: 132   
-[22:05:04] On-CPU Samples: 695      | Unique Call Chains: 302   
+![Terminal — profile ทั้งระบบขณะ busy ทำงาน](screenshots/week18-3-system-wide.png)
 
-[INFO] Sampler detached. Rendering top on-CPU call chains...
-[STATS] perf samples fired: 3960 | recorded (after idle/PID filter): 845 | unique chains: 353
-[STATS] stack-id collisions (-EEXIST): kernel=0 user=3 | stack_counts full: 0
-[STATS] -> some stacks were dropped by hash collisions; raise stack_traces max_entries if this is large
+*ภาพ: Terminal — profile ทั้งระบบขณะ busy ทำงาน*
 
-=================== TOP ON-CPU CALL CHAINS ===================
-
-#1 [busy (PID: 4082145)] - Sample Count: 333
-    [u] spin
-    [u] hot_path_a
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
-
-#2 [busy (PID: 4082145)] - Sample Count: 161
-    [u] spin
-    [u] hot_path_b
-    [u] run_workload
-    [u] main
-    [u] [libc.so.6+0x2a601]
-    [u] __libc_start_main
-    [u] _start
-
-#3 [link (PID: 4082907)] - Sample Count: 1
-    [u] 0x4206a0
-    [u] 0x421305
-    [u] 0x54ea26
-    [u] 0x5d8606
-    [u] 0x64b56c
-    [u] 0x511dcb
-    [u] 0x5e1a2f
-    [u] 0x5e666b
-    [u] 0x5e8ad8
-    [u] 0x5e89ff
-    [u] 0x48b501
-==============================================================
-2026/10/28 22:05:05 [INFO] Wrote 330 folded stack lines to all.txt
-2026/10/28 22:05:05 [INFO] Render: ./flamegraph.pl all.txt > cpu.svg
-```
-
-สรุปจำนวน sample ต่อโปรเซสจาก `all.txt` (คำนวณด้วย `awk '{c=$NF; split($1,a,";"); n[a[1]]+=c} END{for(k in n) print n[k], k}' all.txt | sort -rn | head -5`):
+ตัวอย่างการสรุปจำนวน sample ต่อโปรเซสจาก `all.txt` (output ข้อความนี้มาจากการบันทึกรอบก่อนบน Linux 7.0.0-38 ไม่ใช่ `all.txt` ของภาพด้านบน คำนวณด้วย `awk '{c=$NF; split($1,a,";"); n[a[1]]+=c} END{for(k in n) print n[k], k}' all.txt | sort -rn | head -5`):
 ```text
 495 busy
 127 sleep
@@ -520,13 +387,14 @@ busy;_start;__libc_start_main;[libc.so.6+0x2a601];main;run_workload;hot_path_b;s
 ```
 
 ### 4.4 การตีความผลลัพธ์ (4.3)
-- 3960 samples ≈ 8 × 99 × 5 แต่ถูกบันทึกเพียง 845 เพราะ CPU ส่วนใหญ่ว่าง (idle ถูกกรองทิ้ง) — `busy` ครอง ~59% ของ sample ที่ไม่ใช่ idle
-- **#3 `link`** (ตัว linker ของ Go จากงาน build อื่นบนเครื่อง) จบไปก่อนที่ profiler จะทันอ่าน `/proc/<pid>/maps` จึงเหลือแต่ที่อยู่ดิบ — นี่คือข้อจำกัดของ symbolization ฝั่ง userspace ที่ต้องเข้าใจ
-- มี user stack collision 3 ครั้ง (จาก ~353 unique chains) — โปรแกรมรายงานให้เห็นแทนที่จะทิ้งเงียบ ๆ
+- 3960 samples ≈ 8 × 99 × 5 และถูกบันทึกถึง 3957 เพราะขณะนั้นเครื่องมีงานอื่นทำงานเต็มเกือบทุก CPU (มี idle ให้กรองทิ้งน้อยมาก) — สอง chain แรกของ `busy` รวมกันได้ 292 + 142 = 434 samples (~11%) ต่ำกว่า 99 Hz × 5 s (495) ของหนึ่ง core อยู่บ้าง (น่าจะเพราะถูกแย่ง CPU กับงานอื่นและมี sample ที่ถูกทิ้งจาก stack collision) แต่สัดส่วน 292 : 142 ≈ 2.06 : 1 ยังตรงกับที่ออกแบบไว้
+- **#3 `python3` แสดง `(no stack: kernel id -14, user id -17)`:** user stack ถูกทิ้งเพราะ `-EEXIST` (-17 = hash collision ใน `stack_traces`) ส่วน kernel id `-EFAULT` (-14) หมายถึงไม่มี kernel stack ให้เก็บ (น่าจะเป็น sample ที่เกิดตอนอยู่ใน user mode) จึงเหลือแต่จำนวน sample โดยไม่มีเฟรม
+- มี stack collision `kernel=18 user=374` (จาก 2840 unique chains) — โปรแกรมรายงานให้เห็นแทนที่จะทิ้งเงียบ ๆ ถ้าค่านี้สูงแบบนี้ควรเพิ่ม `max_entries` ของ `stack_traces` ตามคำเตือนในบรรทัด `[STATS]`
+- ในการบันทึกรอบก่อน (Linux 7.0.0-38) อันดับ #3 เป็น `link` (ตัว linker ของ Go จากงาน build อื่นบนเครื่อง) ที่จบไปก่อน profiler จะทันอ่าน `/proc/<pid>/maps` จึงเหลือแต่ที่อยู่ดิบ (เช่น `0x4206a0`) — นี่คือข้อจำกัดของ symbolization ฝั่ง userspace ที่ต้องเข้าใจ
 
 ### 4.5 Flame Graph ที่ได้จริง (render ด้วย `flamegraph.py`)
 
-Capture รอบใหม่บนเครื่องเดียวกัน (99 Hz) แล้ว render ด้วย `python3 flamegraph.py` ตัวเลข sample จึงต่างจากข้อ 4.1/4.3 เล็กน้อย: กราฟ (ก) มาจากการรันของ [`scripts/screenshots/week18.sh`](../../scripts/screenshots/week18.sh) บน Linux 7.0.0-43 (ภาพที่ 2 และ 4 ด้านบน) ส่วนกราฟ (ข) บันทึกบน Linux 7.0.0-38
+render ด้วย `python3 flamegraph.py` (99 Hz): กราฟ (ก) มาจาก `out.txt` ของการรันเดียวกับหัวข้อ 4.1 (สคริปต์ [`scripts/screenshots/week18.sh`](../../scripts/screenshots/week18.sh) บน Linux 7.0.0-43) ส่วนกราฟ (ข) บันทึกบน Linux 7.0.0-38 ตัวเลขจึงไม่ตรงกับภาพในหัวข้อ 4.3
 
 **(ก) เฉพาะ PID ของ `busy`** — `-p <pid> -d 6s` ได้ 577 samples: `hot_path_a` 379 : `hot_path_b` 198 ≈ **1.91 : 1** (ค่าที่ออกแบบไว้ 2 : 1) ไฟล์ folded ต้นฉบับอยู่ที่ [`images/cpu-busy.folded`](images/cpu-busy.folded) ให้ลอง render เองได้
 

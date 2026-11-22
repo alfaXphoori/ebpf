@@ -94,7 +94,7 @@ struct kfree_skb_args {            /* hand-rolled: ผูกกับ layout ข
 
 ### 1.5 PID/COMM ใน dropwatch "ไม่ใช่เจ้าของแพ็กเก็ตเสมอไป"
 
-`bpf_get_current_pid_tgid()` และ `bpf_get_current_comm()` คืนค่าของ task ที่ **กำลังรันบน CPU ขณะที่ `kfree_skb` ถูกเรียก** ฝั่ง RX ส่วนใหญ่ประมวลผลใน **softirq (NET_RX)** ซึ่งอาจ "ยืม" context ของโปรเซสใดก็ได้ที่บังเอิญรันอยู่ (`swapper/N` เมื่อ CPU ว่าง, `ksoftirqd/N`, หรือโปรเซสที่ไม่เกี่ยวข้องเลย) ในผลลัพธ์จริงด้านล่างจะเห็น `avahi-daemon`, `kworker/3:0` ฯลฯ ดังนั้น:
+`bpf_get_current_pid_tgid()` และ `bpf_get_current_comm()` คืนค่าของ task ที่ **กำลังรันบน CPU ขณะที่ `kfree_skb` ถูกเรียก** ฝั่ง RX ส่วนใหญ่ประมวลผลใน **softirq (NET_RX)** ซึ่งอาจ "ยืม" context ของโปรเซสใดก็ได้ที่บังเอิญรันอยู่ (`swapper/N` เมื่อ CPU ว่าง, `ksoftirqd/N`, หรือโปรเซสที่ไม่เกี่ยวข้องเลย) ในผลลัพธ์จริงด้านล่างจะเห็น `kworker/0:2`, `kworker/u32:3` ฯลฯ ดังนั้น:
 - ใช้ `COMM` เป็น "เบาะแส" เท่านั้น ห้ามสรุปว่าโปรเซสนั้นเป็นต้นเหตุ
 - กรณี `nc`/`python3` ในแล็บนี้ตรงกับผู้ส่ง เพราะบน loopback โดยทั่วไป softirq ฝั่งรับจะถูกประมวลผลต่อทันทีใน context ของโปรเซสผู้ส่ง (ตอน `local_bh_enable()` หลัง `loopback_xmit()`) แต่ไม่รับประกันเสมอไป
 - หากต้องการเจ้าของจริง ให้ดูจาก `skb->sk` (ฝั่งส่ง) หรือ `rx_sk` (ฝั่งรับ, Linux รุ่นใหม่) แทน
@@ -280,101 +280,44 @@ sudo bpftool prog show name trace_kfree_skb
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0
-> บันทึกเมื่อ 2026-10-28 ขณะที่มีแล็บอื่นรันอยู่บนเครื่องเดียวกัน จึงมี event พื้นหลังปนอยู่
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0
+> บันทึกเมื่อ 2026-11-21 บนเครื่องที่มีบริการอื่นทำงานอยู่ จึงมี event พื้นหลังปนอยู่
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week13.sh`](../../scripts/screenshots/week13.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week13.sh`](../../scripts/screenshots/week13.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make all (bpf2go + go build)](screenshots/week13-1-build.png)
-
-*ภาพที่ 1: Terminal — make all (bpf2go + go build)*
-
-![Terminal 2 — สร้าง drop ที่รู้สาเหตุบน loopback](screenshots/week13-2-trigger-drops.png)
-
-*ภาพที่ 2: Terminal 2 — สร้าง drop ที่รู้สาเหตุบน loopback*
-
-![Terminal 1 — sudo ./bin/dropwatch -ip-only](screenshots/week13-3-dropwatch.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ./bin/dropwatch -ip-only*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 การคอมไพล์ (`make all`)
-```text
-===> Generating Go bindings from dropwatch.c via bpf2go...
-go generate ./...
-In file included from /mnt/sda/ebpf/phase07-advanced-security-observability/week13-kfree-skb-dropwatch/dropwatch.c:13:
-5 warnings generated.
-Compiled /mnt/sda/ebpf/phase07-advanced-security-observability/week13-kfree-skb-dropwatch/bpf_bpfel.o
-Stripped /mnt/sda/ebpf/phase07-advanced-security-observability/week13-kfree-skb-dropwatch/bpf_bpfel.o
-Wrote /mnt/sda/ebpf/phase07-advanced-security-observability/week13-kfree-skb-dropwatch/bpf_bpfel.go
-...
-===> Building userspace binary bin/dropwatch...
-mkdir -p bin
-go build -v -o bin/dropwatch .
-```
+
+![Terminal — make all (bpf2go + go build) และ format ของ tracepoint skb:kfree_skb](screenshots/week13-1-build.png)
+
+*ภาพ: Terminal — make all (bpf2go + go build) และ format ของ tracepoint skb:kfree_skb*
+
 > warning 5 รายการมาจาก `vmlinux.h` (`declaration does not declare anything`) เป็นเรื่องปกติของ header ที่ bpftool สร้าง ไม่กระทบการทำงาน
 
 ### 4.2 คำสั่งทดสอบ (Terminal 2)
-```text
-$ nc -z -w1 127.0.0.1 9999
-exit=1
-$ echo hi | nc -u -w1 127.0.0.1 9998
-$ python3 -c "...connect(("::1", 9997))"
-[Errno 111] Connection refused
-```
+
+![Terminal 2 — สร้าง drop ที่รู้สาเหตุบน loopback](screenshots/week13-2-trigger-drops.png)
+
+*ภาพ: Terminal 2 — สร้าง drop ที่รู้สาเหตุบน loopback*
 
 ### 4.3 ผลลัพธ์ dropwatch (`sudo ./bin/dropwatch -ip-only`)
-```text
-======================================================================
- eBPF Kernel Dropwatch & Packet Loss Diagnostics (kfree_skb)
-======================================================================
-2026/10/28 22:01:11 [INFO] Loaded 132 drop reason names from kernel BTF
-2026/10/28 22:01:11 [INFO] Loaded 265374 kernel text symbols from /proc/kallsyms
-2026/10/28 22:01:11 [CO-RE] trace_event_raw_kfree_skb.rx_sk  at byte offset 24
-2026/10/28 22:01:11 [CO-RE] trace_event_raw_kfree_skb.reason at byte offset 36
-2026/10/28 22:01:11 [INFO] Attached to 'skb:kfree_skb'! Monitoring dropped packets live...
-TIME      PID     COMM             PROTO  DROP REASON                RX_SK DROP LOCATION     
------------------------------------------------------------------------------------------------
-22:01:13  4026949 nc               IPv4   NO_SOCKET                  no    tcp_v4_rcv+0x9c
-22:01:13  4026951 nc               IPv4   NO_SOCKET                  no    __udp4_lib_rcv+0x4b1
-22:01:13  4026952 python3          IPv6   NO_SOCKET                  no    tcp_v6_rcv+0x31a
-22:01:13  4026141 dds.ev.0         IPv4   NOT_SPECIFIED              no    ip_rcv_finish_core+0x233
-22:01:14  4026141 python3          IPv4   NOT_SPECIFIED              no    dst_discard+0x13
-22:01:14  4026141 python3          IPv4   NOT_SPECIFIED              no    ip_rcv_finish_core+0x233
-22:01:14  4026141 python3          IPv4   NOT_SPECIFIED              no    ip_rcv_finish_core+0x233
-22:01:14  4026141 python3          IPv4   NOT_SPECIFIED              no    dst_discard+0x13
-22:01:14  1844    avahi-daemon     IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-22:01:14  55      ksoftirqd/5      IPv4   NOT_SPECIFIED              no    dst_discard+0x13
-22:01:14  3873298 kworker/3:0      IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-22:01:14  3873298 kworker/3:0      IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-22:01:14  3295491 kworker/3:2      IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-22:01:14  3784738 kworker/6:2      IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-22:01:14  3873298 kworker/3:0      IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-22:01:15  3534437 kworker/u32:1    IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
-(... ตัด event IPV6DISABLED พื้นหลังที่ซ้ำกันออก 11 บรรทัด ...)
-22:01:17  1844    avahi-daemon     IPv6   IPV6DISABLED               no    ip6_rcv_core+0x361
 
-[INFO] Received interrupt. Shutting down dropwatch...
+![Terminal 1 — sudo ./bin/dropwatch -ip-only](screenshots/week13-3-dropwatch.png)
 
-========== Drop Summary ==========
-Total Captured Dropped Packets: 2270 (ring buffer events, before display filters)
-Per-reason totals from BPF hash map drop_reason_stats:
-  - IPV6DISABLED               : 19 packets
-  - QUEUE_PURGE                : 2 packets
-  - NO_SOCKET                  : 3 packets
-  - NOT_SPECIFIED              : 2246 packets
-==================================
-```
+*ภาพ: Terminal 1 — sudo ./bin/dropwatch -ip-only*
 
 **วิเคราะห์ผล:**
 - 3 บรรทัดแรกคือแพ็กเก็ตที่เราสร้างเอง ได้ `NO_SOCKET` ตรงตามคาด และ location ชี้ไปยังฟังก์ชันรับของแต่ละโปรโตคอล (`tcp_v4_rcv`, `__udp4_lib_rcv`, `tcp_v6_rcv`)
-- PID `4026141` แสดงทั้ง `dds.ev.0` และ `python3` เพราะ `comm` เป็นค่า **ต่อเธรด** ขณะที่ PID ที่เราเก็บคือ TGID (ต่อโปรเซส)
-- `Total 2270` แต่แสดงบนจอเพียงราว 30 บรรทัด เพราะ `-ip-only` ตัด event ที่ไม่ใช่ IP (เช่น netlink ที่เกิดจาก `udev-worker` ตอนแล็บอื่นสร้าง interface) ออกจากการแสดงผล แต่ Hash Map ยังนับครบ
+- บรรทัดที่เหลือเป็น event พื้นหลังที่ไม่ได้มาจากคำสั่งของเรา: `NOT_SPECIFIED` ที่ `ip6_mc_input` (แพ็กเก็ต IPv6 multicast ที่ถูกทิ้ง โดย context ที่จับได้เป็น `kworker`) และ `NO_SOCKET` ที่ `ping_rcv` จากโปรเซส `ping` อื่นบนเครื่อง ซึ่งทำให้ยอดรวม `NO_SOCKET` ใน Hash Map เป็น 4 (3 จากเรา + 1 จาก ping)
+- `comm` เป็นค่า **ต่อเธรด** ขณะที่ PID ที่เราเก็บคือ TGID (ต่อโปรเซส) ดังนั้น PID เดียวกันอาจแสดงชื่อ COMM ต่างกันได้ถ้า drop เกิดในหลายเธรดของโปรเซสเดียวกัน
+- `Total 1910` แต่แสดงบนจอเพียง 9 บรรทัด เพราะ `-ip-only` ตัด event ที่ไม่ใช่ IP (เช่น netlink ที่เกิดจาก `udev-worker` ตอนแล็บอื่นสร้าง interface) ออกจากการแสดงผล แต่ Hash Map ยังนับครบ
 - ใน run ก่อนหน้าที่ไม่ใส่ `-ip-only` บนเครื่องเดียวกัน พบ `MAC80211_UNUSABLE/0x58` จาก `swapper/7` (ไดรเวอร์ Wi-Fi) ซึ่งเป็นค่าที่ README เวอร์ชันเก่าแสดงเป็น `REASON_65624`
 
 ---

@@ -113,7 +113,7 @@ struct trace_bpf_args {
 | `net.core.bpf_jit_harden` | 0/1/2 | ปิด / เปิดสำหรับ unprivileged / เปิดทุกโปรแกรม (constant blinding ป้องกัน JIT spraying) |
 | `/sys/kernel/security/lsm` มี `bpf` | — | BPF LSM เปิดอยู่ จึงเขียนนโยบาย `lsm/bpf` เพื่อ **บังคับ** ว่าใครโหลดอะไรได้ |
 
-บนเครื่องทดลอง: `unprivileged_bpf_disabled = 2`, `bpf_jit_harden = 0` ตอนบันทึก output ข้อความในหัวข้อ 4.2 (Linux 7.0.0-38) LSM ที่เปิดคือ `lockdown,capability,landlock,yama,apparmor,ima,evm` (**ไม่มี `bpf`**) เครื่องจึงทำได้เพียง "ตรวจจับ" ต่อมาเราเปิด BPF LSM ด้วย kernel command line `lsm=landlock,lockdown,yama,integrity,apparmor,bpf` (ใช้ใน Week 10) ตอนนี้ `/sys/kernel/security/lsm` จึงเป็น `lockdown,capability,landlock,yama,apparmor,bpf,ima,evm` และ auditor รายงาน `BPF LSM ... : ACTIVE` (ดูภาพหน้าจอในหัวข้อ 4) พร้อมเห็นโปรแกรม LSM `restrict_filesy` ของ systemd ใน inventory — ผลบรรทัดนี้จึงขึ้นกับการตั้งค่าการบูตของแต่ละเครื่อง
+บนเครื่องทดลอง: `unprivileged_bpf_disabled = 2`, `bpf_jit_harden = 0` ตอนบันทึกผลรอบแรก (Linux 7.0.0-38) LSM ที่เปิดคือ `lockdown,capability,landlock,yama,apparmor,ima,evm` (**ไม่มี `bpf`**) เครื่องจึงทำได้เพียง "ตรวจจับ" ต่อมาเราเปิด BPF LSM ด้วย kernel command line `lsm=landlock,lockdown,yama,integrity,apparmor,bpf` (ใช้ใน Week 10) ตอนนี้ `/sys/kernel/security/lsm` จึงเป็น `lockdown,capability,landlock,yama,apparmor,bpf,ima,evm` และ auditor รายงาน `BPF LSM ... : ACTIVE` (ดูภาพหน้าจอในหัวข้อ 4.2) พร้อมเห็นโปรแกรม LSM `restrict_filesy` ของ systemd ใน inventory — ผลบรรทัดนี้จึงขึ้นกับการตั้งค่าการบูตของแต่ละเครื่อง
 
 ---
 
@@ -304,140 +304,42 @@ sudo sh -c 'rm -f /sys/fs/bpf/w16_*'   # unpin -> โปรแกรมถูก
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`, 8 CPUs), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-10-28, `-hook auto` เลือก `fentry/__sys_bpf`)
-> ตัด ANSI color code ออก
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`, 8 CPUs), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-11-21, `-hook auto` เลือก `fentry/__sys_bpf`)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week16.sh`](../../scripts/screenshots/week16.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week16.sh`](../../scripts/screenshots/week16.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal 2 — โหลดโปรแกรมทดสอบ (ก่อน/ระหว่าง auditor ทำงาน)](screenshots/week16-1-terminal2.png)
-
-*ภาพที่ 1: Terminal 2 — โหลดโปรแกรมทดสอบ (ก่อน/ระหว่าง auditor ทำงาน)*
-
-![Terminal 1 — sudo ./bin/bpf-audit](screenshots/week16-2-auditor.png)
-
-*ภาพที่ 2: Terminal 1 — sudo ./bin/bpf-audit*
-
-![ยืนยันการจับครบทุก CPU ของแต่ละ hook (fentry / raw)](screenshots/week16-3-per-cpu.png)
-
-*ภาพที่ 3: ยืนยันการจับครบทุก CPU ของแต่ละ hook (fentry / raw)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 Terminal 2
-```text
-$ sudo bpftool prog load week13-kfree-skb-dropwatch/bpf_bpfel.o /sys/fs/bpf/w16_preloaded   # ก่อนเริ่ม auditor
-loaded
-$ for c in 0 1 2 3 4 5 6 7; do sudo taskset -c $c bpftool prog load week14-cgroup-sock-addr/bpf_bpfel.o /sys/fs/bpf/w16_cpu$c; done
-$ sudo bpftool prog show pinned /sys/fs/bpf/w16_cpu7
-11100: cgroup_sock_addr  name sock4_connect  tag f5482f9a4d336f56  gpl
-	loaded_at 2026-10-28T22:22:37+0700  uid 0
-	xlated 648B  jited 397B  memlock 4096B  map_ids 5225,5227,5226
-	btf_id 6078
-```
+
+![Terminal 2 — โหลดโปรแกรมทดสอบ (ก่อน/ระหว่าง auditor ทำงาน)](screenshots/week16-1-terminal2.png)
+
+*ภาพ: Terminal 2 — โหลดโปรแกรมทดสอบ (ก่อน/ระหว่าง auditor ทำงาน)*
 
 ### 4.2 Auditor (`sudo ./bin/bpf-audit`)
-> output ข้อความชุดนี้บันทึกก่อนเปิด BPF LSM จึงขึ้น `NOT ACTIVE` บนเครื่องที่บูตด้วย `lsm=...,bpf` (เช่นภาพหน้าจอด้านบน) จะขึ้น `ACTIVE` และมีโปรแกรม `restrict_filesy` (LSM ของ systemd) เพิ่มใน inventory
-```text
-======================================================================
- eBPF Integrity Auditor: bpf() syscall monitor + program inventory
-======================================================================
-----------------------------------------------------------------------
- [1] Host eBPF Security & Hardening Posture Assessment
-----------------------------------------------------------------------
-  • kernel.unprivileged_bpf_disabled : 2 [SECURE / HARDENED]
-  • net.core.bpf_jit_harden          : 0 [DEFAULT / UNHARDENED]
-  • net.core.bpf_jit_enable          : 1
-  • BPF LSM in /sys/kernel/security/lsm : NOT ACTIVE
-----------------------------------------------------------------------
 
-2026/10/28 22:22:34 [INFO] Loaded 41 bpf_cmd names from kernel BTF
-----------------------------------------------------------------------
- [2] Startup Inventory: eBPF programs already loaded in the kernel
-----------------------------------------------------------------------
-  ID     TYPE            NAME              TAG                UID   NOTE
-  57     CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  58     CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  99     CGroupDevice    s_snapd_desktop   5592a8780089fcce   1000  
-  9432   CGroupDevice    sd_devices        470479e7b2a42bb5   0     
-  9433   CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  9434   CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  9435   CGroupDevice    sd_devices        a97c143260cd9940   0     
-  9436   CGroupDevice    sd_devices        99aee04c1c96cc7e   0     
-  9437   CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  9438   CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  9439   CGroupDevice    sd_devices        bf0092a65d4c9334   0     
-  9440   CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  9441   CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  9442   CGroupDevice    sd_devices        925aa739a35aee81   0     
-  9443   CGroupDevice    sd_devices        99aee04c1c96cc7e   0     
-  9444   CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  9445   CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  9446   CGroupDevice    sd_devices        99aee04c1c96cc7e   0     
-  9447   CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  9448   CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  9449   CGroupDevice    sd_devices        49ba04a7ef7eacb7   0     
-  9450   CGroupDevice    sd_devices        9f0126175d483e7a   0     
-  9451   CGroupSKB       sd_fw_egress      772db7720b2728e9   0     
-  9452   CGroupSKB       sd_fw_ingress     772db7720b2728e9   0     
-  10925  CGroupDevice    (no name)         b1e4e8bab2078b38   0     
-  11049  TracePoint      trace_kfree_skb   b04867a63be555c2   0     
-  11051  Tracing         audit_sys_bpf     a6780ab09f0e2e46   0     <- this auditor
-  Total: 27 programs (CGroupDevice=11, CGroupSKB=14, TracePoint=1, Tracing=1)
-----------------------------------------------------------------------
+![Terminal 1 — sudo ./bin/bpf-audit](screenshots/week16-2-auditor.png)
 
-2026/10/28 22:22:34 [INFO] Hooked fentry/__sys_bpf
-2026/10/28 22:22:34 [INFO] Auditing state-changing sys_bpf() calls in real time (-all for everything)...
+*ภาพ: Terminal 1 — sudo ./bin/bpf-audit*
 
-TIME      PID     UID   COMM             BPF COMMAND              RISK        DETAIL
-------------------------------------------------------------------------------------------
-22:22:36  110944  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=SocketFilter name=""
-22:22:36  110944  0     bpftool          BPF_TOKEN_CREATE         NOTICE      
-22:22:36  110944  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=SocketFilter name=""
-22:22:36  110944  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=SocketFilter name=""
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=SocketFilter name="libbpf_nametest"
-22:22:36  110944  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=Kprobe name="det_arg_ctx"
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_BTF_LOAD             NOTICE      
-22:22:36  110944  0     bpftool          BPF_MAP_CREATE           NOTICE      
-22:22:36  110944  0     bpftool          BPF_MAP_CREATE           NOTICE      
-22:22:36  110944  0     bpftool          BPF_MAP_CREATE           NOTICE      
-22:22:36  110944  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:36  110944  0     bpftool          BPF_OBJ_PIN              NOTICE      
-(... bpftool อีก 7 โปรเซส (CPU 1-7) แต่ละตัวมี 22 บรรทัดรูปแบบเดียวกัน ตัดออก เหลือเฉพาะบรรทัด PROG_LOAD ของโปรแกรมจริง ...)
-22:22:36  110947  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:36  110950  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:36  110957  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:36  110960  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:37  110964  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:37  110970  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-22:22:37  110974  0     bpftool          BPF_PROG_LOAD            PROG_LOAD   type=CGroupSockAddr name="sock4_connect"
-
-[INFO] Stopping BPF integrity auditor...
-[SUCCESS] BPF Integrity Auditor stopped safely.
-```
+> เครื่องที่บันทึกภาพบูตด้วย `lsm=...,bpf` จึงขึ้น `BPF LSM ... : ACTIVE` และมีโปรแกรม `restrict_filesy` (LSM ของ systemd) ใน inventory บนเครื่องที่ไม่ได้เปิด BPF LSM จะขึ้น `NOT ACTIVE` และไม่มีแถวนี้ (ดูข้อ 1.5)
 
 ### 4.3 ยืนยันการจับครบทุก CPU ของแต่ละ hook
-```text
-[fentry] Hooked fentry/__sys_bpf  -> sock4_connect PROG_LOAD seen: 8/8, OBJ_PIN seen: 8
-[raw] Hooked tracepoint/raw_syscalls/sys_enter (id == 321)  -> sock4_connect PROG_LOAD seen: 8/8, OBJ_PIN seen: 8
-```
-(รัน `sudo ./bin/bpf-audit -hook fentry` และ `-hook raw` แยกกัน แล้วโหลดโปรแกรมด้วย `taskset -c 0..7` เหมือนขั้นตอนที่ 4 แล้วนับบรรทัดด้วย `grep -c`)
+
+![ยืนยันการจับครบทุก CPU ของแต่ละ hook (fentry / raw)](screenshots/week16-3-per-cpu.png)
+
+*ภาพ: ยืนยันการจับครบทุก CPU ของแต่ละ hook (fentry / raw)*
+
+(รัน `sudo ./bin/bpf-audit -hook fentry` และ `-hook raw` แยกกันโดยเก็บ log ลงไฟล์ แล้วโหลดโปรแกรมด้วย `taskset -c 0..7` เหมือนขั้นตอนที่ 4 จากนั้นนับจำนวน PID ที่ไม่ซ้ำของบรรทัด `sock4_connect` และนับ `BPF_OBJ_PIN` ด้วย `grep -c` ทั้งสอง hook ได้ 8 ครบตามจำนวน CPU)
 
 **วิเคราะห์ผล:**
-- **Inventory จับโปรแกรมที่โหลดก่อนได้:** `11049 TracePoint trace_kfree_skb` คือโปรแกรมที่เรา pin ไว้ในขั้นตอนที่ 2 **ก่อน** auditor เริ่ม ตัวเฝ้า syscall เพียงอย่างเดียวจะไม่มีทางเห็นมัน
+- **Inventory จับโปรแกรมที่โหลดก่อนได้:** `9964 TracePoint trace_kfree_skb` คือโปรแกรมที่เรา pin ไว้ในขั้นตอนที่ 2 **ก่อน** auditor เริ่ม ตัวเฝ้า syscall เพียงอย่างเดียวจะไม่มีทางเห็นมัน
 - **โปรแกรมของ auditor เอง** แสดงเป็น `Tracing audit_sys_bpf <- this auditor` (ชนิด `Tracing` = fentry)
 - **จับได้ครบ 8 CPU:** `BPF_PROG_LOAD ... name="sock4_connect"` ปรากฏ 8 ครั้งจาก bpftool 8 โปรเซส (PID ต่างกัน) ที่ถูก pin คนละ CPU
 - **คำสั่งถูกถอดรหัสถูกต้อง:** เห็น `BPF_PROG_LOAD`, `BPF_TOKEN_CREATE`, `BPF_BTF_LOAD`, `BPF_OBJ_PIN` แทนที่จะเป็น `BPF_MAP_CREATE` ทุกบรรทัดแบบเวอร์ชันเดิม

@@ -347,133 +347,49 @@ sudo ip netns exec w12ips curl -s localhost:2112/metrics | grep "^ips_"
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 — veth `w12b` ใน Namespace `w12ips` ตามขั้นตอนที่ 3 (โค้ดสี ANSI ใน Log ถูกตัดออกเพื่อให้อ่านง่าย)
+> **Environment**: Ubuntu 26.04.1 LTS (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 — veth `w12b` ใน Namespace `w12ips` ตามขั้นตอนที่ 3
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week12.sh`](../../scripts/screenshots/week12.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week12.sh`](../../scripts/screenshots/week12.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week12-1-unit-tests.png)
-
-*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
-
-![Terminal 2 — Ping Flood / SYN Burst จาก w12atk และตรวจผ่าน REST API + /metrics](screenshots/week12-2-autoban-attack.png)
-
-*ภาพที่ 2: Terminal 2 — Ping Flood / SYN Burst จาก w12atk และตรวจผ่าน REST API + /metrics*
-
-![Terminal 1 — sudo ip netns exec w12ips ./bin/ips-agent (Auto-Ban mode, หลัง Ctrl+C)](screenshots/week12-3-autoban-agent.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ip netns exec w12ips ./bin/ips-agent (Auto-Ban mode, หลัง Ctrl+C)*
-
-![Rate-limit-only mode (-autoban=false): ping 100 pps จาก w12atk + log ของ agent](screenshots/week12-4-ratelimit-only.png)
-
-*ภาพที่ 4: Rate-limit-only mode (-autoban=false): ping 100 pps จาก w12atk + log ของ agent*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 ผลลัพธ์ `make test`
-```text
-cd cmd/ips-agent && go generate ./...
-go test -exec sudo -v ./...
-=== RUN   TestNonInspectedTrafficPasses
---- PASS: TestNonInspectedTrafficPasses (0.00s)
-=== RUN   TestSYNFloodAutoBanEnabled
---- PASS: TestSYNFloodAutoBanEnabled (0.05s)
-=== RUN   TestSYNFloodAutoBanDisabled
---- PASS: TestSYNFloodAutoBanDisabled (0.05s)
-=== RUN   TestICMPFloodAutoBan
---- PASS: TestICMPFloodAutoBan (0.05s)
-=== RUN   TestFixedWindowReset
---- PASS: TestFixedWindowReset (0.15s)
-=== RUN   TestZeroConfigUsesDefaults
---- PASS: TestZeroConfigUsesDefaults (0.00s)
-=== RUN   TestBanTTLExpiry
-2026/10/28 22:06:23 [CONTROL] IP 198.51.100.7 manually blacklisted (reason=4)
---- PASS: TestBanTTLExpiry (0.25s)
-PASS
-ok  	week12-capstone-ips/cmd/ips-agent	0.583s
-```
-(ตัดบรรทัด `Compiled/Stripped/Wrote` ของ bpf2go ออก)
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week12-1-unit-tests.png)
+
+*ภาพ: Terminal — make test (BPF_PROG_TEST_RUN) (กรองบรรทัด `Compiled/Stripped/Wrote` ของ bpf2go ออกด้วย `grep -vE`)*
 
 ### 4.2 Auto-Ban Mode (`-autoban=true`, ค่าเริ่มต้น): Flood, Auto-Ban, Auto-Unban TTL และ Manual Ban
 ฝั่งผู้โจมตีและ REST API:
-```text
---- ping -f -c 200 (ICMP flood from 10.212.0.1) ---
---- 10.212.0.2 ping statistics ---
-274 packets transmitted, 5 received, 98.1752% packet loss, time 2995ms
-rtt min/avg/max/mdev = 0.003/0.011/0.041/0.014 ms, ipg/ewma 10.969/0.025 ms
---- SYN burst: 30 x connect() to closed port 8080 ---
---- GET /api/blacklist ---
-[{"ip":"10.212.0.1","drop_count":5,"drop_bytes":370,"reason":"SYN_FLOOD","banned_for":"1s"}]
 
---- GET /api/blacklist (after TTL) ---
-[]
+![Terminal 2 — Ping Flood / SYN Burst จาก w12atk และตรวจผ่าน REST API + /metrics](screenshots/week12-2-autoban-attack.png)
 
---- POST /api/blacklist (203.0.113.99) ---
-{"status":"banned","ip":"203.0.113.99"}
---- GET /metrics ---
-# TYPE ips_active_blacklisted_ips gauge
-ips_active_blacklisted_ips 1
-# TYPE ips_alerts_lost_total counter
-ips_alerts_lost_total 0
-# TYPE ips_dropped_blacklist_total counter
-ips_dropped_blacklist_total 287
-# TYPE ips_dropped_ratelimit_total counter
-ips_dropped_ratelimit_total 2
-# TYPE ips_passed_packets_total counter
-ips_passed_packets_total 22
-# TYPE ips_total_bytes counter
-ips_total_bytes 29546
-```
+*ภาพ: Terminal 2 — Ping Flood / SYN Burst จาก w12atk และตรวจผ่าน REST API + /metrics*
+
 Log ของ Agent:
-```text
-2026/10/28 22:03:09 [CONFIG] SYN Limit=10 pps, ICMP Limit=5 pps, Window=1s, Auto-Ban=true, Ban TTL=6s
-2026/10/28 22:03:09 [INFO] Smart IPS attached to interface w12b (index 1558)
-2026/10/28 22:03:09 [INFO] Smart IPS Daemon active! Web/API running at http://0.0.0.0:2112
-2026/10/28 22:03:11 [IPS ALERT] ICMP_FLOOD  | Proto=ICMP | Src=10.212.0.1:0 -> Dst=10.212.0.2:0 | Rate=6 PPS | Action=AUTO-BANNED
-2026/10/28 22:03:17 [IPS UNBAN] IP 10.212.0.1 unbanned after 6s TTL expiration
-2026/10/28 22:03:18 [IPS ALERT] SYN_FLOOD   | Proto=TCP  | Src=10.212.0.1:43636 -> Dst=10.212.0.2:8080 | Rate=11 PPS | Action=AUTO-BANNED
-2026/10/28 22:03:25 [IPS UNBAN] IP 10.212.0.1 unbanned after 6s TTL expiration
-2026/10/28 22:03:28 [CONTROL] IP 203.0.113.99 manually blacklisted (reason=4)
-2026/10/28 22:03:28 
-[INFO] Termination signal received. Stopping Smart IPS Daemon...
-2026/10/28 22:03:28 [INFO] Smart IPS cleanly shut down.
-```
+
+![Terminal 1 — sudo ip netns exec w12ips ./bin/ips-agent (Auto-Ban mode, หลัง Ctrl+C)](screenshots/week12-3-autoban-agent.png)
+
+*ภาพ: Terminal 1 — sudo ip netns exec w12ips ./bin/ips-agent (Auto-Ban mode, หลัง Ctrl+C)*
+
 การอ่านผล:
 - `ping -f` ได้รับ Reply เพียง 5 ตัว (= ICMP Limit) จากนั้น Echo ตัวที่ 6 ทำให้ IP ถูกแบน และแพ็กเก็ตที่เหลือถูก Drop ที่ Blacklist (`ips_dropped_blacklist_total`)
-- SYN Burst เริ่มขณะ ICMP Ban ยังมีผล SYN ช่วงแรกจึงถูก Drop ด้วย Blacklist เดิม หลัง Ban หมดอายุ (22:03:17) SYN ตัวที่ 11 ใน Window เดียวกันทำให้ถูกแบนใหม่ด้วยเหตุผล `SYN_FLOOD`
+- SYN Burst เริ่มขณะ ICMP Ban ยังมีผล SYN ช่วงแรกจึงถูก Drop ด้วย Blacklist เดิม หลัง Ban หมดอายุ (15:52:42) SYN ตัวที่ 11 ใน Window เดียวกันทำให้ถูกแบนใหม่ด้วยเหตุผล `SYN_FLOOD`
 - `ips_dropped_ratelimit_total 2` = แพ็กเก็ตที่ "ทำให้เกิด Ban" 2 ครั้ง (ICMP 1 + SYN 1)
 - `ips_active_blacklisted_ips 1` = Manual Ban ของ `203.0.113.99` (นับจาก Map จริง)
 
 ### 4.3 Rate-limit-only Mode (`-autoban=false`)
-```text
---- ping -i 0.01 -c 300 (100 pps for ~3s) ---
-300 packets transmitted, 20 received, 93.3333% packet loss, time 3332ms
-rtt min/avg/max/mdev = 0.003/0.018/0.044/0.009 ms
---- GET /api/blacklist ---
-[]
 
---- GET /metrics ---
-ips_active_blacklisted_ips 0
-ips_alerts_lost_total 0
-ips_dropped_blacklist_total 0
-ips_dropped_ratelimit_total 280
-ips_passed_packets_total 25
-ips_total_bytes 29762
-=== agent log ===
-2026/10/28 22:03:51 [CONFIG] SYN Limit=10 pps, ICMP Limit=5 pps, Window=1s, Auto-Ban=false, Ban TTL=6s
-2026/10/28 22:03:51 [INFO] Smart IPS attached to interface w12b (index 1564)
-2026/10/28 22:03:51 [INFO] Smart IPS Daemon active! Web/API running at http://0.0.0.0:2112
-2026/10/28 22:03:53 [IPS ALERT] ICMP_FLOOD  | Proto=ICMP | Src=10.212.0.1:0 -> Dst=10.212.0.2:0 | Rate=6 PPS | Action=RATE-LIMITED
-2026/10/28 22:03:54 [IPS ALERT] ICMP_FLOOD  | Proto=ICMP | Src=10.212.0.1:0 -> Dst=10.212.0.2:0 | Rate=6 PPS | Action=RATE-LIMITED
-2026/10/28 22:03:55 [IPS ALERT] ICMP_FLOOD  | Proto=ICMP | Src=10.212.0.1:0 -> Dst=10.212.0.2:0 | Rate=6 PPS | Action=RATE-LIMITED
-2026/10/28 22:03:56 [IPS ALERT] ICMP_FLOOD  | Proto=ICMP | Src=10.212.0.1:0 -> Dst=10.212.0.2:0 | Rate=6 PPS | Action=RATE-LIMITED
-2026/10/28 22:03:56 
-[INFO] Termination signal received. Stopping Smart IPS Daemon...
-2026/10/28 22:03:56 [INFO] Smart IPS cleanly shut down.
-```
+![Rate-limit-only mode (-autoban=false): ping 100 pps จาก w12atk + log ของ agent](screenshots/week12-4-ratelimit-only.png)
+
+*ภาพ: Rate-limit-only mode (`-autoban=false`): ping 100 pps จาก w12atk + log ของ agent*
+
 - ไม่มี IP ถูกแบน แต่ได้ Reply 20 ตัว = 5 ตัวต่อ Window × 4 Window ที่ ping คร่อมอยู่ (ส่วนที่เกิน 280 ตัวถูก Drop)
 - Alert ออกเพียง 1 ครั้งต่อ Window ไม่ใช่ทุกแพ็กเก็ตที่ถูก Drop
 

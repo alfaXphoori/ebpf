@@ -293,36 +293,37 @@ sudo cat lab-files/secret.txt   # root: ได้รับการยกเว�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04.1 LTS (`Linux ce-desk 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), `CONFIG_BPF_LSM=y`, clang 21, Go 1.26, cilium/ebpf v0.16.0
-> - หัวข้อ 4.1–4.2 capture **ก่อน** เปิด BPF LSM (LSM=`lockdown,capability,landlock,yama,apparmor,ima,evm`)
-> - หัวข้อ 4.3 capture **หลัง** เพิ่ม `lsm=...,bpf` ใน GRUB และรีบูต (LSM=`lockdown,capability,landlock,yama,apparmor,bpf,ima,evm`) — การบล็อกจริงของโค้ดเวอร์ชันนี้ทดสอบครบแล้ว
+> **Environment**: Ubuntu 26.04.1 LTS, `CONFIG_BPF_LSM=y`, clang 21, Go 1.26, cilium/ebpf v0.16.0
+> - ภาพหน้าจอในหัวข้อ 4.1 และ 4.3 รันบน `Linux ce-desk 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64` ที่**เปิด** BPF LSM แล้ว (LSM=`lockdown,capability,landlock,yama,apparmor,bpf,ima,evm`) — หัวข้อ 4.1 จึงบังคับ AUDIT ด้วย `-mode=audit` และหัวข้อ 4.3 ทดสอบการบล็อกจริงของโค้ดเวอร์ชันนี้ครบแล้ว
+> - หัวข้อ 4.2 และ log ตอนเริ่มต้นของ `-mode=auto` แบบข้อความในหัวข้อ 4.1 มาจากการรันครั้งก่อนบน `Linux ce-desk 7.0.0-38-generic` **ก่อน** เปิด BPF LSM (LSM=`lockdown,capability,landlock,yama,apparmor,ima,evm`)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week10.sh`](../../scripts/screenshots/week10.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week10.sh`](../../scripts/screenshots/week10.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน AUDIT mode](screenshots/week10-1-audit-user.png)
-
-*ภาพที่ 1: Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน AUDIT mode*
-
-![Terminal 1 — sudo ./bin/lsm_file_guard -mode=audit -protect lab-files/app.key](screenshots/week10-2-audit-guard.png)
-
-*ภาพที่ 2: Terminal 1 — sudo ./bin/lsm_file_guard -mode=audit -protect lab-files/app.key*
-
-![Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน ENFORCE mode (BPF LSM)](screenshots/week10-3-enforce-user.png)
-
-*ภาพที่ 3: Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน ENFORCE mode (BPF LSM)*
-
-![Terminal 1 — sudo ./bin/lsm_file_guard -protect lab-files/app.key (auto -> ENFORCE)](screenshots/week10-4-enforce-guard.png)
-
-*ภาพที่ 4: Terminal 1 — sudo ./bin/lsm_file_guard -protect lab-files/app.key (auto -> ENFORCE)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
-### 4.1 Audit mode: `sudo ./bin/lsm_file_guard -protect lab-files/app.key` แล้วรันคำสั่งในขั้นตอนที่ 4
-(ตัดบรรทัดของ process อื่นในเครื่องออก: `go` build ของงานอื่นเปิด `/usr/share/go-1.26/src/runtime/secret.go`, `secret_asm.go`, `secret_amd64.s` และถูกรายงานเป็น `name` match ด้วย -- อีกหนึ่ง false positive จริง)
+### 4.1 Audit mode: `sudo ./bin/lsm_file_guard -mode=audit -protect lab-files/app.key` แล้วรันคำสั่งในขั้นตอนที่ 4
+
+**Terminal 1 — guard ใน AUDIT mode**
+
+![Terminal 1 — sudo ./bin/lsm_file_guard -mode=audit -protect lab-files/app.key](screenshots/week10-2-audit-guard.png)
+
+*ภาพ: Terminal 1 — guard ใน AUDIT mode (`fentry/security_file_open`) รายงาน `[AUDIT would-block]` แต่ไม่บล็อก*
+
+ภาพตัด alert ของ process อื่นในเครื่องที่ไม่เกี่ยวกับแล็บออก (ในการรันครั้งก่อน alert ที่ถูกตัดคือ `go` build ของงานอื่นที่เปิด `/usr/share/go-1.26/src/runtime/secret.go`, `secret_asm.go`, `secret_amd64.s` และถูกรายงานเป็น `name` match ด้วย -- อีกหนึ่ง false positive จริง)
+
+**Terminal 2 — user ทั่วไป (UID 1000) รันคำสั่งในขั้นตอนที่ 4**
+
+![Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน AUDIT mode](screenshots/week10-1-audit-user.png)
+
+*ภาพ: Terminal 2 — ทุกคำสั่งอ่านไฟล์ได้ตามปกติ (`exit=0`) เพราะ AUDIT mode แค่บันทึก ไม่บล็อก*
+
+**`-mode=auto` บนเคอร์เนลที่ไม่มี bpf LSM** — ภาพด้านบนถ่ายบนเคอร์เนลที่เปิด BPF LSM แล้ว จึงต้องบังคับ `-mode=audit` เอง ถ้ารัน `sudo ./bin/lsm_file_guard -protect lab-files/app.key` (ค่าเริ่มต้น `-mode=auto`) บนเคอร์เนลที่**ไม่มี** `bpf` ใน LSM list โปรแกรมจะเตือนแล้ว fallback เป็น AUDIT เอง (log ตอนเริ่มต้นจากการรันครั้งก่อนบน `7.0.0-38`; alert ที่ตามมาเหมือนในภาพ):
 ```text
 2026/10/28 22:08:37 [INFO] Active Linux Security Modules: lockdown,capability,landlock,yama,apparmor,ima,evm
 2026/10/28 22:08:37 [WARNING] 'bpf' is NOT in /sys/kernel/security/lsm!
@@ -333,14 +334,8 @@ sudo cat lab-files/secret.txt   # root: ได้รับการยกเว�
 2026/10/28 22:08:37 [POLICY] Protecting inode dev=8:0 ino=7340734 (lab-files/app.key)
 2026/10/28 22:08:37 [INFO] Attached 'fentry/security_file_open' (AUDIT: matching opens are logged, NOT blocked)
 2026/10/28 22:08:37 [INFO] Watching for access to 'secret*' files and protected inodes...
-SECURITY_ACTION      PID     UID    COMM       MATCH  PATH -> RESULT
-----------------------------------------------------------------------------------------------------
-[AUDIT would-block]  4132668 1000   cat        name   /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/secret.txt -> ALLOWED (audit only)
-[AUDIT would-block]  4132674 1000   cat        name   /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/secret.txt -> ALLOWED (audit only)
-[AUDIT would-block]  4132675 1000   cat        inode  /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/app.key -> ALLOWED (audit only)
-[AUDIT would-block]  4132676 1000   cat        inode  /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/backup.txt -> ALLOWED (audit only)
-[AUDIT would-block]  4132677 1000   python3    name   /usr/lib/python3.14/__pycache__/secrets.cpython-314.pyc -> ALLOWED (audit only)
 ```
+
 วิเคราะห์ผล (เทียบกับคำสั่งในขั้นตอนที่ 4 ตามลำดับ):
 | คำสั่ง | ผล | ความหมาย |
 | :--- | :--- | :--- |
@@ -379,58 +374,18 @@ exit=0
 ยืนยันหัวข้อ 1.4: verifier ยอมรับ program (รวม `bpf_d_path`), attach สำเร็จ แต่ไม่มีการ block และไม่มี alert
 
 ### 4.3 Enforce mode บนเคอร์เนลที่ **เปิด** BPF LSM แล้ว: `sudo ./bin/lsm_file_guard -protect lab-files/app.key`
-ไม่ต้องระบุ `-mode` เพราะ `-mode=auto` ตรวจพบ `bpf` ใน LSM list และเลือก ENFORCE เอง (ไม่มีบรรทัด WARNING เหมือนข้อ 4.1–4.2) หน้าต่าง guard:
-```text
-2026/10/28 22:52:17 [INFO] Active Linux Security Modules: lockdown,capability,landlock,yama,apparmor,bpf,ima,evm
-2026/10/28 22:52:17 [POLICY] Enforce Mode: BLOCK NON-ROOT (root UID 0 allowed)
-2026/10/28 22:52:17 [POLICY] Protecting inode dev=8:0 ino=7340967 (lab-files/app.key)
-2026/10/28 22:52:17 [INFO] Attached BPF LSM hook 'lsm/file_open' (ENFORCE: matching opens return -EPERM)
-2026/10/28 22:52:17 [INFO] Watching for access to 'secret*' files and protected inodes...
-SECURITY_ACTION      PID     UID    COMM       MATCH  PATH -> RESULT
-----------------------------------------------------------------------------------------------------
-[BLOCKED -EPERM]     4792    1000   cat        name   /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/secret.txt -> EPERM (Blocked)
-[BLOCKED -EPERM]     4794    1000   cat        name   /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/secret.txt -> EPERM (Blocked)
-[BLOCKED -EPERM]     4795    1000   cat        inode  /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/app.key -> EPERM (Blocked)
-[BLOCKED -EPERM]     4796    1000   cat        inode  /mnt/sda/ebpf/phase05-security-observability/week10-bpf-lsm/lab-files/backup.txt -> EPERM (Blocked)
-[BLOCKED -EPERM]     4797    1000   python3    name   /usr/lib/python3.14/__pycache__/secrets.cpython-314.pyc -> EPERM (Blocked)
-[BLOCKED -EPERM]     4797    1000   python3    name   /usr/lib/python3.14/secrets.py -> EPERM (Blocked)
-2026/10/28 22:52:32 [INFO] Termination signal received. Detaching hook and exiting...
-2026/10/28 22:52:32 [INFO] Ringbuf reader closed. Goodbye.
-```
+ไม่ต้องระบุ `-mode` เพราะ `-mode=auto` ตรวจพบ `bpf` ใน LSM list และเลือก ENFORCE เอง (ไม่มีบรรทัด WARNING เหมือน log ของ 4.2 และ log `-mode=auto` ในหัวข้อ 4.1) หน้าต่าง guard:
+
+![Terminal 1 — sudo ./bin/lsm_file_guard -protect lab-files/app.key (auto -> ENFORCE)](screenshots/week10-4-enforce-guard.png)
+
+*ภาพ: Terminal 1 — guard เลือก ENFORCE เอง (`lsm/file_open`) และรายงาน `[BLOCKED -EPERM]`*
+
 หน้าต่าง user ทั่วไป (UID 1000) รันคำสั่งในขั้นตอนที่ 4 ระหว่างที่ guard ทำงาน:
-```text
-$ sudo bpftool link show
-4: tracing  prog 41
-	prog_type lsm  attach_type lsm_mac
-	target_obj_id 1  target_btf_id 98575
-5: tracing  prog 87
-	prog_type lsm  attach_type lsm_mac
-	target_obj_id 1  target_btf_id 98575
-$ cat lab-files/secret.txt
-cat: lab-files/secret.txt: Operation not permitted
-exit=1
-$ cat lab-files/notes.txt
-top secret
-exit=0
-$ cat lab-files/shortcut
-cat: lab-files/shortcut: Operation not permitted
-exit=1
-$ cat lab-files/app.key
-cat: lab-files/app.key: Operation not permitted
-exit=1
-$ cat lab-files/backup.txt
-cat: lab-files/backup.txt: Operation not permitted
-exit=1
-$ python3 -c "import secrets"
-PermissionError: [Errno 1] Operation not permitted: '/usr/lib/python3.14/secrets.py'
-exit=1
-$ sudo cat lab-files/secret.txt   # root (UID 0)
-top secret
-exit=0
-$ cat lab-files/secret.txt        # หลังกด Ctrl+C ให้ guard detach แล้ว
-top secret
-exit=0
-```
+
+![Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน ENFORCE mode (BPF LSM)](screenshots/week10-3-enforce-user.png)
+
+*ภาพ: Terminal 2 — user ทั่วไป (UID 1000) ขณะ guard อยู่ใน ENFORCE mode (BPF LSM)*
+
 วิเคราะห์ผล:
 | คำสั่ง | ผลจริง | ความหมาย |
 | :--- | :--- | :--- |
@@ -442,7 +397,7 @@ exit=0
 | `sudo cat secret.txt` | อ่านได้ | root ได้รับการยกเว้นตาม policy 0 (Block Non-Root) จึงไม่มี alert |
 | `cat` หลัง detach | อ่านได้ | เมื่อ link ถูกปิด นโยบายหายทันที ไม่มีสถานะค้างในเคอร์เนล |
 
-**สังเกต `bpftool link show`**: มี link ชนิด `lsm_mac` **สองตัว** — `prog 87` คือ `lsm/file_open` ของแล็บนี้ ส่วน `prog 41` คือโปรแกรม `restrict_filesystems` ของ **systemd (PID 1)** ที่โหลดเองอัตโนมัติตอนบูตทันทีที่เคอร์เนลเปิด BPF LSM (ตรวจด้วย `sudo bpftool prog show id 41`) แสดงให้เห็นว่า:
+**สังเกต `bpftool link show`**: มี link ชนิด `lsm_mac` **สองตัว** — `prog 9722` คือ `lsm/file_open` ของแล็บนี้ ส่วน `prog 41` คือโปรแกรม `restrict_filesystems` ของ **systemd (PID 1)** ที่โหลดเองอัตโนมัติตอนบูตทันทีที่เคอร์เนลเปิด BPF LSM (ตรวจด้วย `sudo bpftool prog show id 41`) แสดงให้เห็นว่า:
 1. BPF LSM program หลายตัวผูกกับเคอร์เนลพร้อมกันได้ (คนละ hook หรือ hook เดียวกันก็ได้) และถ้าตัวใดตัวหนึ่งปฏิเสธ การเข้าถึงจะถูกปฏิเสธ (deny wins) ร่วมกับ LSM อื่นอย่าง AppArmor
 2. การเปิด BPF LSM ไม่ได้มีผลแค่กับแล็บของเรา แต่ทำให้ระบบอื่น (systemd) เริ่มใช้กลไกนี้ด้วย — ควรทดสอบผลกระทบใน VM ก่อนเปิดบนเครื่องจริง
 

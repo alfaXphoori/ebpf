@@ -337,121 +337,50 @@ sudo ip netns del w21-tx     # veth ทั้งคู่ถูกลบตา�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100, clang 21, Go 1.26, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), Intel Core i3-12100, clang 21, Go 1.26, cilium/ebpf v0.16.0
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week21.sh`](../../scripts/screenshots/week21.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week21.sh`](../../scripts/screenshots/week21.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week21-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
-
-![Terminal 2 — ตรวจสถานะ + ส่งทราฟฟิกจาก w21-tx](screenshots/week21-2-status-traffic.png)
-
-*ภาพที่ 2: Terminal 2 — ตรวจสถานะ + ส่งทราฟฟิกจาก w21-tx*
-
-![Terminal 1 — sudo ip netns exec w21-rx ./bin/af-xdp-pipeline -iface w21-xsk0](screenshots/week21-3-pipeline-output.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ip netns exec w21-rx ./bin/af-xdp-pipeline -iface w21-xsk0*
-
-![Terminal 1 — ขอ Zero-Copy บน veth (ขั้นตอนที่ 3)](screenshots/week21-4-zerocopy.png)
-
-*ภาพที่ 4: Terminal 1 — ขอ Zero-Copy บน veth (ขั้นตอนที่ 3)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test`
-```text
-=== RUN   TestVerdictsWithoutSocket
-=== RUN   TestVerdictsWithoutSocket/arp
-=== RUN   TestVerdictsWithoutSocket/ipv4-tcp
-=== RUN   TestVerdictsWithoutSocket/ipv4-icmp
-=== RUN   TestVerdictsWithoutSocket/ipv4-truncated
-=== RUN   TestVerdictsWithoutSocket/ipv4-udp-no-socket
---- PASS: TestVerdictsWithoutSocket (0.01s)
-    --- PASS: TestVerdictsWithoutSocket/arp (0.00s)
-    --- PASS: TestVerdictsWithoutSocket/ipv4-tcp (0.00s)
-    --- PASS: TestVerdictsWithoutSocket/ipv4-icmp (0.00s)
-    --- PASS: TestVerdictsWithoutSocket/ipv4-truncated (0.00s)
-    --- PASS: TestVerdictsWithoutSocket/ipv4-udp-no-socket (0.00s)
-=== RUN   TestRedirectWithSocket
---- PASS: TestRedirectWithSocket (0.01s)
-=== RUN   TestDescribePacket
---- PASS: TestDescribePacket (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase09-high-throughput-socket-acceleration/week21-af-xdp-redirect	0.029s
-```
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week21-1-make-test.png)
+
+*ภาพ: `make test` — ทดสอบ Verdict ด้วย `BPF_PROG_TEST_RUN` ผ่านทุกกรณี*
 
 ### 4.2 Pipeline จริงบน veth (ขั้นตอนที่ 4-6)
-```text
---- ip link show ---
-1585: w21-xsk0@if1584: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 xdp qdisc noqueue state UP mode DEFAULT group default qlen 1000
-    link/ether 5e:28:0c:a6:35:c0 brd ff:ff:ff:ff:ff:ff link-netns w21-tx
-    prog/xdp id 10187 name xsk_redirect_pr tag abc59f5d6cf7f4c1 jited 
---- bpftool net show ---
-xdp:
-w21-xsk0(1585) driver id 10187
---- ss --xdp -e ---
-Recv-Q Send-Q Local Address:Port Peer Address:Port
-0      0           w21-xsk0:q0               *     ino:6027919 sk:72
-	rx(entries:2048)
-	umem(id:0,size:8388608,num_pages:2048,chunk_size:2048,headroom:0,ifindex:1585,qid:0,zc:0,refs:1)
-	fr(entries:4096)
-	cr(entries:2048)
-	stats(rx dropped:0,rx invalid:0,rx queue full:0,rx fill ring empty:0,tx invalid:0,tx ring empty:0)
---- ping (ICMP -> XDP_PASS -> kernel replies) ---
---- 10.21.0.1 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 412ms
-rtt min/avg/max/mdev = 0.050/0.072/0.099/0.020 ms
---- UDP x5 to 10.21.0.1:9999 ---
---- UDP flood 20000 pkts ---
-sent 20000 in 0.040s
---- kernel UDP stats in w21-rx (NoPorts would grow if the kernel saw the UDP) ---
-UdpInDatagrams                  0                  0.0
-UdpNoPorts                      0                  0.0
-```
+
+![Terminal 2 — ตรวจสถานะ + ส่งทราฟฟิกจาก w21-tx](screenshots/week21-2-status-traffic.png)
+
+*ภาพ: Terminal 2 — ตรวจสถานะ (`ip link`, `bpftool net`, `ss --xdp`) แล้วส่งทราฟฟิกจาก `w21-tx`*
 
 **Output ของ `af-xdp-pipeline`:**
-```text
-======================================================================
- eBPF AF_XDP Packet Pipeline (XDP -> BPF_MAP_TYPE_XSKMAP -> UMEM)
-======================================================================
-2026/10/28 22:06:43 [INFO] Attached XDP program to w21-xsk0 [Index: 1585]
-2026/10/28 22:06:43 [INFO] AF_XDP socket fd=7 bound to w21-xsk0 queue 0 | UMEM 4096 x 2048 B | mode: XDP_COPY (copy mode: kernel memcpy()s each packet into UMEM)
-2026/10/28 22:06:43 [INFO] xsks_map[0] = fd 7 -> IPv4/UDP on this queue now bypasses the kernel stack
 
-[RX #1] q=0 len=56   10.21.0.2:46707 -> 10.21.0.1:9999 UDP payload="hello-af-xdp-1"
-[RX #2] q=0 len=56   10.21.0.2:41288 -> 10.21.0.1:9999 UDP payload="hello-af-xdp-2"
-[RX #3] q=0 len=56   10.21.0.2:55398 -> 10.21.0.1:9999 UDP payload="hello-af-xdp-3"
-[RX #4] q=0 len=56   10.21.0.2:33234 -> 10.21.0.1:9999 UDP payload="hello-af-xdp-4"
-[RX #5] q=0 len=56   10.21.0.2:39168 -> 10.21.0.1:9999 UDP payload="hello-af-xdp-5"
-[RX #6] q=0 len=48   10.21.0.2:39027 -> 10.21.0.1:9999 UDP payload="bulk-0"
-[RX #7] q=0 len=48   10.21.0.2:39027 -> 10.21.0.1:9999 UDP payload="bulk-1"
-[RX #8] q=0 len=48   10.21.0.2:39027 -> 10.21.0.1:9999 UDP payload="bulk-2"
-[RX #9] q=0 len=48   10.21.0.2:39027 -> 10.21.0.1:9999 UDP payload="bulk-3"
-[RX #10] q=0 len=48   10.21.0.2:39027 -> 10.21.0.1:9999 UDP payload="bulk-4"
-[22:06:45] XDP: redirected=20005    passed=8      no_xsk=0    | AF_XDP RX: 20005    pkts 1029170    B | rx_dropped=0 ring_full=0 fill_empty=0
-[22:06:47] XDP: redirected=20005    passed=9      no_xsk=0    | AF_XDP RX: 20005    pkts 1029170    B | rx_dropped=0 ring_full=0 fill_empty=0
+![Terminal 1 — sudo ip netns exec w21-rx ./bin/af-xdp-pipeline -iface w21-xsk0](screenshots/week21-3-pipeline-output.png)
 
-[INFO] Stopping RX loop, removing socket from xsks_map and detaching XDP...
-[22:06:47] XDP: redirected=20005    passed=9      no_xsk=0    | AF_XDP RX: 20005    pkts 1029170    B | rx_dropped=0 ring_full=0 fill_empty=0
-```
+*ภาพ: Terminal 1 — `af-xdp-pipeline` รับแพ็กเก็ต UDP ผ่าน AF_XDP*
 
 การอ่านผล:
 - `redirected=20005` = 5 (hello) + 20,000 (bulk) และ `AF_XDP RX: 20005` ตรงกันทุกแพ็กเก็ต, `rx_dropped=0`
-- `passed=8-9` คือแพ็กเก็ตที่ไม่ใช่ IPv4/UDP ซึ่งไปเคอร์เนลตามปกติ ได้แก่ ICMP Echo Request 3 ตัว, ARP และแพ็กเก็ต IPv6 ที่อินเทอร์เฟซส่งเองตอน Up (เช่น Neighbor/Router Solicitation) — `ping` จึงได้ 0% loss
+- `passed=5-6` คือแพ็กเก็ตที่ไม่ใช่ IPv4/UDP ซึ่งไปเคอร์เนลตามปกติ ได้แก่ ICMP Echo Request 3 ตัว และ ARP/IPv6 ที่อินเทอร์เฟซส่งเอง (เช่น Neighbor/Router Solicitation) — `ping` จึงได้ 0% loss
 - `UdpInDatagrams = 0` และ `UdpNoPorts = 0`: เคอร์เนลไม่เคยเห็น UDP ทั้ง 20,005 ตัวเลย (ถ้าเห็นจะต้องตอบ ICMP Port Unreachable และเพิ่ม `UdpNoPorts`)
 - `len=56` = Ethernet 14 + IPv4 20 + UDP 8 + Payload 14 ไบต์
 - `ss` แสดง `zc:0` (Copy Mode) และ `bpftool net` แสดง `driver` = XDP รันใน Native Mode ของไดรเวอร์ veth
-- ผู้ส่งเป็นสคริปต์ Python 20,000 แพ็กเก็ตใน 0.040 s — **ไม่ใช่การวัดขีดจำกัดของ AF_XDP** เป็นเพียงยืนยันว่ารับครบไม่ตกหล่นที่อัตรานี้
+- ผู้ส่งเป็นสคริปต์ Python 20,000 แพ็กเก็ตใน 0.037 s — **ไม่ใช่การวัดขีดจำกัดของ AF_XDP** เป็นเพียงยืนยันว่ารับครบไม่ตกหล่นที่อัตรานี้
 
 ### 4.3 ขอ Zero-Copy บน veth (ขั้นตอนที่ 3)
-```text
-2026/10/28 22:06:43 Failed to create AF_XDP socket: bind(ifindex=1585, queue=0, flags=0x4): operation not supported
-```
+
+![Terminal 1 — ขอ Zero-Copy บน veth (ขั้นตอนที่ 3)](screenshots/week21-4-zerocopy.png)
+
+*ภาพ: Terminal 1 — `af-xdp-pipeline -zerocopy` บน veth ถูกปฏิเสธด้วย `operation not supported`*
+
 `flags=0x4` คือ `XDP_ZEROCOPY` — ไดรเวอร์ veth บนเคอร์เนล 7.0 ไม่รองรับ จึงคืน `EOPNOTSUPP` ตามหัวข้อ 1.3
 
 ---

@@ -303,151 +303,38 @@ sudo ./lab_netns.sh clean
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), Python 3, iproute2, ethtool
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), Python 3, iproute2, ethtool
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week01.sh`](../../scripts/screenshots/week01.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week01.sh`](../../scripts/screenshots/week01.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — sudo ./lab_netns.sh setup](screenshots/week01-1-setup.png)
-
-*ภาพที่ 1: Terminal — sudo ./lab_netns.sh setup*
-
-![Terminal — sudo ./lab_netns.sh test](screenshots/week01-2-connectivity.png)
-
-*ภาพที่ 2: Terminal — sudo ./lab_netns.sh test*
-
-![Terminal 2 — ส่งทราฟฟิกจาก w01-ns1](screenshots/week01-3-traffic.png)
-
-*ภาพที่ 3: Terminal 2 — ส่งทราฟฟิกจาก w01-ns1*
-
-![Terminal 1 — raw_sniffer.py ใน w01-ns2](screenshots/week01-4-sniffer.png)
-
-*ภาพที่ 4: Terminal 1 — raw_sniffer.py ใน w01-ns2*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 การตั้งค่า Topology และทดสอบ Connectivity (`sudo ./lab_netns.sh setup && sudo ./lab_netns.sh test`)
-```text
-===> Setting up isolated Network Namespaces (w01-ns1 <-> w01-ns2)...
 
-===> Cleaning up existing Network Namespaces and veth interfaces...
-[SUCCESS] Cleanup completed successfully.
-[INFO] Step 1: Creating network namespaces 'w01-ns1' and 'w01-ns2'
-[INFO] Step 2: Creating virtual Ethernet pair 'w01-veth1' <---> 'w01-veth2'
-[INFO] Step 3: Moving 'w01-veth1' to namespace 'w01-ns1' and 'w01-veth2' to 'w01-ns2'
-[INFO] Step 4: Assigning IP addresses
-[INFO]         w01-ns1:w01-veth1 -> 10.10.1.1/24
-[INFO]         w01-ns2:w01-veth2 -> 10.10.1.2/24
-[INFO] Step 5: Bringing up loopback and veth interfaces in both namespaces
-[INFO] Step 6: Disabling TX/RX checksum and segment offloading (TSO/GSO/GRO)
-[SUCCESS] Lab topology successfully established!
+![Terminal — sudo ./lab_netns.sh setup](screenshots/week01-1-setup.png)
 
-===> Current Network Namespaces & Interface Topology
-Active Namespaces:
-  - w01-ns2 (id: 2)
-  - w01-ns1 (id: 1)
+*ภาพ: Terminal — sudo ./lab_netns.sh setup*
 
-[Namespace w01-ns1] Interfaces:
-lo               UNKNOWN        127.0.0.1/8 ::1/128 
-w01-veth1@if1620 UP             10.10.1.1/24 fe80::38dc:23ff:fed5:a5/64 
+![Terminal — sudo ./lab_netns.sh test](screenshots/week01-2-connectivity.png)
 
-[Namespace w01-ns2] Interfaces:
-lo               UNKNOWN        127.0.0.1/8 ::1/128 
-w01-veth2@if1621 UP             10.10.1.2/24 fe80::7060:94ff:fe9d:a5f1/64 
-===> Testing bidirectional ICMP connectivity...
-[INFO] Pinging from w01-ns1 (10.10.1.1) -> w01-ns2 (10.10.1.2)...
-PING 10.10.1.2 (10.10.1.2) 56(84) bytes of data.
-64 bytes from 10.10.1.2: icmp_seq=1 ttl=64 time=0.034 ms
-64 bytes from 10.10.1.2: icmp_seq=2 ttl=64 time=0.056 ms
-64 bytes from 10.10.1.2: icmp_seq=3 ttl=64 time=0.058 ms
-
---- 10.10.1.2 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2033ms
-rtt min/avg/max/mdev = 0.034/0.049/0.058/0.010 ms
-[SUCCESS] Ping w01-ns1 -> w01-ns2 succeeded!
-[INFO] Pinging from w01-ns2 (10.10.1.2) -> w01-ns1 (10.10.1.1)...
-PING 10.10.1.1 (10.10.1.1) 56(84) bytes of data.
-64 bytes from 10.10.1.1: icmp_seq=1 ttl=64 time=0.046 ms
-64 bytes from 10.10.1.1: icmp_seq=2 ttl=64 time=0.023 ms
-64 bytes from 10.10.1.1: icmp_seq=3 ttl=64 time=0.074 ms
-
---- 10.10.1.1 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2041ms
-rtt min/avg/max/mdev = 0.023/0.047/0.074/0.020 ms
-[SUCCESS] Ping w01-ns2 -> w01-ns1 succeeded!
-[SUCCESS] All connectivity tests passed!
-```
+*ภาพ: Terminal — sudo ./lab_netns.sh test*
 
 ### 4.2 การดักจับแพ็กเก็ตระดับไบต์ด้วย `raw_sniffer.py`
-คำสั่งที่ใช้: Terminal 1 รัน `sudo ip netns exec w01-ns2 python3 raw_sniffer.py --interface w01-veth2 --verbose` ส่วน Terminal 2 ล้าง ARP cache แล้วส่ง `ping -c 1`, UDP ไปพอร์ต 9999 (ไม่มีใครฟัง) และ TCP ไปพอร์ต 8080 (มี `nc -l -p 8080` รออยู่ใน `w01-ns2`):
-```text
-======================================================
- eBPF Zero to Hero - Week 01: Low-Level Raw Sniffer   
-======================================================
- Capturing on : interface 'w01-veth2'
- Filter       : ALL
- Count limit  : Unlimited
- Verbose dump : Enabled
- Press Ctrl+C at any time to stop and view statistics.
-------------------------------------------------------
+คำสั่งที่ใช้: Terminal 1 รัน `sudo ip netns exec w01-ns2 python3 raw_sniffer.py --interface w01-veth2 --verbose` ส่วน Terminal 2 ล้าง ARP cache แล้วส่ง `ping -c 1`, UDP ไปพอร์ต 9999 (ไม่มีใครฟัง) และ TCP ไปพอร์ต 8080 (มี `nc -l 8080` รออยู่ใน `w01-ns2` ใน Terminal 3):
 
-[22:14:54] [L2-Other] EtherType=0x86dd 72:60:94:9d:a5:f1 -> 33:33:00:00:00:02
-[22:14:54] [ARP] 72:60:94:9d:a5:f1 -> 3a:dc:23:d5:00:a5 | ARP Request: Who has 10.10.1.1? Tell 10.10.1.2
-    0000:  00 01 08 00 06 04 00 01 72 60 94 9d a5 f1 0a 0a  |........r`......|
-    0010:  01 02 00 00 00 00 00 00 0a 0a 01 01              |............|
-[22:14:54] [ARP] 3a:dc:23:d5:00:a5 -> 72:60:94:9d:a5:f1 | ARP Reply: 10.10.1.1 is at 3a:dc:23:d5:00:a5
-    0000:  00 01 08 00 06 04 00 02 3a dc 23 d5 00 a5 0a 0a  |........:.#.....|
-    0010:  01 01 72 60 94 9d a5 f1 0a 0a 01 02              |..r`........|
-[22:14:54] [ARP] 3a:dc:23:d5:00:a5 -> ff:ff:ff:ff:ff:ff | ARP Request: Who has 10.10.1.2? Tell 10.10.1.1
-    0000:  00 01 08 00 06 04 00 01 3a dc 23 d5 00 a5 0a 0a  |........:.#.....|
-    0010:  01 01 00 00 00 00 00 00 0a 0a 01 02              |............|
-[22:14:54] [ARP] 72:60:94:9d:a5:f1 -> 3a:dc:23:d5:00:a5 | ARP Reply: 10.10.1.2 is at 72:60:94:9d:a5:f1
-    0000:  00 01 08 00 06 04 00 02 72 60 94 9d a5 f1 0a 0a  |........r`......|
-    0010:  01 02 3a dc 23 d5 00 a5 0a 0a 01 01              |..:.#.......|
-[22:14:54] [ICMP] 10.10.1.1 -> 10.10.1.2 | Echo Request (Code 0) TTL=64 Len=84
-    0000:  43 2f 00 01 6e 11 e2 6a 00 00 00 00 20 11 0a 00  |C/..n..j.... ...|
-    0010:  00 00 00 00 10 11 12 13 14 15 16 17 18 19 1a 1b  |................|
-    0020:  1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a 2b  |.... !"#$%&'()*+|
-    0030:  2c 2d 2e 2f 30 31 32 33 34 35 36 37              |,-./01234567|
-[22:14:54] [ICMP] 10.10.1.2 -> 10.10.1.1 | Echo Reply (Code 0) TTL=64 Len=84
-    0000:  43 2f 00 01 6e 11 e2 6a 00 00 00 00 20 11 0a 00  |C/..n..j.... ...|
-    0010:  00 00 00 00 10 11 12 13 14 15 16 17 18 19 1a 1b  |................|
-    0020:  1c 1d 1e 1f 20 21 22 23 24 25 26 27 28 29 2a 2b  |.... !"#$%&'()*+|
-    0030:  2c 2d 2e 2f 30 31 32 33 34 35 36 37              |,-./01234567|
-[22:14:54] [UDP]  10.10.1.1:35318 -> 10.10.1.2:9999 Len=28 Checksum=0xce77
-    0000:  48 65 6c 6c 6f 20 65 42 50 46 20 4e 65 74 77 6f  |Hello eBPF Netwo|
-    0010:  72 6b 21 0a                                      |rk!.|
-[22:14:54] [ICMP] 10.10.1.2 -> 10.10.1.1 | Destination Unreachable (Code 3) TTL=64 Len=76
-    0000:  00 00 00 00 45 00 00 30 16 a8 40 00 40 11 0d ff  |....E..0..@.@...|
-    0010:  0a 0a 01 01 0a 0a 01 02 89 f6 27 0f 00 1c ce 77  |..........'....w|
-    0020:  48 65 6c 6c 6f 20 65 42 50 46 20 4e 65 74 77 6f  |Hello eBPF Netwo|
-    0030:  72 6b 21 0a                                      |rk!.|
-[22:14:54] [TCP]  10.10.1.1:40068 -> 10.10.1.2:8080 [SYN] Seq=1813799347 Ack=0 Win=64240
-[22:14:54] [TCP]  10.10.1.2:8080 -> 10.10.1.1:40068 [ACK|SYN] Seq=3095122178 Ack=1813799348 Win=65160
-[22:14:54] [TCP]  10.10.1.1:40068 -> 10.10.1.2:8080 [ACK] Seq=1813799348 Ack=3095122179 Win=63
-[22:14:54] [TCP]  10.10.1.1:40068 -> 10.10.1.2:8080 [ACK|PSH] Seq=1813799348 Ack=3095122179 Win=63
-    0000:  68 69 0a                                         |hi.|
-[22:14:54] [TCP]  10.10.1.2:8080 -> 10.10.1.1:40068 [ACK] Seq=3095122179 Ack=1813799351 Win=64
-[22:14:54] [L2-Other] EtherType=0x86dd 3a:dc:23:d5:00:a5 -> 33:33:00:00:00:02
-[22:14:55] [TCP]  10.10.1.1:40068 -> 10.10.1.2:8080 [ACK|FIN] Seq=1813799351 Ack=3095122179 Win=63
-[22:14:55] [TCP]  10.10.1.2:8080 -> 10.10.1.1:40068 [ACK|FIN] Seq=3095122179 Ack=1813799352 Win=64
-[22:14:55] [TCP]  10.10.1.1:40068 -> 10.10.1.2:8080 [ACK] Seq=1813799352 Ack=3095122180 Win=63
+![Terminal 2 — ส่งทราฟฟิกจาก w01-ns1](screenshots/week01-3-traffic.png)
 
-[!] Interrupted by user. Exiting...
+*ภาพ: Terminal 2 — ล้าง ARP cache แล้วส่ง ICMP, UDP และ TCP จาก w01-ns1*
 
-========== Packet Capture Statistics ==========
-  Total Packets Captured : 18
-  IPv4 Packets           : 12
-    - TCP Packets        : 8
-    - UDP Packets        : 1
-    - ICMP Packets       : 3
-    - Other L4 Protocols : 0
-  ARP Packets            : 4
-===============================================
-```
+![Terminal 1 — raw_sniffer.py ใน w01-ns2](screenshots/week01-4-sniffer.png)
+
+*ภาพ: Terminal 1 — raw_sniffer.py ใน w01-ns2 จับได้ 18 แพ็กเก็ต (ARP 4, TCP 8, UDP 1, ICMP 3)*
 
 ข้อสังเกตจากผลจริง:
 - **ARP 4 เฟรม** เพราะเราล้าง ARP cache ทั้งสองฝั่ง ทั้งสองฝั่งจึงต่างถามหากัน

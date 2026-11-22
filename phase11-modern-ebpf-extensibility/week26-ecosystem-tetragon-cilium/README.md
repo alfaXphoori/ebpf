@@ -387,9 +387,11 @@ sudo bpftool prog show | grep -c 'name cil_' # ต้องเป็น 0
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Docker 29.1.3, **Tetragon v1.7.1** (`quay.io/cilium/tetragon:v1.7.1`, digest `sha256:afc9458b…4a02`), host bpftool v7.7.0, BPF LSM เปิดอยู่, `CONFIG_BPF_KPROBE_OVERRIDE=y`
+> **Environment**: Ubuntu 26.04 LTS, Docker 29.1.3, **Tetragon v1.7.1** (`quay.io/cilium/tetragon:v1.7.1`, digest `sha256:afc9458b…4a02`), host bpftool v7.7.0, BPF LSM เปิดอยู่, `CONFIG_BPF_KPROBE_OVERRIDE=y`
 >
 > ส่วน Cilium: kind v0.33.0 (node image เริ่มต้น `kindest/node:v1.37.0`), cilium-cli v0.20.1, Cilium v1.20.4
+>
+> ภาพหน้าจอ (หัวข้อ 4.1–4.8) รันบน `Linux 7.0.0-43-generic x86_64` ส่วน output แบบข้อความที่เหลือ (ทดสอบด้านลบใน 4.1, daemon log ใน 4.2, JSON ใน 4.3(ค), link list ใน 4.4, event ใน 4.5–4.6, error-injection list และ `list` ใน 4.7 และ Cilium ทั้งหมดใน 4.9) มาจากการรันก่อนหน้าบน `Linux 7.0.0-38-generic x86_64`
 >
 > เครื่องแล็บมีงานอื่นรันพร้อมกัน event ที่ไม่เกี่ยวข้องจึงถูกกรองออกด้วย `--process` / `--policy-names` / `grep lab-files` ตามที่ระบุในแต่ละหัวข้อ
 
@@ -397,60 +399,19 @@ sudo bpftool prog show | grep -c 'name cil_' # ต้องเป็น 0
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week26.sh`](../../scripts/screenshots/week26.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week26.sh`](../../scripts/screenshots/week26.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test + unit test ของ validator (ไม่ต้อง root)](screenshots/week26-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test + unit test ของ validator (ไม่ต้อง root)*
-
-![Terminal — make up และโหลด policy 01–03](screenshots/week26-2-up-apply.png)
-
-*ภาพที่ 2: Terminal — make up และโหลด policy 01–03*
-
-![Terminal 2 — สร้างเหตุการณ์ (exec / เปิดไฟล์ / TCP connect)](screenshots/week26-3-terminal2-activity.png)
-
-*ภาพที่ 3: Terminal 2 — สร้างเหตุการณ์ (exec / เปิดไฟล์ / TCP connect)*
-
-![Terminal 1 — event ของ policy 01–03 (tetra getevents -o compact)](screenshots/week26-4-events.png)
-
-*ภาพที่ 4: Terminal 1 — event ของ policy 01–03 (tetra getevents -o compact)*
-
-![Terminal — make progs + make list (policy 01–03 ทำงานอยู่)](screenshots/week26-5-progs.png)
-
-*ภาพที่ 5: Terminal — make progs + make list (policy 01–03 ทำงานอยู่)*
-
-![Terminal — Policy 04: Sigkill (monitor ก่อน แล้วค่อย enforce)](screenshots/week26-6-sigkill.png)
-
-*ภาพที่ 6: Terminal — Policy 04: Sigkill (monitor ก่อน แล้วค่อย enforce)*
-
-![Terminal — Policy 05: Override ผ่าน BPF LSM (EPERM แทน SIGKILL)](screenshots/week26-7-override-lsm.png)
-
-*ภาพที่ 7: Terminal — Policy 05: Override ผ่าน BPF LSM (EPERM แทน SIGKILL)*
-
-![Terminal — Override บน kprobe: ทำไมต้อง --disable-kprobe-multi](screenshots/week26-8-fmodret.png)
-
-*ภาพที่ 8: Terminal — Override บน kprobe: ทำไมต้อง --disable-kprobe-multi*
-
-![Terminal — make down และตรวจว่าไม่มีอะไรค้าง](screenshots/week26-9-down.png)
-
-*ภาพที่ 9: Terminal — make down และตรวจว่าไม่มีอะไรค้าง*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test` (ไม่ต้อง root, ไม่เริ่มคอนเทนเนอร์)
-```text
-===> Validating TracingPolicy YAML (policies/*.yaml)...
-  ok    policies/01-process-exec-lsm.yaml
-  ok    policies/02-file-monitor.yaml
-  ok    policies/03-tcp-connect.yaml
-  ok    policies/04-enforce-secret-sigkill.yaml
-  ok    policies/05-enforce-secret-override.yaml
-  ok    policies/06-enforce-secret-fmodret.yaml
-  ok    cilium/kind-w26.yaml
-  ok    cilium/web-allow-only-frontend.yaml
-  ok    run-tetragon.sh (bash -n)
-```
-ทดสอบด้านลบ: สำเนาของ policy 04 ที่เปลี่ยน path เป็น `/etc/shadow`
+
+![Terminal — make test + unit test ของ validator (ไม่ต้อง root)](screenshots/week26-1-make-test.png)
+
+*ภาพ: `make test` + unit test ของ validator (`test_rejects_unrestricted_sigkill` ตรวจว่า Sigkill ที่ไม่จำกัด path ถูกปฏิเสธ)*
+
+ทดสอบด้านลบด้วยมือ (จากการรันก่อนหน้าบน 7.0.0-38, ไม่มีในภาพ): สำเนาของ policy 04 ที่เปลี่ยน path เป็น `/etc/shadow`
 ```text
 ERROR: 04-bad.yaml: kprobes/security_file_open selector 0: non-lab path(s) ['/etc/shadow']
 ERROR: 04-bad.yaml: kprobes/security_file_open selector 0: ['Sigkill'] is not restricted to a lab-files/ path
@@ -459,31 +420,14 @@ neg exit=1
 ```
 
 ### 4.2 `make up` และโหลด policy 01–03
-```text
-$ make up
-./run-tetragon.sh up
-prepared /mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files (secret.txt, notes.txt, bin/w26-hello)
-starting w26-tetragon from quay.io/cilium/tetragon:v1.7.1
-container: w26-tetragon (quay.io/cilium/tetragon:v1.7.1)
-daemon version: Server version: v1.7.1
-ID   NAME   STATE   FILTERID   NAMESPACE   SENSORS   KERNELMEMORY   MODE   NPOST   NENFORCE   NMONITOR
-$ make apply-exec apply-file apply-connect
-tracing policy "/w26/policies/01-process-exec-lsm.yaml" added
-ID   NAME                   STATE     FILTERID   NAMESPACE   SENSORS       KERNELMEMORY   MODE           NPOST   NENFORCE   NMONITOR
-2    w26-process-exec-lsm   enabled   0          (global)    generic_lsm   1.16 MB        monitor_only   0       0          0
-tracing policy "/w26/policies/02-file-monitor.yaml" added
-ID   NAME                   STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE           NPOST   NENFORCE   NMONITOR
-2    w26-process-exec-lsm   enabled   0          (global)    generic_lsm      1.16 MB        monitor_only   0       0          0
-3    w26-file-monitor       enabled   0          (global)    generic_kprobe   1.13 MB        monitor_only   0       0          0
-tracing policy "/w26/policies/03-tcp-connect.yaml" added
-ID   NAME                   STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE           NPOST   NENFORCE   NMONITOR
-2    w26-process-exec-lsm   enabled   0          (global)    generic_lsm      1.16 MB        monitor_only   0       0          0
-3    w26-file-monitor       enabled   0          (global)    generic_kprobe   1.13 MB        monitor_only   0       0          0
-4    w26-tcp-connect        enabled   0          (global)    generic_kprobe   865.74 kB      monitor_only   0       0          0
-```
+
+![Terminal — make up และโหลด policy 01–03](screenshots/week26-2-up-apply.png)
+
+*ภาพ: `make up` และโหลด policy 01–03*
+
 `MODE monitor_only` = policy ที่ไม่มี enforcement action เลย ส่วน `KERNELMEMORY` คือหน่วยความจำของ map ที่ policy นั้นใช้ — policy LSM ตัวเดียวใช้ ~1.16 MB
 
-Log ตอนเริ่มของ daemon (`docker logs w26-tetragon`) แสดงความสามารถของ kernel ที่ Tetragon ตรวจพบ (ตัดมาบางบรรทัด):
+Log ตอนเริ่มของ daemon (`docker logs w26-tetragon`, จากการรันก่อนหน้าบน 7.0.0-38, ไม่มีในภาพ) แสดงความสามารถของ kernel ที่ Tetragon ตรวจพบ (ตัดมาบางบรรทัด):
 ```text
 level=info msg="Starting tetragon" version=v1.7.1
 level=info msg="BTF discovery: default kernel btf file found" btf-file=/sys/kernel/btf/vmlinux
@@ -498,51 +442,24 @@ level=info msg="Registered probe types" types="generic_uprobe, loader, execve, e
 
 ### 4.3 Event จริงของ policy 01–03
 
-คำสั่งที่รันใน terminal 2:
-```text
-$ ./lab-files/bin/w26-hello
-hello from w26-hello (pid 80131)
-$ cat lab-files/notes.txt
-w26 lab notes: reading this is only logged
-$ cat lab-files/secret.txt
-w26 lab secret: tetragon-should-block-this
-$ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18026/notes.txt
-200
-$ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:18027/   # ไม่มีใครฟังพอร์ตนี้
-000
-exit=7
-```
+คำสั่งที่รันใน terminal 2 (เปิด `http.server` พอร์ต 18026 ไว้ก่อน):
 
-**(ก) `./run-tetragon.sh capture 12 --process 'w26-hello|cat|curl'`** (แสดงเฉพาะบรรทัดที่มี `lab-files|18026|18027`):
-```text
-🚀 process ce-desk /mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files/bin/w26-hello ./lab-files/bin/w26-hello
-💥 exit    ce-desk /mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files/bin/w26-hello ./lab-files/bin/w26-hello 0
-🚀 process ce-desk /usr/bin/cat lab-files/notes.txt
-💥 exit    ce-desk /usr/bin/cat lab-files/notes.txt 0
-🚀 process ce-desk /usr/bin/cat lab-files/secret.txt
-💥 exit    ce-desk /usr/bin/cat lab-files/secret.txt 0
-🚀 process ce-desk /usr/bin/curl "-s -o /dev/null -w %{http_code}\\n http://127.0.0.1:18026/notes.txt"
-🔌 connect ce-desk /usr/bin/curl tcp 127.0.0.1:55338 -> 127.0.0.1:18026
-🧹 close   ce-desk /usr/bin/curl tcp 127.0.0.1:55338 -> 127.0.0.1:18026
-💥 exit    ce-desk /usr/bin/curl "-s -o /dev/null -w %{http_code}\\n http://127.0.0.1:18026/notes.txt" 0
-🚀 process ce-desk /usr/bin/curl "-s -o /dev/null -w %{http_code}\\n http://127.0.0.1:18027/"
-💥 exit    ce-desk /usr/bin/curl "-s -o /dev/null -w %{http_code}\\n http://127.0.0.1:18027/" 7
-```
+![Terminal 2 — สร้างเหตุการณ์ (exec / เปิดไฟล์ / TCP connect)](screenshots/week26-3-terminal2-activity.png)
+
+*ภาพ: Terminal 2 — สร้างเหตุการณ์ exec / เปิดไฟล์ / TCP connect*
+
+**(ก) `./run-tetragon.sh capture 14 --process 'w26-hello|cat|curl'`** (แสดงเฉพาะบรรทัดที่มี `lab-files|18026|18027`) และ **(ข) `./run-tetragon.sh capture 14 --policy-names w26-process-exec-lsm,w26-file-monitor,w26-tcp-connect`** (ไม่ได้ตัดบรรทัดใด):
+
+![Terminal 1 — event ของ policy 01–03 (tetra getevents -o compact)](screenshots/week26-4-events.png)
+
+*ภาพ: Terminal 1 — event ของ policy 01–03 แบบ compact: (ก) กรองด้วย `--process` (ข) กรองด้วย `--policy-names`*
+
 - `🚀 process` / `💥 exit` มาจาก base sensor โดยไม่ต้องมี policy (Week 09) — `exit ... 7` คือ exit code ของ curl (connection refused)
 - curl ไปพอร์ต 18027 **ไม่มี** `🔌 connect` เพราะ selector `DPort 18026` กรองทิ้งใน kernel
 
-**(ข) `./run-tetragon.sh capture 12 --policy-names w26-process-exec-lsm,w26-file-monitor,w26-tcp-connect`** (ไม่ได้ตัดบรรทัดใด):
-```text
-🔒 LSM     ce-desk /usr/bin/bash bprm_check_security
-❓ syscall ce-desk /usr/bin/cat security_file_open
-❓ syscall ce-desk /usr/bin/cat security_file_open
-🔌 connect ce-desk /usr/bin/curl tcp 127.0.0.1:55338 -> 127.0.0.1:18026
-❓ syscall ce-desk /usr/bin/python3 security_file_open
-🧹 close   ce-desk /usr/bin/curl tcp 127.0.0.1:55338 -> 127.0.0.1:18026
-```
-รูปแบบ compact ไม่แสดง path ของ `security_file_open` (Tetragon รู้จักเฉพาะฟังก์ชันยอดนิยม เช่น `tcp_connect` จึงใส่ไอคอน `❓ syscall`) และ `python3` ที่เห็นคือ `http.server` ที่เปิด `notes.txt` เพื่อตอบ curl
+ใน (ข) รูปแบบ compact ไม่แสดง path ของ `security_file_open` (Tetragon รู้จักเฉพาะฟังก์ชันยอดนิยม เช่น `tcp_connect` จึงใส่ไอคอน `❓ syscall`) และ `python3` ที่เห็นคือ `http.server` ที่เปิด `notes.txt` เพื่อตอบ curl
 
-**(ค) JSON เดียวกัน: `capture-json 12 --policy-names ... | jq -c -f event-summary.jq | jq -c 'del(.argv)'`** (`del(.argv)` ใช้ลบ command line ยาวของ bash ที่ใช้รันสคริปต์ทดลอง):
+**(ค) JSON เดียวกัน: `capture-json 12 --policy-names ... | jq -c -f event-summary.jq | jq -c 'del(.argv)'`** — จากการรันก่อนหน้าบน 7.0.0-38, ไม่มีในภาพ (`del(.argv)` ใช้ลบ command line ยาวของ bash ที่ใช้รันสคริปต์ทดลอง):
 ```text
 {"type":"process_lsm","policy":"w26-process-exec-lsm","hook":"bprm_check_security","binary":"/usr/bin/bash","pid":80131,"args":["/mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files/bin/w26-hello"],"action":"KPROBE_ACTION_POST"}
 {"type":"process_kprobe","policy":"w26-file-monitor","hook":"security_file_open","binary":"/usr/bin/cat","pid":80132,"args":["/mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files/notes.txt"],"return":0,"action":"KPROBE_ACTION_POST"}
@@ -551,72 +468,21 @@ exit=7
 {"type":"process_kprobe","policy":"w26-file-monitor","hook":"security_file_open","binary":"/usr/bin/python3","pid":79852,"args":["/mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files/notes.txt"],"return":0,"action":"KPROBE_ACTION_POST"}
 {"type":"process_kprobe","policy":"w26-tcp-connect","hook":"tcp_close","binary":"/usr/bin/curl","pid":80134,"args":["127.0.0.1:55338 -> 127.0.0.1:18026"],"action":"KPROBE_ACTION_POST"}
 ```
-- event LSM มี `pid 80131` เท่ากับ PID ที่ `w26-hello` พิมพ์ออกมา แต่ `binary` ยังเป็น `/usr/bin/bash` เพราะ `bprm_check_security` เกิดก่อน exec จะเปลี่ยน image (ข้อ 2.1)
+- event LSM มี `pid 80131` เท่ากับ PID ที่ `w26-hello` พิมพ์ออกมาในรอบนั้น (`hello from w26-hello (pid 80131)`) แต่ `binary` ยังเป็น `/usr/bin/bash` เพราะ `bprm_check_security` เกิดก่อน exec จะเปลี่ยน image (ข้อ 2.1)
 - `"return":0` มาจาก `return: true` ใน policy 02 (LSM อนุญาต)
 
 ### 4.4 `make progs` — BPF program ที่ Tetragon โหลด (policy 01–03 ทำงานอยู่)
-```text
-$ make progs
-./run-tetragon.sh progs
-== programs held directly by the tetragon process (bpftool inside the container)
-3427: kprobe  name event_exit_acct_process  tag 4dfbb31db5fbfce9  gpl
-3429: kprobe  name event_wake_up_new_task  tag 76339515e02ae53c  gpl
-3431: tracepoint  name event_execve  tag cd7b659f13f2958e  gpl
-3433: kprobe  name tg_kp_bprm_committing_creds  tag baccda55c3fe363a  gpl
-3434: socket_filter  name execve_map_update  tag 4c99e2a331f84f3f  gpl
-3437: lsm  name generic_lsm_output  tag 3b150978387431f5  gpl
-3442: lsm  name generic_lsm_event  tag 4e8d0279dd900ba1  gpl
-3450: kprobe  name generic_kprobe_event  tag 933294ece4aef2b4  gpl
-3452: kprobe  name generic_retkprobe_event  tag 2147666b19be2e50  gpl
-3460: kprobe  name generic_kprobe_event  tag 933294ece4aef2b4  gpl
-== all Tetragon programs (id type name), matched by name on the host
-3427: kprobe event_exit_acct_process
-3429: kprobe event_wake_up_new_task
-3430: tracepoint execve_rate
-3431: tracepoint event_execve
-3432: tracepoint execve_send
-3433: kprobe tg_kp_bprm_committing_creds
-3434: socket_filter execve_map_update
-3437: lsm generic_lsm_output
-3438: lsm generic_lsm_process_event
-3439: lsm generic_lsm_setup_event
-3440: lsm generic_lsm_process_filter
-3441: lsm generic_lsm_filter_arg
-3442: lsm generic_lsm_event
-3443: lsm generic_lsm_actions
-3444: kprobe generic_kprobe_output
-3445: kprobe generic_kprobe_process_event
-3446: kprobe generic_kprobe_setup_event
-3447: kprobe generic_kprobe_process_filter
-3448: kprobe generic_kprobe_actions
-3449: kprobe generic_kprobe_filter_arg
-3450: kprobe generic_kprobe_event
-3451: kprobe generic_retkprobe_filter_arg
-3452: kprobe generic_retkprobe_event
-3453: kprobe generic_retkprobe_actions
-3454: kprobe generic_retkprobe_output
-3455: kprobe generic_kprobe_filter_arg
-3456: kprobe generic_kprobe_output
-3457: kprobe generic_kprobe_process_event
-3458: kprobe generic_kprobe_process_filter
-3459: kprobe generic_kprobe_actions
-3460: kprobe generic_kprobe_event
-3461: kprobe generic_kprobe_setup_event
-$ make list
-./run-tetragon.sh list
-ID   NAME                   STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE           NPOST   NENFORCE   NMONITOR
-2    w26-process-exec-lsm   enabled   0          (global)    generic_lsm      1.16 MB        monitor_only   0       0          0
-3    w26-file-monitor       enabled   0          (global)    generic_kprobe   1.13 MB        monitor_only   3       0          0
-4    w26-tcp-connect        enabled   0          (global)    generic_kprobe   865.74 kB      monitor_only   2       0          0
-```
-(บรรทัดสรุปท้ายของ `progs` คือ `== total: 32 programs`)
+
+![Terminal — make progs + make list (policy 01–03 ทำงานอยู่)](screenshots/week26-5-progs.png)
+
+*ภาพ: `make progs` + `make list` ขณะ policy 01–03 ทำงานอยู่ (`== total: 32 programs`)*
 
 อ่านผล:
-- **base sensor 7 โปรแกรม** (3427–3434): `event_execve` คือ tracepoint `sched_process_exec` แบบเดียวกับ Week 09; `execve_map_update` เป็นชนิด `socket_filter` แต่ไม่มี link ใน `bpftool link show` จึงไม่ได้แนบกับ hook ใด เป็นโปรแกรมใช้ภายในของ Tetragon (อ่านซอร์สของ Tetragon หากต้องการรายละเอียด)
+- **base sensor 7 โปรแกรม** (10866–10873): `event_execve` คือ tracepoint `sched_process_exec` แบบเดียวกับ Week 09; `execve_map_update` เป็นชนิด `socket_filter` แต่ไม่มี link ใน `bpftool link show` จึงไม่ได้แนบกับ hook ใด เป็นโปรแกรมใช้ภายในของ Tetragon (อ่านซอร์สของ Tetragon หากต้องการรายละเอียด)
 - **มีแค่ 10 โปรแกรมที่มี `pids tetragon`** ส่วนที่เหลือคือปลายทางของ tail call (อยู่ใน prog-array map ไม่ได้ถือ fd โดยตรง)
 - Policy 02 มี kretprobe จึงมีชุด `generic_retkprobe_*` เพิ่ม; policy 03 (2 ฟังก์ชัน) ใช้ **kprobe_multi link เดียว**
 
-ส่วนของ `docker exec w26-tetragon bpftool link show` (ตัดมาเฉพาะ link ของ Tetragon):
+ส่วนของ `docker exec w26-tetragon bpftool link show` (ตัดมาเฉพาะ link ของ Tetragon; จากการรันก่อนหน้าบน 7.0.0-38 ไม่มีในภาพ และเลข prog ต่างจากภาพ):
 ```text
 132: perf_event  prog 3427
 	kprobe ffffffff9ada52b0 acct_process
@@ -639,30 +505,12 @@ ID   NAME                   STATE     FILTERID   NAMESPACE   SENSORS          KE
 ```
 
 ### 4.5 Policy 04: Sigkill — monitor ก่อน แล้วค่อย enforce
-```text
-$ make apply-sigkill-monitor
-tracing policy "/w26/policies/04-enforce-secret-sigkill.yaml" added
-ID   NAME                         STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
-5    w26-enforce-secret-sigkill   enabled   0          (global)    generic_kprobe   860.91 kB      monitor   0       0          0
-$ cat lab-files/secret.txt
-w26 lab secret: tetragon-should-block-this
-exit=0
-$ ./run-tetragon.sh list
-ID   NAME                         STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
-5    w26-enforce-secret-sigkill   enabled   0          (global)    generic_kprobe   860.91 kB      monitor   1       0          1
-$ ./run-tetragon.sh mode w26-enforce-secret-sigkill enforce
-tracing policy "w26-enforce-secret-sigkill" set to mode "enforce"
-$ cat lab-files/secret.txt
-/bin/bash: line 11: 81953 Killed                     cat lab-files/secret.txt
-exit=137
-$ cat lab-files/notes.txt
-w26 lab notes: reading this is only logged
-exit=0
-$ ./run-tetragon.sh list
-ID   NAME                         STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
-5    w26-enforce-secret-sigkill   enabled   0          (global)    generic_kprobe   860.91 kB      enforce   2       1          1
-```
-Event ระหว่าง enforce (บรรทัด `🚀`/`💥` จาก `capture 7 --process cat | grep lab-files` และบรรทัด `❓` จาก `capture 7 --policy-names w26-enforce-secret-sigkill` ที่รันพร้อมกัน):
+
+![Terminal — Policy 04: Sigkill (monitor ก่อน แล้วค่อย enforce)](screenshots/week26-6-sigkill.png)
+
+*ภาพ: Policy 04: Sigkill — monitor ก่อน แล้วค่อย enforce*
+
+Event ระหว่าง enforce (จากการรันก่อนหน้าบน 7.0.0-38 ไม่มีในภาพ และ PID ต่างจากภาพ; บรรทัด `🚀`/`💥` จาก `capture 7 --process cat | grep lab-files` และบรรทัด `❓` จาก `capture 7 --policy-names w26-enforce-secret-sigkill` ที่รันพร้อมกัน):
 ```text
 🚀 process ce-desk /usr/bin/cat lab-files/secret.txt
 💥 exit    ce-desk /usr/bin/cat lab-files/secret.txt SIGKILL
@@ -683,24 +531,12 @@ JSON (`capture-json 7 --process cat | jq -c -f event-summary.jq | grep lab-files
 - ฟิลด์ `action` ของ event เป็น `KPROBE_ACTION_POST` เพราะ event ถูกส่งโดย action `Post` หลักฐานของการบังคับคือ `signal: SIGKILL` ใน `process_exit` และตัวนับ `NENFORCE`
 
 ### 4.6 Policy 05: Override ผ่าน BPF LSM
-```text
-$ ./run-tetragon.sh remove w26-enforce-secret-sigkill
-tracing policy "w26-enforce-secret-sigkill" deleted
-$ make apply-override
-tracing policy "/w26/policies/05-enforce-secret-override.yaml" added
-ID   NAME                          STATE     FILTERID   NAMESPACE   SENSORS       KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
-6    w26-enforce-secret-override   enabled   0          (global)    generic_lsm   1.16 MB        enforce   0       0          0
-$ cat lab-files/secret.txt
-cat: lab-files/secret.txt: Operation not permitted
-exit=1
-$ head -c 14 lab-files/notes.txt; echo
-w26 lab notes:
-exit=0
-$ ./run-tetragon.sh list
-ID   NAME                          STATE     FILTERID   NAMESPACE   SENSORS       KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
-6    w26-enforce-secret-override   enabled   0          (global)    generic_lsm   1.16 MB        enforce   0       1          0
-```
-Event (บรรทัด `🚀`/`💥` จาก `capture 7 --process 'cat|head' | grep lab-files`, บรรทัด `🔒` จาก `capture 7 --policy-names w26-enforce-secret-override` และ JSON จาก `capture-json 7 --process 'cat|head' | jq -c -f event-summary.jq | grep lab-files`):
+
+![Terminal — Policy 05: Override ผ่าน BPF LSM (EPERM แทน SIGKILL)](screenshots/week26-7-override-lsm.png)
+
+*ภาพ: Policy 05: Override ผ่าน BPF LSM — `cat` ได้ `EPERM` แทนการถูก SIGKILL*
+
+Event (จากการรันก่อนหน้าบน 7.0.0-38, ไม่มีในภาพ; บรรทัด `🚀`/`💥` จาก `capture 7 --process 'cat|head' | grep lab-files`, บรรทัด `🔒` จาก `capture 7 --policy-names w26-enforce-secret-override` และ JSON จาก `capture-json 7 --process 'cat|head' | jq -c -f event-summary.jq | grep lab-files`):
 ```text
 🚀 process ce-desk /usr/bin/cat lab-files/secret.txt
 💥 exit    ce-desk /usr/bin/cat lab-files/secret.txt 1
@@ -719,11 +555,13 @@ Event (บรรทัด `🚀`/`💥` จาก `capture 7 --process 'cat|head
 
 ### 4.7 Override บน kprobe: ทำไมต้อง `--disable-kprobe-multi`
 
-ลองโหลด policy ที่เหมือน 06 ขณะที่ daemon รันด้วยค่าเริ่มต้น:
-```text
-Error: failed to add tracing policy: rpc error: code = Unknown desc = policy handler 'tracing' failed loading policy 'w26-kprobe-override-test': override validation failed: can't override 'security_file_open' function with kprobe_multi, use --disable-kprobe-multi option
-```
-และ error-injection list ของ kernel นี้:
+ลองโหลด policy 06 ขณะที่ daemon รันด้วยค่าเริ่มต้น (ถูกปฏิเสธ) แล้ว `make down` และเริ่มใหม่ด้วย `make up-nomulti` ก่อนโหลด policy 06 อีกครั้ง:
+
+![Terminal — Override บน kprobe: ทำไมต้อง --disable-kprobe-multi](screenshots/week26-8-fmodret.png)
+
+*ภาพ: Override บน kprobe: ถูกปฏิเสธเมื่อใช้ kprobe_multi แต่ใช้ได้หลัง `make up-nomulti`*
+
+error-injection list ของ kernel (จากการรันก่อนหน้าบน 7.0.0-38, ไม่มีในภาพ):
 ```text
 $ sudo grep -c "" /sys/kernel/debug/error_injection/list
 1066
@@ -732,57 +570,27 @@ $ sudo grep -E "^security_" /sys/kernel/debug/error_injection/list | wc -l
 $ sudo grep -E '^__x64_sys_openat\b' /sys/kernel/debug/error_injection/list
 __x64_sys_openat	ERRNO
 ```
-เริ่มใหม่ด้วย `make up-nomulti` แล้วโหลด policy 06:
+
+`./run-tetragon.sh list` หลังทดสอบ (จากการรันก่อนหน้าบน 7.0.0-38, ไม่มีในภาพ):
 ```text
-$ TETRAGON_ARGS="--disable-kprobe-multi" ./run-tetragon.sh up
-prepared /mnt/sda/ebpf/phase11-modern-ebpf-extensibility/week26-ecosystem-tetragon-cilium/lab-files (secret.txt, notes.txt, bin/w26-hello)
-starting w26-tetragon from quay.io/cilium/tetragon:v1.7.1 (args: --disable-kprobe-multi)
-container: w26-tetragon (quay.io/cilium/tetragon:v1.7.1)
-daemon version: Server version: v1.7.1
-ID   NAME   STATE   FILTERID   NAMESPACE   SENSORS   KERNELMEMORY   MODE   NPOST   NENFORCE   NMONITOR
-$ ./run-tetragon.sh apply 06-enforce-secret-fmodret.yaml
-tracing policy "/w26/policies/06-enforce-secret-fmodret.yaml" added
-ID   NAME                         STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
-2    w26-enforce-secret-fmodret   enabled   0          (global)    generic_kprobe   3.48 MB        enforce   0       0          0
-$ cat lab-files/secret.txt
-cat: lab-files/secret.txt: Operation not permitted
-exit=1
-$ cat lab-files/notes.txt
-w26 lab notes: reading this is only logged
-exit=0
 $ ./run-tetragon.sh list
 ID   NAME                         STATE     FILTERID   NAMESPACE   SENSORS          KERNELMEMORY   MODE      NPOST   NENFORCE   NMONITOR
 2    w26-enforce-secret-fmodret   enabled   0          (global)    generic_kprobe   3.48 MB        enforce   1       1          0
-$ docker exec w26-tetragon bpftool link show | grep -B2 -A2 security_file_open
-	pids tetragon(83184)
-157: perf_event  prog 3548
-	kprobe ffffffff9b32b410 security_file_open
-	bpf_cookie 0
-	pids tetragon(83184)
 ```
-และ link ของโปรแกรม override (`bpftool prog show` ในคอนเทนเนอร์พบ `3549: tracing  name generic_fmodret_override`):
-```text
-156: tracing  prog 3549
-	prog_type tracing  attach_type modify_return
-	target_obj_id 1  target_btf_id 149750
-	pids tetragon(83184)
-```
+
+link `modify_return` ในภาพ (`target_btf_id 150021`) เป็นของโปรแกรม override ซึ่ง `bpftool prog show` ในคอนเทนเนอร์แสดงชื่อ `generic_fmodret_override` ส่วน link `perf_event` คือ kprobe บน `security_file_open`
+
 - ไม่มี kprobe_multi: kprobe ถูกแนบเป็น `perf_event` link ทีละฟังก์ชัน
 - Override จริงทำโดยโปรแกรม `tracing` / `attach_type modify_return` (BPF trampoline — Week 22) ไม่ใช่ `bpf_override_return()` ซึ่งเป็นเหตุผลที่ `security_file_open` ไม่ต้องอยู่ใน error-injection list
 - policy นี้ใช้ map ถึง 3.48 MB (เทียบกับ 0.86 MB ของ policy 04)
 
 ### 4.8 `make down` และตรวจว่าไม่มีอะไรค้าง
-```text
-$ make down
-./run-tetragon.sh down
-stopping w26-tetragon
-cleanup OK: no Tetragon BPF program is loaded
-$ sudo bpftool prog show | grep -i tetragon ; echo "matches=$?"
-matches=1
-$ docker ps -a --filter name=w26-tetragon --format "{{.Names}}" | wc -l
-0
-```
-(`grep` คืนค่า 1 = ไม่พบบรรทัดใดเลย) หลังรอบ `up-nomulti` ก็ได้ `cleanup OK: no Tetragon BPF program is loaded` เช่นกัน
+
+![Terminal — make down และตรวจว่าไม่มีอะไรค้าง](screenshots/week26-9-down.png)
+
+*ภาพ: `make down` (หลังรอบ `up-nomulti`) และตรวจว่าไม่มีอะไรค้าง*
+
+(`grep` คืนค่า 1 = ไม่พบบรรทัดใดเลย) `make down` ของรอบค่าเริ่มต้น (ภาพในหัวข้อ 4.7) ก็ได้ `cleanup OK: no Tetragon BPF program is loaded` เช่นกัน
 
 ### 4.9 Cilium บน kind (รันจริงบนเครื่องแล็บ)
 

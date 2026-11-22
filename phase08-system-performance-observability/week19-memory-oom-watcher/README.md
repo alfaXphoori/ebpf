@@ -333,84 +333,45 @@ sudo bpftool map dump name page_fault_coun | head      # ชื่อแมป�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`, 8 CPUs, RAM 15 GB, swap 4 GB) — เครื่องทดสอบมีงานพื้นหลังอื่นทำงานอยู่ด้วย จึงเห็นโปรเซสอย่าง `sleep`, `bash`, `bpftrace` ในอันดับ page fault
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`, 8 CPUs, RAM 15 GB, swap 4 GB) — เครื่องทดสอบมีงานพื้นหลังอื่นทำงานอยู่ด้วย จึงเห็นโปรเซสอย่าง `sleep`, `bash`, `cut` ในอันดับ page fault
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week19.sh`](../../scripts/screenshots/week19.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week19.sh`](../../scripts/screenshots/week19.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal 2 — กระตุ้น OOM ใน scope ที่จำกัดแรม 50M](screenshots/week19-1-trigger-oom.png)
-
-*ภาพที่ 1: Terminal 2 — กระตุ้น OOM ใน scope ที่จำกัดแรม 50M*
-
-![Terminal 1 — sudo ./bin/oom-watcher -duration 10s](screenshots/week19-2-watcher.png)
-
-*ภาพที่ 2: Terminal 1 — sudo ./bin/oom-watcher -duration 10s*
-
-![Terminal 2 — เทียบกับ kernel log และ bpftool](screenshots/week19-3-kernel-log.png)
-
-*ภาพที่ 3: Terminal 2 — เทียบกับ kernel log และ bpftool*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 เทอร์มินัลที่กระตุ้น OOM
-```text
-Running as unit: run-p4124218-i4141391.scope; invocation ID: fc9f230a0b7c4cf78984dfe9a1e686b5
-/bin/bash: line 6: 4124218 Killed                     systemd-run --user --scope -p MemoryMax=50M -p MemorySwapMax=0 python3 -c '
-blocks = []
-for i in range(200):              # safety cap: never more than ~200 MB
-    blocks.append(b"\x01" * (1 << 20))
-print("allocated", len(blocks), "MB without OOM?!")
-'
-exit status: 137
-```
 
-### 4.2 ผลลัพธ์ของ `sudo ./bin/oom-watcher -duration 5s`
-```text
-======================================================================
- eBPF Memory Subsystem & OOM Forensics Watcher
-======================================================================
-2026/10/28 22:08:01 [INFO] Watching for User Page Faults and OOM Killer events...
+![Terminal 2 — กระตุ้น OOM ใน scope ที่จำกัดแรม 50M (exit status 137)](screenshots/week19-1-trigger-oom.png)
 
+*ภาพ: Terminal 2 — กระตุ้น OOM ใน scope ที่จำกัดแรม 50M (exit status 137)*
 
-[CRITICAL OOM KILLER TRIGGERED] 22:08:03
-  • Victim Process : python3 (PID: 4124218, UID: 1000)
-  • Triggered by   : python3 (PID: 4124218)
-  • Cgroup (v2)    : run-p4124218-i4141391.scope (id 241936)
-  • Cgroup path    : (already removed - transient scope exited with its last process)
-  • Total VM Size  : 69608 kB (67.98 MB)
-  • Anonymous RSS  : 50944 kB (49.75 MB)
-  • File RSS       : 6736 kB (6.58 MB)
-  • Shmem RSS      : 0 kB (0.00 MB)
-  • Page Tables    : 172 kB (0.17 MB)
-  • oom_score_adj  : 0
+### 4.2 ผลลัพธ์ของ `sudo ./bin/oom-watcher -duration 10s`
 
-[22:08:04] Top Processes by User-Space Page Faults (cumulative):
-   #1 sleep            : 223665   page faults (156929 on write)
-   #2 bash             : 29153    page faults (21820 on write)
-   #3 bpftrace         : 25910    page faults (23953 on write)
-   #4 python3          : 12873    page faults (12736 on write)
-   #5 date             : 10520    page faults (7921 on write)
+![Terminal 1 — sudo ./bin/oom-watcher -duration 10s](screenshots/week19-2-watcher.png)
 
+*ภาพ: Terminal 1 — sudo ./bin/oom-watcher -duration 10s*
 
-[INFO] Detaching Memory Watcher...
-```
-(บรรทัดหัวข้อ `[CRITICAL OOM KILLER TRIGGERED]` แสดงเป็นตัวอักษรสีแดงด้วย ANSI escape code ในเทอร์มินัลจริง)
+(บรรทัดหัวข้อ `[CRITICAL OOM KILLER TRIGGERED]` แสดงเป็นตัวอักษรสีแดงด้วย ANSI escape code)
 
 ### 4.3 Kernel log ของเหตุการณ์เดียวกัน
-```text
-Oct 28 22:08:03 ce-desk kernel: Memory cgroup out of memory: Killed process 4124218 (python3) total-vm:69608kB, anon-rss:51000kB, file-rss:6860kB, shmem-rss:0kB, UID:1000 pgtables:172kB oom_score_adj:0
-```
+
+![Terminal 2 — เทียบกับ kernel log และ bpftool](screenshots/week19-3-kernel-log.png)
+
+*ภาพ: Terminal 2 — เทียบกับ kernel log และ bpftool*
 
 ### 4.4 การตีความผลลัพธ์
-- **OOM เกิดในขอบเขต cgroup เท่านั้น:** `Memory cgroup out of memory` และชื่อ scope `run-p4124218-i4141391.scope` ตรงกับที่ `systemd-run` สร้าง — ไม่มีโปรเซสอื่นของเครื่องถูกฆ่า
-- **ค่าจาก eBPF ตรงกับ kernel log:** `total-vm` (69608 kB), `UID` (1000), `pgtables` (172 kB), `oom_score_adj` (0) ตรงกันทุกตัว ส่วน `anon-rss`/`file-rss` ต่างกันเล็กน้อย (50944 vs 51000 kB) เพราะเคอร์เนลอ่านค่าเพื่อพิมพ์ log **หลังจาก** จุด `mark_victim` และตัวนับ RSS ของ `mm` เป็นตัวนับแบบ per-CPU ที่ค่าอ่านได้เป็นค่าประมาณ ณ ขณะนั้น
+- **OOM เกิดในขอบเขต cgroup เท่านั้น:** `Memory cgroup out of memory` และชื่อ scope `run-p1249834-i9635909.scope` ตรงกับที่ `systemd-run` สร้าง — ไม่มีโปรเซสอื่นของเครื่องถูกฆ่า
+- **ค่าจาก eBPF ตรงกับ kernel log:** `total-vm` (69608 kB), `UID` (1000), `pgtables` (176 kB), `oom_score_adj` (0) ตรงกันทุกตัว ส่วน `anon-rss`/`file-rss` ต่างกันเล็กน้อย (anon 50944 vs 51000 kB, file 6652 vs 6776 kB) เพราะเคอร์เนลอ่านค่าเพื่อพิมพ์ log **หลังจาก** จุด `mark_victim` และตัวนับ RSS ของ `mm` เป็นตัวนับแบบ per-CPU ที่ค่าอ่านได้เป็นค่าประมาณ ณ ขณะนั้น
 - **Anonymous RSS ≈ 50 MB = `MemoryMax`:** python ถูกฆ่าตอนข้อมูลที่เขียนเต็ม limit พอดี
-- **page fault ของ `python3` = 12873** ใกล้กับค่าที่คำนวณไว้ในหัวข้อ 1.1 (50 MiB / 4 KiB = 12800) และเกือบทั้งหมดเป็น fault จากการเขียน (12736) ตรงกับพฤติกรรมของโปรแกรมที่เขียนข้อมูลลงหน่วยความจำใหม่
+- **page fault ของ `python3`:** ตัวนับใช้ `comm` เป็น key (ดู `bpftool map dump` ในหัวข้อ 4.3) จึงรวม fault ของ **ทุก** โปรเซสชื่อ `python3` บนเครื่อง ในภาพค่า `python3` ยังเพิ่มจาก 44675 เป็น 173092 หลังเหยื่อถูกฆ่าไปแล้ว แปลว่ามี `python3` ตัวอื่นทำงานอยู่ ค่านี้จึงเทียบกับ 12,800 ที่คำนวณในหัวข้อ 1.1 ตรง ๆ ไม่ได้ ส่วนในการบันทึกรอบก่อน (Linux 7.0.0-38) ซึ่งไม่มี `python3` อื่นรบกวน วัดได้ 12873 (เป็น fault จากการเขียน 12736) ใกล้กับ 50 MiB / 4 KiB = 12800 และตรงกับพฤติกรรมของโปรแกรมที่เขียนข้อมูลลงหน่วยความจำใหม่ ถ้าต้องการแยกรายโปรเซสให้เปลี่ยน key เป็น PID
 - **Cgroup path หาไม่เจอ แต่ชื่อยังอยู่:** scope ถูกลบไปแล้วก่อนที่ Go จะเดินหา inode — นี่คือเหตุผลที่เราอ่าน `kn->name` ตั้งแต่ในเคอร์เนล (เวอร์ชันแรกที่เราทดลองแสดงแค่ cgroup id ที่หา path ไม่ได้)
-- อันดับ 1-3 (`sleep`, `bash`, `bpftrace`) มาจากงานอื่นบนเครื่องทดสอบ ตัวเลขบนเครื่องของคุณจะแตกต่างไป
+- อันดับอื่น (`sleep`, `bash`, `cut`, `2.1.330` ฯลฯ) มาจากงานอื่นบนเครื่องทดสอบ ตัวเลขบนเครื่องของคุณจะแตกต่างไป
 
 ---
 

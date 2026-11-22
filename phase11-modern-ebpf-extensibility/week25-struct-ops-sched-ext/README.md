@@ -368,203 +368,75 @@ pgrep -f 'ext-run' || echo "no workload left"
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), 12th Gen Intel Core i3-12100 (8 logical CPUs), clang 21.1.8, Go 1.26, cilium/ebpf v0.22.0 — เครื่องมีงานอื่นรันอยู่ระหว่างทดลอง ตัวเลขจึงต่างกันในแต่ละรอบ
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), 12th Gen Intel Core i3-12100 (8 logical CPUs), clang 21.1.8, Go 1.26, cilium/ebpf v0.22.0 — ภาพหน้าจอถ่ายขณะเครื่องว่าง ตัวเลขที่อ้างถึง "รอบก่อนหน้า" ในหัวข้อการตีความมาจากการรันบน `Linux 7.0.0-38-generic` ขณะเครื่องมีงานอื่นรันอยู่
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week25.sh`](../../scripts/screenshots/week25.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week25.sh`](../../scripts/screenshots/week25.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
 > **หมายเหตุ:** ภาพชุดนี้ถ่ายขณะเครื่องว่าง (load average < 1.5) — demo-nice ได้อัตราส่วน vtime nice0:nice10 ≈ 8.1 : 1 และ FIFO ได้ enqueue 19,215 / dispatch 19,214 (ต่างกัน 1 ตัว ดูคำอธิบายในหัวข้อการตีความผล)
 
-![Terminal — make test (attach จริงในโหมด SWITCH_PARTIAL แล้ว detach)](screenshots/week25-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test (attach จริงในโหมด SWITCH_PARTIAL แล้ว detach)*
-
-![Terminal — sudo ./bin/scx-w25 -duration 5s (FIFO)](screenshots/week25-2-fifo-run.png)
-
-*ภาพที่ 2: Terminal — sudo ./bin/scx-w25 -duration 5s (FIFO)*
-
-![Terminal 2 — มุมมองจาก bpftool ระหว่าง scheduler ทำงาน](screenshots/week25-3-bpftool-view.png)
-
-*ภาพที่ 3: Terminal 2 — มุมมองจาก bpftool ระหว่าง scheduler ทำงาน*
-
-![Terminal — make demo-nice (FIFO vs vtime, spinner 4 ตัวบน CPU 3)](screenshots/week25-4-demo-nice.png)
-
-*ภาพที่ 4: Terminal — make demo-nice (FIFO vs vtime, spinner 4 ตัวบน CPU 3)*
-
-![Terminal — make demo-stall (watchdog eject)](screenshots/week25-5-demo-stall.png)
-
-*ภาพที่ 5: Terminal — make demo-stall (watchdog eject)*
-
-![Terminal — make demo-error (scx_bpf_error eject) + ยืนยันว่าเครื่องกลับสู่สภาพเดิม](screenshots/week25-6-demo-error.png)
-
-*ภาพที่ 6: Terminal — make demo-error (scx_bpf_error eject) + ยืนยันว่าเครื่องกลับสู่สภาพเดิม*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test`
 
-```text
-=== RUN   TestSchedulerDispatchesExtTasks
-=== RUN   TestSchedulerDispatchesExtTasks/fifo
-    main_test.go:138: mode=fifo local=5569 enqueue=5607 dispatch=5607 running=15001
-=== RUN   TestSchedulerDispatchesExtTasks/vtime
-    main_test.go:138: mode=vtime local=5962 enqueue=5454 dispatch=5454 running=15082
---- PASS: TestSchedulerDispatchesExtTasks (3.36s)
-    --- PASS: TestSchedulerDispatchesExtTasks/fifo (1.69s)
-    --- PASS: TestSchedulerDispatchesExtTasks/vtime (1.67s)
-=== RUN   TestWatchdogEjectsStalledScheduler
-    main_test.go:166: ejected: reason="runnable task stall" msg="exe[78561] failed to run for 1.505s"
-    main_test.go:175: pid 78561 sum_exec_runtime 29.5ms -> 254.2ms after eject
---- PASS: TestWatchdogEjectsStalledScheduler (2.10s)
-=== RUN   TestScxBpfErrorEjects
---- PASS: TestScxBpfErrorEjects (0.50s)
-=== RUN   TestStructOpsHasNoTestRun
-    main_test.go:217: BPF_PROG_TEST_RUN on struct_ops/w25_running: run program: operation not supported (expected)
---- PASS: TestStructOpsHasNoTestRun (0.03s)
-PASS
-ok  	ebpf-noob-to-hero/phase11-modern-ebpf-extensibility/week25-struct-ops-sched-ext	5.992s
-sched_ext state after tests: disabled
-```
+
+![Terminal — make test (attach จริงในโหมด SWITCH_PARTIAL แล้ว detach)](screenshots/week25-1-make-test.png)
+
+*ภาพ: `make test` — attach จริงในโหมด `SWITCH_PARTIAL` แล้ว detach (state กลับเป็น `disabled`)*
 
 ### 4.2 `sudo ./bin/scx-w25 -duration 5s` (FIFO)
 
-```text
-======================================================================
- Week 25: sched_ext BPF scheduler (mode=fifo, fail=none, SWITCH_PARTIAL)
-======================================================================
-[sysfs] before attach  state=disabled  root/ops=-            switch_all=0 enable_seq=20
-[sysfs] after attach   state=enabled   root/ops=w25_minimal  switch_all=0 enable_seq=21
-[work ] 16 x `sh -c <spin+sleep loop>` pgid=54170, policy of pid 54170 = 7 (7 = SCHED_EXT)
-[stats] deltas per interval (รวมทุก CPU); running/CPU = จำนวนครั้งที่ task ของเราขึ้นแต่ละ CPU
-[  1.0s] local=+3342   enqueue=+4112   dispatch=+4112   running=+13006  | running/CPU: 1569 1665 1602 1672 1583 1672 1629 1614
-[  2.0s] local=+2916   enqueue=+4167   dispatch=+4167   running=+14624  | running/CPU: 3251 3586 3345 3668 3205 3628 3523 3424
-[  3.0s] local=+3218   enqueue=+3991   dispatch=+3991   running=+13636  | running/CPU: 4923 5467 5338 5292 4879 5389 5118 4860
-[  4.0s] local=+2802   enqueue=+4127   dispatch=+4124   running=+14900  | running/CPU: 6690 7230 8348 6805 6705 7113 6800 6475
-[  5.0s] local=+2989   enqueue=+4188   dispatch=+4191   running=+13994  | running/CPU: 8504 9036 10125 8681 8316 8907 8504 8087
-[main ] -duration 5s reached
-----------------------------------------------------------------------
-CPU       local    enqueue   dispatch    running
-0          1794       2649       2620       8504
-1          1836       2613       2642       9036
-2          1855       2563       2563      10125
-3          1907       2550       2605       8681
-4          1897       2492       2558       8316
-5          1918       2560       2513       8907
-6          2030       2651       2592       8504
-7          2030       2507       2492       8088
-all       15267      20585      20585      70161
-[sysfs] after detach   state=disabled  root/ops=-            switch_all=0 enable_seq=21
-[exit ] kind=UNREG(64) reason="unregistered from user space"
-```
 
-`dmesg` ของการรันแบบนี้มี 2 บรรทัดต่อรอบ:
+![Terminal — sudo ./bin/scx-w25 -duration 5s (FIFO)](screenshots/week25-2-fifo-run.png)
 
-```text
-[ 1080.712787] sched_ext: BPF scheduler "w25_minimal" enabled (partial)
-[ 1084.800147] sched_ext: BPF scheduler "w25_minimal" disabled (unregistered from user space)
-```
+*ภาพ: `sudo ./bin/scx-w25 -duration 5s` (FIFO) ตามด้วย `dmesg` 2 บรรทัดของรอบนี้*
+
+`dmesg` ของการรันแบบนี้มี 2 บรรทัดต่อรอบ คือ `enabled (partial)` ตอนโหลด และ `disabled (unregistered from user space)` ตอนถอด (ท้ายภาพ)
 
 ### 4.3 มุมมองจาก `bpftool` ระหว่าง scheduler ทำงาน (ตัดบางส่วน)
 
-```text
-$ sudo bpftool struct_ops show
-9672: w25_ops         sched_ext_ops
-$ sudo bpftool link show | grep struct_ops
-121: struct_ops  map 9672
-$ sudo bpftool prog show | grep -A1 struct_ops
-3289: struct_ops  name w25_dispatch  tag 504874827a192b67  gpl
-	loaded_at 2026-10-28T23:13:40+0700  uid 0
-3290: struct_ops  name w25_enable  tag 16edb0ff03828730  gpl
-...
-3295: struct_ops  name w25_select_cpu  tag 3b2abc63fc1b5638  gpl
-$ ./bin/scx-w25 ext-run sh -c 'grep -E "^(policy|ext)" /proc/$$/sched'
-policy                                       :                    7
-ext.enabled                                  :                    1
-```
+
+![Terminal 2 — มุมมองจาก bpftool ระหว่าง scheduler ทำงาน](screenshots/week25-3-bpftool-view.png)
+
+*ภาพ: Terminal 2 — `make state` และ `bpftool` ระหว่าง scheduler ทำงาน*
 
 ### 4.4 `make demo-nice`: FIFO vs vtime (spinner 4 ตัว pin บน CPU 3 นาน 6 วินาที)
 
-```text
-== mode=fifo: 4 SCHED_EXT spinners pinned to CPU 3 for 6s
-pid=67529   nice=0   policy=7 cpu_ms=1496
-pid=67530   nice=0   policy=7 cpu_ms=1496
-pid=67531   nice=10  policy=7 cpu_ms=1512
-pid=67532   nice=10  policy=7 cpu_ms=1497
-== mode=vtime: 4 SCHED_EXT spinners pinned to CPU 3 for 6s
-pid=67968   nice=0   policy=7 cpu_ms=2737
-pid=67969   nice=0   policy=7 cpu_ms=2638
-pid=67970   nice=10  policy=7 cpu_ms=320
-pid=67971   nice=10  policy=7 cpu_ms=322
-```
+
+![Terminal — make demo-nice (FIFO vs vtime, spinner 4 ตัวบน CPU 3)](screenshots/week25-4-demo-nice.png)
+
+*ภาพ: `make demo-nice` — FIFO vs vtime, spinner 4 ตัวบน CPU 3 (ถ่ายบนเครื่องว่าง)*
 
 ### 4.5 `make demo-stall`: watchdog eject
 
-```text
-======================================================================
- Week 25: sched_ext BPF scheduler (mode=fifo, fail=stall, SWITCH_PARTIAL)
-======================================================================
-[sysfs] before attach  state=disabled  root/ops=-            switch_all=0 enable_seq=24
-[sysfs] after attach   state=enabled   root/ops=w25_minimal  switch_all=0 enable_seq=25
-[work ] 4 x `sh -c <spin+sleep loop>` pgid=68307, policy of pid 68307 = 7 (7 = SCHED_EXT)
-[stats] deltas per interval (รวมทุก CPU); running/CPU = จำนวนครั้งที่ task ของเราขึ้นแต่ละ CPU
-[  1.0s] local=+0      enqueue=+4      dispatch=+0      running=+14     | running/CPU: 3 0 3 5 3 0 0 0
-[  2.0s] local=+0      enqueue=+0      dispatch=+0      running=+25     | running/CPU: 4 1 5 6 14 5 3 1
-[  3.0s] local=+0      enqueue=+0      dispatch=+0      running=+0      | running/CPU: 4 1 5 6 14 5 3 1
-[eject] kernel disabled the BPF scheduler: kind=ERROR_STALL(1026)
-[eject] reason="runnable task stall"
-[eject] msg="exe[68310] failed to run for 2.028s"
-[eject] SCHED_EXT tasks fall back to the fair class; see `sudo dmesg | grep sched_ext`
-[sysfs] after eject    state=disabled  root/ops=-            switch_all=0 enable_seq=25
-----------------------------------------------------------------------
-CPU       local    enqueue   dispatch    running
-...
-all           0          4          0         39
-[sysfs] after detach   state=disabled  root/ops=-            switch_all=0 enable_seq=25
-[exit ] kind=ERROR_STALL(1026) reason="runnable task stall"
 
-$ sudo dmesg | grep -A3 'sched_ext:' | tail -n 8
-[ 1464.901995] sched_ext: BPF scheduler "w25_minimal" enabled (partial)
-[ 1466.958488] sched_ext: BPF scheduler "w25_minimal" disabled (runnable task stall)
-[ 1466.958510] sched_ext: w25_minimal: exe[68310] failed to run for 2.028s
-[ 1466.958518]    scx_exit+0x50/0x80
-[ 1466.958535]    scx_watchdog_workfn+0x160/0x200
-[ 1466.958547]    process_one_work+0x1ac/0x3d0
-```
+![Terminal — make demo-stall (watchdog eject)](screenshots/week25-5-demo-stall.png)
+
+*ภาพ: `make demo-stall` — watchdog eject scheduler หลัง task ค้างเกิน `timeout_ms`*
 
 ### 4.6 `make demo-error`: `scx_bpf_error()` จากโค้ด BPF
 
-```text
-[  1.0s] local=+789    enqueue=+0      dispatch=+0      running=+1019   | running/CPU: 154 86 135 107 142 117 157 121
-[eject] kernel disabled the BPF scheduler: kind=ERROR_BPF(1025)
-[eject] reason="scx_bpf_error"
-[eject] msg="w25: deliberate scx_bpf_error after 1000 running events"
-[eject] SCHED_EXT tasks fall back to the fair class; see `sudo dmesg | grep sched_ext`
-[sysfs] after eject    state=disabled  root/ops=-            switch_all=0 enable_seq=26
-...
-[exit ] kind=ERROR_BPF(1025) reason="scx_bpf_error"
 
-$ sudo dmesg | grep -A3 'sched_ext:' | tail -n 5
-[ 1468.523424] sched_ext: BPF scheduler "w25_minimal" disabled (scx_bpf_error)
-[ 1468.523437] sched_ext: w25_minimal: w25: deliberate scx_bpf_error after 1000 running events
-[ 1468.523442]    scx_exit+0x50/0x80
-[ 1468.523454]    scx_bpf_error_bstr+0x79/0xb0
-[ 1468.523461]    bpf_prog_e4dff11fc60b8767_w25_running+0xbe/0xd3
-```
+![Terminal — make demo-error (scx_bpf_error eject) + ยืนยันว่าเครื่องกลับสู่สภาพเดิม](screenshots/week25-6-demo-error.png)
+
+*ภาพ: `make demo-error` — `scx_bpf_error()` eject scheduler แล้วยืนยันว่าเครื่องกลับสู่สภาพเดิม*
 
 หลังทุกการทดลองข้างต้น `/sys/kernel/sched_ext/state` กลับเป็น `disabled`
 
 **การตีความ:**
 - **Partial mode ทำงานตามที่ออกแบบ:** `switch_all=0` และ `dmesg` ระบุ `enabled (partial)` ทุกครั้ง; `enable_seq` เพิ่มทีละ 1 ต่อการโหลดหนึ่งครั้ง
-- **`enqueue ≈ dispatch` เมื่อรวมทุก CPU** (20,585 = 20,585 ในหัวข้อ 4.2): task ที่เข้า `SHARED_DSQ` ถูกดึงออกไปรันแทบทั้งหมด แต่ **ไม่รับประกันว่าเท่ากันพอดี**: task ที่ยังค้างอยู่ใน `SHARED_DSQ` ตอน detach จะถูกเคอร์เนลคืนให้ fair class โดยไม่ผ่าน `w25_dispatch` จึงอาจเห็น enqueue มากกว่า dispatch ไม่กี่ตัว (ภาพหน้าจอที่ 2 ซึ่งถ่ายบนเครื่องว่างได้ 19,215 กับ 19,214 ส่วนรอบที่ถ่ายขณะเครื่องมีโหลดสูงต่างกันถึง 8 ตัว: 4,955 กับ 4,947) แต่ **ต่อ CPU ไม่เท่ากัน** เพราะ task ถูก enqueue บน CPU หนึ่งแล้วไปถูก dispatch บนอีก CPU ได้ (คิวเดียวทั้งระบบ = global FIFO); ตัวเลขรายวินาทีที่ dispatch มากกว่า enqueue เล็กน้อยเกิดจากการอ่านตัวนับคนละจังหวะ
-- **`local` (direct dispatch)** คือการตื่นที่ `select_cpu` เจอ CPU ว่างจึงข้าม `ops.enqueue` — ในหัวข้อ 4.6 ที่มี workload แค่ 4 โปรเซสบน 8 CPU แทบทุกการตื่นเป็น direct dispatch (`enqueue=+0`) ส่วน 16 โปรเซสในหัวข้อ 4.2 ทำให้ต้องเข้าคิวบ่อยขึ้น
+- **`enqueue ≈ dispatch` เมื่อรวมทุก CPU** (19,215 กับ 19,214 ในหัวข้อ 4.2): task ที่เข้า `SHARED_DSQ` ถูกดึงออกไปรันแทบทั้งหมด แต่ **ไม่รับประกันว่าเท่ากันพอดี**: task ที่ยังค้างอยู่ใน `SHARED_DSQ` ตอน detach จะถูกเคอร์เนลคืนให้ fair class โดยไม่ผ่าน `w25_dispatch` จึงอาจเห็น enqueue มากกว่า dispatch ไม่กี่ตัว (ในหัวข้อ 4.2 ต่างกัน 1 ตัว ส่วนรอบก่อนหน้าที่รันขณะเครื่องมีโหลดสูงต่างกันถึง 8 ตัว: 4,955 กับ 4,947) แต่ **ต่อ CPU ไม่เท่ากัน** เพราะ task ถูก enqueue บน CPU หนึ่งแล้วไปถูก dispatch บนอีก CPU ได้ (คิวเดียวทั้งระบบ = global FIFO); ตัวเลขรายวินาทีที่ dispatch มากกว่า enqueue เล็กน้อยเกิดจากการอ่านตัวนับคนละจังหวะ
+- **`local` (direct dispatch)** คือการตื่นที่ `select_cpu` เจอ CPU ว่างจึงข้าม `ops.enqueue` — ในหัวข้อ 4.6 ที่มี workload แค่ 4 โปรเซสบน 8 CPU แทบทุกการตื่นเป็น direct dispatch (`local=+684` เทียบ `enqueue=+2`) ส่วน 16 โปรเซสในหัวข้อ 4.2 ทำให้ต้องเข้าคิวบ่อยขึ้น
 - **`running` มากกว่า `local + enqueue` หลายเท่า:** `ops.running` ถูกเรียกทุกครั้งที่ task ได้ขึ้น CPU ไม่ใช่เฉพาะหลังผ่าน enqueue/dispatch สาเหตุที่น่าจะเป็นคือกรณีที่เคอร์เนลวาง task กลับลง local DSQ เองโดยไม่เรียก `ops.enqueue` เช่น task ถูก task ของ class ที่สูงกว่า (fair) แย่ง CPU ชั่วคราวแล้วได้กลับมารันต่อด้วย slice ที่เหลือ หรือเป็น task สุดท้ายบน CPU ที่ได้ slice ใหม่โดยไม่ต้องเข้าคิว (ไม่ได้ตั้ง `SCX_OPS_ENQ_LAST`) — ลองพิสูจน์เองในแบบฝึกหัดระดับพื้นฐานข้อ 2
-- **vtime เคารพ nice:** บน CPU เดียวกัน FIFO แบ่งเวลาเท่ากันทั้ง 4 ตัว (~1.5 s) ไม่สนใจ nice ส่วน vtime ให้ nice 0 ได้ ~2.64–2.74 s และ nice 10 ได้ ~0.32 s อัตราส่วนประมาณ 8.2–8.6 : 1 ใกล้แต่ไม่เท่ากับอัตราส่วน weight 100 : 11 (≈ 9 : 1) ส่วนหนึ่งเพราะ dispatch เกิดก่อนที่ `prev` จะกลับเข้าคิว (ดูข้อจำกัดข้อ 3) และ CPU 3 ยังมี task ของ fair class มาแทรกเป็นระยะ อัตราส่วนนี้ขึ้นกับโหลดของเครื่อง: บนเครื่องว่าง (ภาพหน้าจอ demo-nice) ได้ ~8.1 : 1 แต่เมื่อมีงานอื่นรันพร้อมกันบน CPU เดียวกัน (fair class แทรกมากขึ้น) เราวัดได้เพียง ~3.5 : 1 ทิศทางยังเหมือนเดิม คือ vtime ให้ nice 0 ได้ CPU มากกว่า nice 10 ชัดเจน ส่วน FIFO เท่ากันทั้ง 4 ตัว
-- **Watchdog:** ตั้ง `timeout_ms=2000` แล้วถูก eject หลัง task ค้าง 2.028 s (ใน test ที่ตั้ง 1000 ms ถูก eject ที่ 1.505 s) — watchdog ตรวจเป็นรอบ เวลาจริงจึงเกิน `timeout_ms` ได้ ไม่ใช่การตัดตรงเป๊ะ; task ที่ค้างชื่อ `exe` เพราะยังอยู่ระหว่าง `ext-run` (`/proc/self/exe`) ก่อน `execve` เป็น `sh`
+- **vtime เคารพ nice:** บน CPU เดียวกัน FIFO แบ่งเวลาเท่ากันทั้ง 4 ตัว (~1.5 s) ไม่สนใจ nice ส่วน vtime ให้ nice 0 ได้ ~2.67–2.69 s และ nice 10 ได้ ~0.32–0.34 s อัตราส่วนรวมประมาณ 8.1 : 1 ใกล้แต่ไม่เท่ากับอัตราส่วน weight 100 : 11 (≈ 9 : 1) ส่วนหนึ่งเพราะ dispatch เกิดก่อนที่ `prev` จะกลับเข้าคิว (ดูข้อจำกัดข้อ 3) และ CPU 3 ยังมี task ของ fair class มาแทรกเป็นระยะ อัตราส่วนนี้ขึ้นกับโหลดของเครื่อง: ภาพในหัวข้อ 4.4 ถ่ายบนเครื่องว่าง แต่ในรอบก่อนหน้าที่มีงานอื่นรันพร้อมกันบน CPU เดียวกัน (fair class แทรกมากขึ้น) เราวัดได้เพียง ~3.5 : 1 ทิศทางยังเหมือนเดิม คือ vtime ให้ nice 0 ได้ CPU มากกว่า nice 10 ชัดเจน ส่วน FIFO เท่ากันทั้ง 4 ตัว
+- **Watchdog:** ตั้ง `timeout_ms=2000` แล้วถูก eject หลัง task ค้าง 2.005 s (ใน test ที่ตั้ง 1000 ms ถูก eject ที่ 1.481 s) — watchdog ตรวจเป็นรอบ เวลาจริงจึงเกิน `timeout_ms` ได้ ไม่ใช่การตัดตรงเป๊ะ; ชื่อ task ที่ค้างในภาพคือ `sh` แต่บางรอบอาจเห็น `exe` ถ้า task ค้างขณะยังอยู่ระหว่าง `ext-run` (`/proc/self/exe`) ก่อน `execve` เป็น `sh`
 - ใน 4.5 ตัวนับ `running` ยังขยับเล็กน้อยระหว่าง stall: เป็นจังหวะที่ task กำลังรันอยู่ตอนถูกเปลี่ยน policy หรือช่วงที่เคอร์เนลกำลังถอด scheduler — ไม่ใช่งานที่ถูก dispatch จาก `SHARED_DSQ` (`dispatch=0` ตลอด)
-- **หลัง eject workload ไม่ตาย:** test วัดได้ว่า `se.sum_exec_runtime` ของ workload เพิ่มจาก 29.5 ms เป็น 254.2 ms ภายใน 0.5 s หลัง eject = กลับไปรันด้วย fair class
+- **หลัง eject workload ไม่ตาย:** test วัดได้ว่า `se.sum_exec_runtime` ของ workload เพิ่มจาก 35.4 ms เป็น 252.7 ms ภายใน 0.5 s หลัง eject = กลับไปรันด้วย fair class
 
 ---
 

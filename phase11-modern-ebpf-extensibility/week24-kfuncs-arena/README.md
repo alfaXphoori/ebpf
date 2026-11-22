@@ -263,203 +263,63 @@ Part 1 ต้องผ่านปกติ ส่วน Part 2 ต้องล�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 (8 CPUs), clang 21.1.8, Go 1.26, bpftool v7.7.0 (libbpf v1.7), cilium/ebpf v0.22.0 + patch ในหัวข้อ 2.5
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), Intel Core i3-12100 (8 CPUs), clang 21.1.8, Go 1.26, bpftool v7.7.0 (libbpf v1.7), cilium/ebpf v0.22.0 + patch ในหัวข้อ 2.5
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week24.sh`](../../scripts/screenshots/week24.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week24.sh`](../../scripts/screenshots/week24.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (kfunc + verifier + arena, BPF_PROG_TEST_RUN)](screenshots/week24-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test (kfunc + verifier + arena, BPF_PROG_TEST_RUN)*
-
-![Terminal — sudo ./bin/kfunc-arena](screenshots/week24-2-kfunc-arena.png)
-
-*ภาพที่ 2: Terminal — sudo ./bin/kfunc-arena*
-
-![Terminal — verifier log เต็มของ leak_task](screenshots/week24-3-verifier-log.png)
-
-*ภาพที่ 3: Terminal — verifier log เต็มของ leak_task*
-
-![Terminal — ค้นหา kfunc บนเครื่อง (หัวข้อ 1.5)](screenshots/week24-4-kfunc-discovery.png)
-
-*ภาพที่ 4: Terminal — ค้นหา kfunc บนเครื่อง (หัวข้อ 1.5)*
-
-![Terminal — addr_space_cast ใน arena_bpfel.o](screenshots/week24-5-addr-space-cast.png)
-
-*ภาพที่ 5: Terminal — addr_space_cast ใน arena_bpfel.o*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test`
-```text
-=== RUN   TestQueryTaskSelf
-    main_test.go:80: pid 80738: tgid=80738 ppid=80736 comm="week24-kfuncs-a" cpus=8
---- PASS: TestQueryTaskSelf (0.03s)
-=== RUN   TestQueryTaskThreadAffinity
---- PASS: TestQueryTaskThreadAffinity (0.03s)
-=== RUN   TestQueryTaskMissing
---- PASS: TestQueryTaskMissing (0.03s)
-=== RUN   TestBrokenProgramsRejected
-=== RUN   TestBrokenProgramsRejected/leak_task
-=== RUN   TestBrokenProgramsRejected/no_null_check
-=== RUN   TestBrokenProgramsRejected/use_after_release
-=== RUN   TestBrokenProgramsRejected/wrong_prog_type
---- PASS: TestBrokenProgramsRejected (0.09s)
-    --- PASS: TestBrokenProgramsRejected/leak_task (0.03s)
-    --- PASS: TestBrokenProgramsRejected/no_null_check (0.03s)
-    --- PASS: TestBrokenProgramsRejected/use_after_release (0.03s)
-    --- PASS: TestBrokenProgramsRejected/wrong_prog_type (0.02s)
-=== RUN   TestArenaUpsertAndWalk
---- PASS: TestArenaUpsertAndWalk (0.02s)
-=== RUN   TestArenaPointersAreUserAddresses
-    main_test.go:222: 756b5c018000-756b5c028000 rw-s 00000000 00:11 1062                       anon_inode:bpf-map
---- PASS: TestArenaPointersAreUserAddresses (0.02s)
-=== RUN   TestArenaPageFaults
---- PASS: TestArenaPageFaults (0.02s)
-=== RUN   TestArenaUserFaultConsumesPage
-=== RUN   TestArenaUserFaultConsumesPage/no_user_fault
-=== RUN   TestArenaUserFaultConsumesPage/go_touched_page_1
---- PASS: TestArenaUserFaultConsumesPage (0.04s)
-    --- PASS: TestArenaUserFaultConsumesPage/no_user_fault (0.02s)
-    --- PASS: TestArenaUserFaultConsumesPage/go_touched_page_1 (0.02s)
-=== RUN   TestArenaWalkLimit
---- PASS: TestArenaWalkLimit (0.02s)
-=== RUN   TestArenaRequiresMmapBeforeLoad
---- PASS: TestArenaRequiresMmapBeforeLoad (0.00s)
-=== RUN   TestArenaCreateLimits
-=== RUN   TestArenaCreateLimits/4GiB_(1<<20_pages)_ok
-=== RUN   TestArenaCreateLimits/4GiB_+_1_page
-    main_test.go:349: creating map: map create: argument list too long
-=== RUN   TestArenaCreateLimits/without_BPF_F_MMAPABLE
-    main_test.go:349: creating map: map create: invalid argument
---- PASS: TestArenaCreateLimits (0.00s)
-    --- PASS: TestArenaCreateLimits/4GiB_(1<<20_pages)_ok (0.00s)
-    --- PASS: TestArenaCreateLimits/4GiB_+_1_page (0.00s)
-    --- PASS: TestArenaCreateLimits/without_BPF_F_MMAPABLE (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase11-modern-ebpf-extensibility/week24-kfuncs-arena	0.301s
-```
+
+![Terminal — make test (kfunc + verifier + arena, BPF_PROG_TEST_RUN)](screenshots/week24-1-make-test.png)
+
+*ภาพ: `make test` — ทดสอบ kfunc, verifier และ arena ด้วย `BPF_PROG_TEST_RUN` ผ่านทั้งหมด*
+
 (comm ของ test binary ถูกตัดเหลือ 15 ตัวอักษร `week24-kfuncs-a` เพราะ `TASK_COMM_LEN` = 16 รวม NUL)
 
 ### 4.2 `sudo ./bin/kfunc-arena`
-```text
-======================================================================
- Week 24 Part 1: kfuncs (bpf_task_from_pid / bpf_task_release / bpf_cpumask_*)
-======================================================================
-PID      FOUND  TGID     PPID     CPUS   COMM            
-80458    yes    80458    80453    8      kfunc-arena     
-1        yes    1        0        8      systemd         
-1073741823 no     (bpf_task_from_pid คืน NULL)
-bpf_ksym_exists(bpf_task_from_vpid)       = 1
-bpf_ksym_exists(bpf_week24_no_such_kfunc) = 0
 
---- Verifier vs. broken kfunc usage (task_kfunc_broken.c) ---
-[leak_task] rejected:
-    Unreleased reference id=2 alloc_insn=2
-    BPF_EXIT instruction in main prog would lead to reference leak
-[no_null_check] rejected:
-    3: (61) r1 = *(u32 *)(r0 +2804)
-    R0 invalid mem access 'trusted_ptr_or_null_'
-[use_after_release] rejected:
-    7: (61) r1 = *(u32 *)(r7 +2804)
-    R7 invalid mem access 'scalar'
-[wrong_prog_type] rejected:
-    1: (85) call bpf_task_from_pid#99570
-    calling kernel function bpf_task_from_pid is not allowed
+![Terminal — sudo ./bin/kfunc-arena](screenshots/week24-2-kfunc-arena.png)
 
-======================================================================
- Week 24 Part 2: BPF Arena (BPF_MAP_TYPE_ARENA + mmap ใน Go)
-======================================================================
-arena: max 16 pages, mmap 65536 bytes (ReadOnly=false)
-header @ offset 0: base(self)=0x7a23c2b3e000 nr_nodes=8 pages=1 bytes_used=304
-/proc/self/maps : 7a23c2b3e000-7a23c2b4e000 rw-s 00000000 00:11 1062                       anon_inode:bpf-map
-1000 upserts with 8 keys -> Go walked 8 nodes by following arena pointers:
-  KEY  COUNT   SUM       NODE PTR         OFFSET  CHECK
-  0    125     62000     0x7a23c2b3e030   0x30    ok
-  1    125     62125     0x7a23c2b3e050   0x50    ok
-  2    125     62250     0x7a23c2b3e070   0x70    ok
-  3    125     62375     0x7a23c2b3e090   0x90    ok
-  4    125     62500     0x7a23c2b3e0b0   0xb0    ok
-  5    125     62625     0x7a23c2b3e0d0   0xd0    ok
-  6    125     62750     0x7a23c2b3e0f0   0xf0    ok
-  7    125     62875     0x7a23c2b3e110   0x110   ok
-
---- Page faults: BPF access ไปยังหน้าที่ยังไม่ได้จอง ---
-BPF  peek off=0xff8  (allocated page)   before=0x0 after=0xc0ffee | Go reads 0xc0ffee
-BPF  peek off=0x8000 (unallocated page) before=0x0 after=0x0 (store dropped)
-Go   read off=0x8000 -> 0x0 (user-space fault ทำให้เคอร์เนลจองหน้านี้ให้)
-BPF  peek off=0x8000 again              before=0x0 after=0xc0ffee (หน้าถูกจองแล้ว)
-```
+*ภาพ: `sudo ./bin/kfunc-arena` — Part 1 kfuncs + verifier, Part 2 BPF Arena*
 
 **การตีความ:**
-- `NODE PTR` (เช่น `0x7a23c2b3e030`) เป็นค่าที่ **โปรแกรม BPF เขียน** ลง `next`/`head` แต่เป็น address ในช่วง mapping ของ process Go เอง (`7a23c2b3e000-7a23c2b4e000` = 64 KiB = 16 หน้า) Go จึงลบฐานแล้วอ่านได้เลย
+- `NODE PTR` (เช่น `0x790be3f5b030`) เป็นค่าที่ **โปรแกรม BPF เขียน** ลง `next`/`head` แต่เป็น address ในช่วง mapping ของ process Go เอง (`790be3f5b000-790be3f6b000` = 64 KiB = 16 หน้า) Go จึงลบฐานแล้วอ่านได้เลย
 - header 48 ไบต์ (`0x30`) + 8 node × 32 ไบต์ = `bytes_used=304` ใช้หน้าเดียว node แรก (key 0) อยู่ offset `0x30` ต่อจาก header พอดี
 - ทุก node ผ่านการตรวจกับค่าที่ Go คำนวณเอง (count = 125, sum = ผลรวมของ i ที่ `i % 8 == key`)
 - PPID 0 ของ systemd คือพฤติกรรมปกติ (`real_parent` ของ init ชี้ไปที่ idle task ซึ่งมี tgid 0)
 - ตำแหน่ง address และ PID เปลี่ยนทุกครั้งที่รัน (ASLR)
 
-รันเพิ่มด้วย `-n 5000 -keys 300` สองรอบ (ตัดเฉพาะบรรทัดสรุป): ได้ `nr_nodes=300 pages=3 bytes_used=9648` และ Go เดินครบ 300 node ทั้งสองรอบ ไม่มี `MISMATCH`
+จากการรันก่อนหน้าบน 7.0.0-38 (ไม่มีในภาพ): รันเพิ่มด้วย `-n 5000 -keys 300` สองรอบ (ตัดเฉพาะบรรทัดสรุป): ได้ `nr_nodes=300 pages=3 bytes_used=9648` และ Go เดินครบ 300 node ทั้งสองรอบ ไม่มี `MISMATCH`
 
 ### 4.3 Verifier log เต็มของ `leak_task`
-```text
-load program: invalid argument:
-	0: R1=ctx() R10=fp0
-	; int leak_task(struct task_query *q) @ task_kfunc_broken.c:19
-	0: (bf) r6 = r1                       ; R1=ctx() R6=ctx()
-	; struct task_struct *t = bpf_task_from_pid(q->pid); @ task_kfunc_broken.c:21
-	1: (61) r1 = *(u32 *)(r6 +0)          ; R1=scalar(smin=0,smax=umax=0xffffffff,var_off=(0x0; 0xffffffff)) R6=ctx()
-	2: (85) call bpf_task_from_pid#99570          ; R0=trusted_ptr_or_null_task_struct(id=2,ref_obj_id=2) refs=2
-	; if (!t) @ task_kfunc_broken.c:23
-	3: (15) if r0 == 0x0 goto pc+2        ; R0=trusted_ptr_task_struct(ref_obj_id=2) refs=2
-	; q->tgid = t->tgid; @ task_kfunc_broken.c:25
-	4: (61) r1 = *(u32 *)(r0 +2804)       ; R0=trusted_ptr_task_struct(ref_obj_id=2) R1=scalar(smin=0,smax=umax=0xffffffff,var_off=(0x0; 0xffffffff)) refs=2
-	5: (63) *(u32 *)(r6 +4) = r1          ; R1=scalar(smin=0,smax=umax=0xffffffff,var_off=(0x0; 0xffffffff)) R6=ctx() refs=2
-	; } @ task_kfunc_broken.c:27
-	6: (b7) r0 = 0                        ; R0=0 refs=2
-	7: (95) exit
-	Unreleased reference id=2 alloc_insn=2
-	BPF_EXIT instruction in main prog would lead to reference leak
-	processed 8 insns (limit 1000000) max_states_per_insn 0 total_states 0 peak_states 0 mark_read 0
-```
-อ่าน log ได้ดังนี้: หลัง `call bpf_task_from_pid#99570` (99570 คือ BTF ID เดียวกับในหัวข้อ 4.4 บน 7.0.0-38; BTF ID เปลี่ยนทุกครั้งที่ build kernel ใหม่ เช่นบน 7.0.0-43 เป็น 99745 ตามภาพหน้าจอ — นี่คือเหตุผลที่ kfunc ต้องอ้างผ่าน BTF ไม่ใช่หมายเลขคงที่) R0 มีชนิด `trusted_ptr_or_null_task_struct` และสถานะ `refs=2`; หลัง `if r0 == 0` ในเส้นทางที่ไม่ใช่ NULL ชนิดกลายเป็น `trusted_ptr_task_struct`; ที่ `exit` ยังมี `refs=2` ค้าง จึงถูกปฏิเสธ (เส้นทาง NULL ไม่มีปัญหาเพราะ reference ถูกยกเลิกไปแล้ว)
+
+![Terminal — verifier log เต็มของ leak_task](screenshots/week24-3-verifier-log.png)
+
+*ภาพ: `go test` แสดงแค่ PASS ส่วน `bpftool prog load broken_bpfel.o` พิมพ์ verifier log เต็มของ `leak_task`*
+
+อ่าน log ได้ดังนี้: หลัง `call bpf_task_from_pid#99745` (99745 คือ BTF ID เดียวกับในหัวข้อ 4.4 บน 7.0.0-43; BTF ID เปลี่ยนทุกครั้งที่ build kernel ใหม่ เช่นบน 7.0.0-38 เคยเป็น 99570 — นี่คือเหตุผลที่ kfunc ต้องอ้างผ่าน BTF ไม่ใช่หมายเลขคงที่) R0 มีชนิด `trusted_ptr_or_null_task_struct` และสถานะ `refs=2`; หลัง `if r0 == 0` ในเส้นทางที่ไม่ใช่ NULL ชนิดกลายเป็น `trusted_ptr_task_struct`; ที่ `exit` ยังมี `refs=2` ค้าง จึงถูกปฏิเสธ (เส้นทาง NULL ไม่มีปัญหาเพราะ reference ถูกยกเลิกไปแล้ว)
 
 ### 4.4 ค้นหา kfunc บนเครื่องทดสอบ
-```text
-$ bpftool btf dump file /sys/kernel/btf/vmlinux | grep -c "DECL_TAG 'bpf_kfunc'"
-272
-$ bpftool btf dump file /sys/kernel/btf/vmlinux | grep -E "FUNC 'bpf_task_from_pid'|type_id=99570 "
-[98316] DECL_TAG 'bpf_kfunc' type_id=99570 component_idx=-1
-[99570] FUNC 'bpf_task_from_pid' type_id=59304 linkage=static
-$ bpftool btf dump file /sys/kernel/btf/vmlinux format c | grep -E '^extern .*\bbpf_(task_from_pid|task_release|task_acquire|cpumask_create|cpumask_copy|arena_alloc_pages)\('
-extern void __attribute__((address_space(1))) *bpf_arena_alloc_pages(void *p__map, void __attribute__((address_space(1))) *addr__ign, u32 page_cnt, int node_id, u64 flags) __weak __ksym;
-extern void bpf_cpumask_copy(struct bpf_cpumask *dst, const struct cpumask *src) __weak __ksym;
-extern struct bpf_cpumask *bpf_cpumask_create(void) __weak __ksym;
-extern struct task_struct *bpf_task_acquire(struct task_struct *p) __weak __ksym;
-extern struct task_struct *bpf_task_from_pid(s32 pid) __weak __ksym;
-extern void bpf_task_release(struct task_struct *p) __weak __ksym;
-$ for m in /sys/kernel/btf/*; do ...; done        # kfunc ที่มาจาก module
-nf_conntrack 10
-nf_nat 1
-vmlinux 272
-```
+
+![Terminal — ค้นหา kfunc บนเครื่อง (หัวข้อ 1.5)](screenshots/week24-4-kfunc-discovery.png)
+
+*ภาพ: ค้นหา kfunc จาก BTF ของ vmlinux และ module*
+
 (ใน 272 ตัวนี้มี `scx_*` ของ sched_ext 51 ตัว — ใช้ใน Week 25) สังเกตว่าชื่อพารามิเตอร์มี suffix อย่าง `p__map`, `addr__ign`: เป็นข้อตกลงของ kfunc ที่บอก verifier ว่าอาร์กิวเมนต์นั้นเป็น map pointer หรือให้ข้ามการตรวจชนิด
 
-### 4.5 `addr_space_cast` ใน object ที่คอมไพล์แล้ว (`llvm-objdump -S --no-show-raw-insn arena_bpfel.o`, ตัดมาบางส่วน)
-```text
-      28:	if r0 == 0x0 goto +0x64 <arena_upsert+0x408>
-      29:	r1 = addr_space_cast(r0, 0x0, 0x1)
-; 		if (hdr)
-      30:	r2 = 0x0 ll
-      32:	r2 = *(u64 *)(r2 + 0x0)
-      33:	if r2 == 0x0 goto +0x7 <arena_upsert+0x148>
-      34:	r2 = addr_space_cast(r2, 0x0, 0x1)
-; 			hdr->pages++;
-      35:	r3 = *(u64 *)(r2 + 0x20)
-      36:	r3 += 0x1
-```
+### 4.5 `addr_space_cast` ใน object ที่คอมไพล์แล้ว (`llvm-objdump ... arena_bpfel.o`, ตัดมาบางส่วน)
+
+![Terminal — addr_space_cast ใน arena_bpfel.o](screenshots/week24-5-addr-space-cast.png)
+
+*ภาพ: `addr_space_cast` ที่ clang แทรกใน `arena_bpfel.o` (ตัด 30 บรรทัดแรก) และจำนวนทั้งไฟล์*
+
 ทั้งไฟล์มี `addr_space_cast` 12 คำสั่ง — ทุกครั้งก่อน dereference pointer ของ arena ตามหัวข้อ 1.7
 
 ---

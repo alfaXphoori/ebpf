@@ -311,66 +311,36 @@ eBPF session concluded safely. All kernel maps freed.
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), BCC / python3-bpfcc 0.35.0, linux-headers-7.0.0-38-generic
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), BCC / python3-bpfcc 0.35.0, linux-headers-7.0.0-43-generic
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week04.sh`](../../scripts/screenshots/week04.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week04.sh`](../../scripts/screenshots/week04.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
+
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 ![Terminal — ตรวจความพร้อมของ BCC](screenshots/week04-1-prereq.png)
 
 *ภาพที่ 1: Terminal — ตรวจความพร้อมของ BCC*
 
-![Terminal 2 — สร้าง Outbound TCP connections](screenshots/week04-2-traffic.png)
-
-*ภาพที่ 2: Terminal 2 — สร้าง Outbound TCP connections*
-
-![Terminal 1 — sudo python3 tcp_v4_latency.py](screenshots/week04-3-tracker.png)
-
-*ภาพที่ 3: Terminal 1 — sudo python3 tcp_v4_latency.py*
-
 <!-- screenshots:end -->
 
 ### 4.1 ผลลัพธ์การรัน `sudo python3 tcp_v4_latency.py` และสร้าง Outbound TCP Connections
-คำสั่งทดสอบใน Terminal 2: `curl` ไปยัง `http://1.1.1.1`, `https://example.com`, `https://www.google.com`, `https://github.com` และ Python เชื่อมต่อ `127.0.0.1:22` พร้อมพิมพ์ `getsockname()` ออกมาเทียบ (`ACTUAL local ('127.0.0.1', 55002)` — ตรงกับ SRC port ที่ eBPF รายงาน)
-```text
-========================================================================
-  eBPF Zero to Hero - Week 04: TCP IPv4 Connect Latency Tracker (BCC)   
-========================================================================
- Compiling embedded C eBPF code via LLVM/Clang and attaching kprobes...
- JIT compilation & Kernel attach completed in 694.2 ms.
+คำสั่งทดสอบใน Terminal 2: `curl` ไปยัง `http://1.1.1.1`, `https://example.com`, `https://www.google.com`, `https://github.com` และ Python เชื่อมต่อ `127.0.0.1:22` พร้อมพิมพ์ `getsockname()` ออกมาเทียบ (`ACTUAL local ('127.0.0.1', 44184)` — ตรงกับ SRC port `127.0.0.1:44184` ที่ eBPF รายงานในบรรทัด `python3`)
 
- Tracing active IPv4 TCP outbound connection latency (SYN initiation).
- Hit Ctrl+C to terminate and view microsecond latency histogram.
+![Terminal 2 — สร้าง Outbound TCP connections](screenshots/week04-2-traffic.png)
 
-TIME      PID     COMM             SRC ADDR:PORT          DST ADDR:PORT          LATENCY (us)
---------------------------------------------------------------------------------------------
-22:25:10  140391  curl             192.168.31.249:36346   1.1.1.1:80             42          
-22:25:10  140396  curl             192.168.31.249:39440   104.20.23.154:443      26          
-22:25:10  140410  curl             192.168.31.249:48330   142.251.151.119:443    20          
-22:25:10  140440  curl             192.168.31.249:57934   20.205.243.166:443     23          
-22:25:11  139404  python3          127.0.0.1:55002        127.0.0.1:22           47          
+*ภาพ: Terminal 2 — สร้าง Outbound TCP connections ด้วย `curl` และ Python `socket.create_connection()`*
 
+![Terminal 1 — sudo python3 tcp_v4_latency.py](screenshots/week04-3-tracker.png)
 
-[!] Detaching eBPF probes and generating latency distribution...
+*ภาพ: Terminal 1 — sudo python3 tcp_v4_latency.py (รายการ connect และ Histogram หลังกด Ctrl+C)*
 
-========================================================================
-           TCP Outbound Connection Latency Histogram (usecs)           
-========================================================================
-     Latency (us)        : count     distribution
-         0 -> 1          : 0        |                                        |
-         2 -> 3          : 0        |                                        |
-         4 -> 7          : 0        |                                        |
-         8 -> 15         : 0        |                                        |
-        16 -> 31         : 3        |****************************************|
-        32 -> 63         : 2        |**************************              |
-========================================================================
-eBPF session concluded safely. All kernel maps freed.
-```
-- วัดทรัพยากรด้วย `sudo /usr/bin/time -f "MAXRSS_KB=%M" timeout -s INT 11 python3 tcp_v4_latency.py` ได้ `MAXRSS_KB=187508` (~183 MiB) ส่วนใหญ่มาจาก LLVM/Clang ที่ฝังอยู่ใน BCC
-- `PID` ของบรรทัด `python3` น้อยกว่า `curl` เพราะ bash ใช้ exec แทนการ fork สำหรับคำสั่งสุดท้ายใน subshell — โปรเซสจึงใช้ PID ของ subshell เดิม
+- บรรทัด `node` และ `Chrome_ChildIOT` ในภาพเป็นโปรเซสอื่นบนเครื่องที่เปิด TCP connection ช่วงเดียวกัน เพราะ kprobe บน `tcp_v4_connect` ดักทั้งระบบ ไม่ได้กรองเฉพาะ Terminal 2
+- วัดทรัพยากรด้วย `sudo /usr/bin/time -f "MAXRSS_KB=%M" timeout -s INT 11 python3 tcp_v4_latency.py` ได้ `MAXRSS_KB=187508` (~183 MiB, วัดในรอบก่อนหน้าบน `Linux 7.0.0-38`) ส่วนใหญ่มาจาก LLVM/Clang ที่ฝังอยู่ใน BCC
+- `PID` ที่รายงานคือโปรเซสที่เรียก `connect()` จริง — ถ้าคำสั่งเป็นคำสั่งสุดท้ายใน subshell, bash จะ exec แทนการ fork โปรเซสจึงใช้ PID ของ subshell เดิม (ในรอบ 7.0.0-38 จึงเคยเห็น PID ของ `python3` น้อยกว่า `curl` ส่วนในภาพนี้ PID เรียงตามลำดับการรัน)
 
 ---
 

@@ -261,166 +261,64 @@ sudo rmdir /sys/fs/cgroup/w20-sockops-lab  # ลบได้เมื่อไ�
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 (8 threads), clang 21, Go 1.26, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), Intel Core i3-12100 (8 threads), clang 21, Go 1.26, cilium/ebpf v0.16.0
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week20.sh`](../../scripts/screenshots/week20.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week20.sh`](../../scripts/screenshots/week20.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (load/attach + end-to-end redirect)](screenshots/week20-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test (load/attach + end-to-end redirect)*
-
-![Terminal 2 — nc ใน cgroup + bpftool ขณะ connection เปิดอยู่](screenshots/week20-2-nc-bpftool.png)
-
-*ภาพที่ 2: Terminal 2 — nc ใน cgroup + bpftool ขณะ connection เปิดอยู่*
-
-![Terminal 1 — sudo ./bin/sockops-accelerator (ระหว่างขั้นตอนที่ 3-5)](screenshots/week20-3-agent-dashboard.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ./bin/sockops-accelerator (ระหว่างขั้นตอนที่ 3-5)*
-
-![Terminal 2 — tcpdump -i lo: baseline vs accelerated](screenshots/week20-4-tcpdump-lo.png)
-
-*ภาพที่ 4: Terminal 2 — tcpdump -i lo: baseline vs accelerated*
-
-![Terminal 2 — tcpbench/iperf3 ใน cgroup w20-sockops-lab: baseline vs accelerated](screenshots/week20-5-benchmark.png)
-
-*ภาพที่ 5: Terminal 2 — tcpbench/iperf3 ใน cgroup w20-sockops-lab: baseline vs accelerated*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test`
-```text
-=== RUN   TestLoadPrograms
---- PASS: TestLoadPrograms (0.02s)
-=== RUN   TestRedirectEndToEnd
-    main_test.go:171: socks_added=2 redirect_msgs=1 redirect_bytes=69632 fallback_msgs=0
---- PASS: TestRedirectEndToEnd (0.03s)
-PASS
-ok  	ebpf-noob-to-hero/phase09-high-throughput-socket-acceleration/week20-tcp-sockops-bypass	0.047s
-```
+
+![Terminal — make test (load/attach + end-to-end redirect)](screenshots/week20-1-make-test.png)
+
+*ภาพ: `make test` — โหลด/แนบโปรแกรม และทดสอบ Redirect แบบ End-to-End (`socks_added=2 redirect_bytes=69632 fallback_msgs=0`)*
 
 ### 4.2 `nc` + `bpftool` ขณะ Connection เปิดอยู่
-```text
---- bpftool map dump name sock_hash (connection open) ---
-key: 7f 00 00 01 7f 00 00 01  a0 46 00 00 aa 9e 00 00  value: 5b 60 00 00 00 00 00 00
-key: 7f 00 00 01 7f 00 00 01  aa 9e 00 00 a0 46 00 00  value: 5c 60 00 00 00 00 00 00
-Found 2 elements
---- bpftool map dump name bypass_stats ---
-[{
-        "key": 0,
-        "value": 1
-    },{
-        "key": 1,
-        "value": 41
-    },{
-        "key": 2,
-        "value": 0
-    },{
-        "key": 3,
-        "value": 0
-    },{
-        "key": 4,
-        "value": 2
-    }
-]
---- server received: ---
-Accelerated TCP Message via BPF SOCKHASH
-```
-สังเกตคีย์: `a0 46 00 00` คือ `0x000046a0` = 18080 (พอร์ต Server ใน Host Order แบบ Little-Endian) และ `aa 9e 00 00` = 40618 (พอร์ตชั่วคราวของ Client) — สองคีย์เป็นภาพสะท้อนของกันและกัน (หัวข้อ 1.5) ส่วน Value คือ Socket Cookie
+
+![Terminal 2 — nc ใน cgroup + bpftool ขณะ connection เปิดอยู่](screenshots/week20-2-nc-bpftool.png)
+
+*ภาพ: Terminal 2 — `nc` ใน cgroup + `bpftool` ขณะ Connection เปิดอยู่*
+
+สังเกตคีย์: `a0 46 00 00` คือ `0x000046a0` = 18080 (พอร์ต Server ใน Host Order แบบ Little-Endian) และ `1e bb 00 00` = `0xbb1e` = 47902 (พอร์ตชั่วคราวของ Client) — สองคีย์เป็นภาพสะท้อนของกันและกัน (หัวข้อ 1.5) ส่วน Value คือ Socket Cookie
 
 ### 4.3 Dashboard ของ Agent (ระหว่างขั้นตอนที่ 3-5)
-```text
-======================================================================
- eBPF TCP Sockops & Direct Socket-to-Socket Bypass (Cilium Mesh FastPath)
-======================================================================
-2026/10/28 22:01:54 [INFO] Attached BPF_PROG_TYPE_SOCK_OPS to cgroup /sys/fs/cgroup/w20-verify
-2026/10/28 22:01:54 [INFO] Attached BPF_PROG_TYPE_SK_MSG verdict to BPF_MAP_TYPE_SOCKHASH
-2026/10/28 22:01:54 [INFO] Socket bypass active for NEW IPv4 TCP connections inside /sys/fs/cgroup/w20-verify
-2026/10/28 22:01:54 [INFO] Move a shell into it: echo $$ | sudo tee /sys/fs/cgroup/w20-verify/cgroup.procs
 
-[22:01:56] Sockets: 2    (live 2   ) | Redirected: 1        msgs 41           B | Fallback: 0      msgs 0          B
-[22:01:58] Sockets: 2    (live 0   ) | Redirected: 1        msgs 41           B | Fallback: 0      msgs 0          B
-[22:02:00] Sockets: 14   (live 2   ) | Redirected: 155989   msgs 4985069609   B | Fallback: 0      msgs 0          B
-[22:02:02] Sockets: 28   (live 4   ) | Redirected: 422255   msgs 18137174262  B | Fallback: 0      msgs 0          B
-[22:02:04] Sockets: 28   (live 4   ) | Redirected: 637890   msgs 46400884982  B | Fallback: 0      msgs 0          B
-[22:02:06] Sockets: 28   (live 4   ) | Redirected: 850553   msgs 74275049718  B | Fallback: 0      msgs 0          B
-[22:02:08] Sockets: 28   (live 0   ) | Redirected: 894073   msgs 79978255244  B | Fallback: 0      msgs 0          B
+![Terminal 1 — sudo ./bin/sockops-accelerator (ระหว่างขั้นตอนที่ 3-5)](screenshots/week20-3-agent-dashboard.png)
 
-[INFO] Detaching sockops and sk_msg hooks...
-[22:02:09] Sockets: 28   (live 0   ) | Redirected: 894073   msgs 79978255244  B | Fallback: 0      msgs 0          B
-```
-(`live 4` ระหว่าง iperf3 = Control Connection + Data Connection อย่างละ 2 Socket)
+*ภาพ: Terminal 1 — Dashboard ของ `sockops-accelerator` ระหว่างขั้นตอนที่ 3-5*
+
+(`live 2` ระหว่าง `nc` = Socket ฝั่ง Client + Server, `live 4` ระหว่าง iperf3 = Control Connection + Data Connection อย่างละ 2 Socket)
 
 ### 4.4 พิสูจน์ด้วย `tcpdump -i lo`: Payload ไม่ผ่าน Loopback อีกต่อไป
 ส่ง `hello-sockmap` (14 ไบต์) ด้วย `nc` ใน cgroup เดียวกัน แล้วดักที่ `lo` (`tcpdump -i lo -nn -q "tcp port 18081"`):
-```text
-== baseline ==
-IP 127.0.0.1.51392 > 127.0.0.1.18081: tcp 0
-IP 127.0.0.1.18081 > 127.0.0.1.51392: tcp 0
-IP 127.0.0.1.51392 > 127.0.0.1.18081: tcp 0
-IP 127.0.0.1.51392 > 127.0.0.1.18081: tcp 14
-IP 127.0.0.1.18081 > 127.0.0.1.51392: tcp 0
-IP 127.0.0.1.51392 > 127.0.0.1.18081: tcp 0
-IP 127.0.0.1.18081 > 127.0.0.1.51392: tcp 0
-IP 127.0.0.1.51392 > 127.0.0.1.18081: tcp 0
 
-== accelerated ==
-IP 127.0.0.1.42998 > 127.0.0.1.18081: tcp 0
-IP 127.0.0.1.18081 > 127.0.0.1.42998: tcp 0
-IP 127.0.0.1.42998 > 127.0.0.1.18081: tcp 0
-IP 127.0.0.1.42998 > 127.0.0.1.18081: tcp 0
-IP 127.0.0.1.18081 > 127.0.0.1.42998: tcp 0
-IP 127.0.0.1.42998 > 127.0.0.1.18081: tcp 0
-```
+![Terminal 2 — tcpdump -i lo: baseline vs accelerated](screenshots/week20-4-tcpdump-lo.png)
+
+*ภาพ: Terminal 2 — `tcpdump -i lo` ก่อนและหลังเปิด Agent*
+
 เมื่อเปิด Agent Segment `tcp 14` (Payload) และ ACK ของมันหายไป เหลือเพียง Handshake และ FIN — **เครื่องมือที่ดักบน `lo` (tcpdump, Netfilter) จะมองไม่เห็นข้อมูลที่ถูก Redirect**
 
 ### 4.5 ผลการวัดประสิทธิภาพ (Baseline vs Accelerated)
 
-ทุกค่ารันใน cgroup เดียวกัน (`w20-verify`) บนเครื่องเดียวกัน ต่างกันแค่มี/ไม่มี Agent:
+ทุกค่ารันใน cgroup เดียวกัน (`w20-sockops-lab`) บนเครื่องเดียวกัน ต่างกันแค่มี/ไม่มี Agent:
 
-```text
-=== tcpbench integrity (accelerated) ===
-[throughput] sent=268435456 recv=268435456 chunk=65536 time=153ms rate=14.07 Gbit/s integrity(sha256)=true
+![Terminal 2 — tcpbench/iperf3 ใน cgroup w20-sockops-lab: baseline vs accelerated](screenshots/week20-5-benchmark.png)
 
-=== tcpbench perf (accelerated) ===
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=280ms rate=61.34 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=3.3us p50=3.3us p99=4.9us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=271ms rate=63.40 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=4.0us p50=3.3us p99=5.7us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=253ms rate=67.78 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=3.7us p50=3.3us p99=14.5us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=235ms rate=73.13 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=3.4us p50=3.3us p99=5.4us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=259ms rate=66.34 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=3.4us p50=3.3us p99=5.3us
+*ภาพ: Terminal 2 — `tcpbench`/`iperf3` ใน cgroup `w20-sockops-lab`: baseline vs accelerated*
 
-=== baseline (same cgroup, NO eBPF attached) ===
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=377ms rate=45.61 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=7.0us p50=6.7us p99=17.3us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=317ms rate=54.22 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=6.9us p50=6.7us p99=10.1us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=343ms rate=50.10 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=6.8us p50=6.7us p99=9.4us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=276ms rate=62.25 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=6.8us p50=6.7us p99=10.1us
-[throughput] sent=2147483648 recv=2147483648 chunk=65536 time=334ms rate=51.48 Gbit/s integrity(sha256)=skipped
-[latency]    iters=20000 msg=64B avg=7.2us p50=6.7us p99=10.2us
-
-=== iperf3 -t 3, 1 stream, 3 รอบ (receiver) ===
-baseline   : 66.1 / 65.8 / 66.8 Gbits/sec
-accelerated: 114  / 110  / 105  Gbits/sec
-```
-
-สรุป (ค่ากลาง/Median):
+สรุป (ค่ากลาง/Median จากภาพด้านบน):
 
 | ตัวชี้วัด | Baseline (TCP ปกติ) | SOCKHASH Redirect | ต่าง |
 |-----------|--------------------|-------------------|------|
-| tcpbench throughput (64 KiB writes, 2 GiB × 5 รอบ) | 51.5 Gbit/s (45.6–62.3) | 66.3 Gbit/s (61.3–73.1) | ≈ +29% |
-| iperf3 throughput (1 stream, 3 s × 3 รอบ) | 66.1 Gbit/s | 110 Gbit/s | ≈ +66% |
-| Latency RTT 64 B p50 (20,000 รอบ × 5) | 6.7 µs | 3.3 µs | ≈ −50% |
+| tcpbench throughput (64 KiB writes, 2 GiB × 3 รอบ) | 53.5 Gbit/s (51.5–61.2) | 73.3 Gbit/s (72.2–73.4) | ≈ +37% |
+| iperf3 throughput (1 stream, 3 s × 1 รอบ) | 70.5 Gbit/s | 107 Gbit/s | ≈ +52% |
+| Latency RTT 64 B p50 (20,000 รอบ × 3) | 6.8 µs | 3.3 µs | ≈ −51% |
 
 > [!IMPORTANT]
 > ตัวเลขเหล่านี้มาจาก **เครื่องเดียว, Loopback, Single Stream, CPU Frequency Scaling ไม่ได้ล็อก** มีความแปรปรวนสูง (ดูช่วง min–max) ใช้เพื่อเห็น **แนวโน้ม** เท่านั้น ไม่ใช่ตัวเลขที่ใช้อ้างอิงได้กับทุกระบบ ผลจริงขึ้นกับ CPU, ขนาดข้อความ, จำนวน Connection และรุ่นเคอร์เนล

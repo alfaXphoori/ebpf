@@ -250,9 +250,9 @@ curl -s https://www.google.com > /dev/null
 ### ขั้นตอนที่ 4: สังเกตการณ์ผลลัพธ์แบบ Real-Time
 ใน Terminal ที่ 1 คุณจะเห็นเหตุการณ์เกิดขึ้นสดๆ (ตัดจากผลจริงในหัวข้อ 4):
 ```text
-22:22:21  1000   107992  bash             /usr/bin/ls
-22:22:21  1000   107996  bash             /usr/bin/whoami
-22:22:21  1000   107997  bash             /usr/bin/curl
+16:45:11  65534  1321307 bash             /usr/bin/ls
+16:45:11  65534  1321316 sudo             /usr/bin/whoami
+16:45:11  65534  1321325 bash             /usr/bin/curl
 
 --- [Periodic Report (every 10s): cumulative since start] ---
 
@@ -260,7 +260,7 @@ Top Processes by TCP Transmit Calls:
 @tcp_send_calls[curl]: 14
 ...
 ```
-> บนเครื่องที่มีงานอื่นรันอยู่ (cron, Docker, IDE ฯลฯ) จะเห็น exec ของโปรเซสอื่นปนมาจำนวนมาก ลองกรองด้วย predicate เช่น `/uid == 1000/` (ดูแบบฝึกหัด)
+> บนเครื่องที่มีงานอื่นรันอยู่ (cron, Docker, IDE ฯลฯ) จะเห็น exec ของโปรเซสอื่นปนมาจำนวนมาก ลองกรองด้วย predicate เช่น `/uid == 1000/` (ดูแบบฝึกหัด) — ในผลตัวอย่างข้างบน Terminal 2 รันในฐานะผู้ใช้ `nobody` จึงเห็น UID เป็น `65534`
 
 ---
 
@@ -279,141 +279,40 @@ sudo bpftool prog show | grep -A2 -E "tracepoint|kprobe"
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), bpftrace v0.25.0, bpftool v7.7 — เครื่องทดสอบมีงานอื่นรันพร้อมกันจำนวนมาก (build, Docker, agent อื่นๆ) ผลจึงยาวกว่า 2,000 บรรทัด ด้านล่างเป็นส่วนที่ตัดมาโดยไม่แก้ไขเนื้อหา
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`), bpftrace v0.25.0, bpftool v7.7 — เครื่องทดสอบมีงานอื่นรันพร้อมกันจำนวนมาก (build, Docker, agent อื่นๆ) ผลจึงยาวกว่า 2,000 บรรทัด — ข้อความ output ที่ยังเหลือในหัวข้อ 4.1 (ส่วน TCP retransmit) มาจากรอบนี้ ส่วนภาพหน้าจอทั้งหมดมาจาก `Linux 7.0.0-43-generic`
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week03.sh`](../../scripts/screenshots/week03.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week03.sh`](../../scripts/screenshots/week03.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
+
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 ![Terminal — ตรวจเครื่องมือ bpftrace / bpftool / BTF](screenshots/week03-1-versions.png)
 
 *ภาพที่ 1: Terminal — ตรวจเครื่องมือ bpftrace / bpftool / BTF*
 
-![Terminal 2 — สร้าง exec และทราฟฟิก TCP](screenshots/week03-2-workload.png)
-
-*ภาพที่ 2: Terminal 2 — สร้าง exec และทราฟฟิก TCP*
-
-![Terminal 3 — bpftool ขณะ bpftrace ทำงาน](screenshots/week03-3-bpftool.png)
-
-*ภาพที่ 3: Terminal 3 — bpftool ขณะ bpftrace ทำงาน*
-
-![Terminal 1 — sudo bpftrace trace_exec_and_tcp.bt](screenshots/week03-4-bpftrace-live.png)
-
-*ภาพที่ 4: Terminal 1 — sudo bpftrace trace_exec_and_tcp.bt*
-
-![Terminal 1 — กด Ctrl+C: FINAL OBSERVABILITY SUMMARY](screenshots/week03-5-bpftrace-summary.png)
-
-*ภาพที่ 5: Terminal 1 — กด Ctrl+C: FINAL OBSERVABILITY SUMMARY*
-
 <!-- screenshots:end -->
 
 ### 4.1 ผลลัพธ์การรัน `sudo bpftrace trace_exec_and_tcp.bt` (ประมาณ 12 วินาที) ขณะรัน `ls`, `whoami`, `curl` สองครั้ง และ `bpftool`
+
+![Terminal 2 — สร้าง exec และทราฟฟิก TCP](screenshots/week03-2-workload.png)
+
+*ภาพ: Terminal 2 — สร้าง exec และทราฟฟิก TCP (รันในฐานะผู้ใช้ `nobody`, UID 65534)*
+
+![Terminal 1 — sudo bpftrace trace_exec_and_tcp.bt](screenshots/week03-4-bpftrace-live.png)
+
+*ภาพ: Terminal 1 — sudo bpftrace trace_exec_and_tcp.bt (เหตุการณ์ exec และ Periodic Report)*
+
+![Terminal 1 — กด Ctrl+C: FINAL OBSERVABILITY SUMMARY](screenshots/week03-5-bpftrace-summary.png)
+
+*ภาพ: Terminal 1 — กด Ctrl+C: FINAL OBSERVABILITY SUMMARY*
+
+รอบที่ถ่ายภาพไม่มี TCP retransmission เลย (หัวข้อ `[5]` ว่าง) ส่วนรอบก่อนหน้าบน `Linux 7.0.0-38` ซึ่งเครื่องมีงานอื่นรันพร้อมกันมาก จับได้ดังนี้ (ตัดมาเฉพาะส่วนที่เกี่ยวกับ retransmit):
 ```text
-Attached 6 probes
-
-====================================================================
-  eBPF Zero to Hero - Week 03: Process Execution & TCP Observability
-====================================================================
-  Active Probes:
-    1. tracepoint:sched:sched_process_exec (New process launches)
-    2. kprobe:tcp_sendmsg                  (TCP payload histogram)
-    3. tracepoint:tcp:tcp_retransmit_skb   (TCP packet drops/retrans)
-    4. interval:s:10                       (Periodic live stats report)
---------------------------------------------------------------------
-  Tracing started! Press Ctrl+C to terminate and view full summary.
-
-TIME      UID    PID     PARENT           FILENAME / EVENT
---------------------------------------------------------------------
-...
-22:22:21  0      107991  bash             /usr/bin/sleep
-22:22:21  1000   107992  bash             /usr/bin/ls
-22:22:21  0      107993  bash             /usr/bin/sleep
-22:22:21  0      107994  bash             /usr/bin/sleep
-22:22:21  0      107995  bash             /usr/bin/sleep
-22:22:21  1000   107996  bash             /usr/bin/whoami
-22:22:21  1000   107997  bash             /usr/bin/curl
-...
 22:22:27  0      0       swapper/4        [TCP RETRANSMIT] <local-ip>:45576 -> 185.125.190.101:80 (State: 2)
 ...
---- [Periodic Report (every 10s): cumulative since start] ---
-
-Top Processes by TCP Transmit Calls:
-@tcp_send_calls[HTTP Client]: 1
-@tcp_send_calls[NetworkManager]: 1
-@tcp_send_calls[2.1.312]: 1
-@tcp_send_calls[curl]: 14
-@tcp_send_calls[sshd-session]: 15
-
-TCP Payload Size Distribution (Bytes):
-@tcp_send_bytes:
-[16, 32)               4 |@@@@@@@@@                                           |
-[32, 64)               4 |@@@@@@@@@                                           |
-[64, 128)             21 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[128, 256)             0 |                                                    |
-[256, 512)             0 |                                                    |
-[512, 1K)              0 |                                                    |
-[1K, 2K)               2 |@@@@                                                |
-[2K, 4K)               0 |                                                    |
-[4K, 8K)               1 |@@                                                  |
-
-
-TCP Retransmissions Observed:
-@tcp_retransmit_count[tailscaled]: 1
-@tcp_retransmit_count[swapper/2]: 1
-@tcp_retransmit_count[swapper/6]: 1
-@tcp_retransmit_count[sleep]: 1
-@tcp_retransmit_count[swapper/5]: 3
-@tcp_retransmit_count[swapper/4]: 16
-----------------------------------------------------------
-...
-====================================================================
-                    FINAL OBSERVABILITY SUMMARY                     
-====================================================================
-
-[1] Executed Processes Count:
-@process_exec_count[...]: ...   (ตัด 18 บรรทัด)
-@process_exec_count[git]: 4
-@process_exec_count[2.1.312]: 6
-@process_exec_count[ps]: 11
-@process_exec_count[sed]: 12
-@process_exec_count[date]: 129
-@process_exec_count[sleep]: 1805
-
-[2] TCP Transmit Calls per Application:
-@tcp_send_calls[HTTP Client]: 1
-@tcp_send_calls[claude]: 1
-@tcp_send_calls[NetworkManager]: 1
-@tcp_send_calls[2.1.312]: 1
-@tcp_send_calls[tailscaled]: 1
-@tcp_send_calls[curl]: 14
-@tcp_send_calls[sshd-session]: 16
-
-[3] Total TCP Transmitted Bytes per Application:
-@tcp_send_total_bytes[NetworkManager]: 87
-@tcp_send_total_bytes[2.1.312]: 89
-@tcp_send_total_bytes[tailscaled]: 504
-@tcp_send_total_bytes[sshd-session]: 1096
-@tcp_send_total_bytes[curl]: 3856
-@tcp_send_total_bytes[HTTP Client]: 5325
-@tcp_send_total_bytes[claude]: 28780
-
-[4] Overall TCP Send Payload Distribution (Histogram):
-@tcp_send_bytes:
-[16, 32)               4 |@@@@@@@@@                                           |
-[32, 64)               4 |@@@@@@@@@                                           |
-[64, 128)             22 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[128, 256)             0 |                                                    |
-[256, 512)             1 |@@                                                  |
-[512, 1K)              0 |                                                    |
-[1K, 2K)               2 |@@@@                                                |
-[2K, 4K)               0 |                                                    |
-[4K, 8K)               1 |@@                                                  |
-[8K, 16K)              0 |                                                    |
-[16K, 32K)             1 |@@                                                  |
-
-
 [5] TCP Retransmissions Encountered:
 @tcp_retransmit_count[tailscaled]: 1
 @tcp_retransmit_count[swapper/6]: 2
@@ -421,42 +320,16 @@ TCP Retransmissions Observed:
 @tcp_retransmit_count[swapper/2]: 3
 @tcp_retransmit_count[swapper/5]: 5
 @tcp_retransmit_count[swapper/4]: 22
-====================================================================
-Observation complete. All kernel probes detached safely.
 ```
 - บรรทัด `[TCP RETRANSMIT]` (ปิดบัง IP ต้นทาง) มี `State: 2` = `TCP_SYN_SENT` คือ SYN ที่ไม่ได้รับ SYN-ACK และ `comm` เป็น `swapper/4` (idle task) เพราะเกิดจาก retransmit timer ใน softirq
-- `@process_exec_count[sleep]` สูงมากเพราะสคริปต์อื่นบนเครื่องรัน `sleep` วนลูป — นี่คือเหตุผลที่ควรกรองด้วย predicate ในงานจริง
+- `@process_exec_count` ถูกครองโดยโปรเซสอื่นบนเครื่อง — ในภาพ `date` 23, `sleep` 20, `python3` 17 ครั้ง ขณะที่ `curl` ที่เราสั่งมีเพียง 2 (รอบ 7.0.0-38 ที่เครื่องยุ่งกว่า `sleep` สูงถึง 1805 ครั้ง) — นี่คือเหตุผลที่ควรกรองด้วย predicate ในงานจริง
 
 ### 4.2 การตรวจสอบ eBPF Programs และ Maps ขณะทำงานด้วย `bpftool`
-```text
---- sudo bpftool prog show (เฉพาะโปรแกรมของ bpftrace) ---
-11038: tracepoint  name tracepoint_sched_sched_process_exec_2  tag 728a8b061c4d55e8  gpl
-	loaded_at 2026-10-28T22:22:19+0700  uid 0
-	xlated 1584B  jited 882B  memlock 4096B  map_ids 5191,5193,5192,5189,5194,5184
-11039: kprobe  name kprobe_tcp_sendmsg_3  tag 9785260b0e69d437  gpl
-	loaded_at 2026-10-28T22:22:19+0700  uid 0
-	xlated 2320B  jited 1287B  memlock 4096B  map_ids 5186,5189,5191,5194,5187,5188
-11040: tracepoint  name tracepoint_tcp_tcp_retransmit_skb_4  tag a01b7a6ebe961729  gpl
-	loaded_at 2026-10-28T22:22:19+0700  uid 0
-	xlated 2304B  jited 1284B  memlock 4096B  map_ids 5191,5193,5189,5194,5185
 
---- sudo bpftool map show (เฉพาะ map ของ bpftrace) ---
-5184: percpu_hash  name AT_process_exec  flags 0x0
-	key 16B  value 8B  max_entries 4096  memlock 623488B
-	btf_id 5973
-5185: percpu_hash  name AT_tcp_retransm  flags 0x0
-	key 16B  value 8B  max_entries 4096  memlock 623488B
-	btf_id 5973
-5186: percpu_hash  name AT_tcp_send_byt  flags 0x0
-	key 16B  value 8B  max_entries 4096  memlock 623488B
-	btf_id 5973
-5187: percpu_hash  name AT_tcp_send_cal  flags 0x0
-	key 16B  value 8B  max_entries 4096  memlock 623488B
-	btf_id 5973
-5188: percpu_hash  name AT_tcp_send_tot  flags 0x0
-	key 16B  value 8B  max_entries 4096  memlock 623488B
-	btf_id 5973
-```
+![Terminal 3 — bpftool ขณะ bpftrace ทำงาน](screenshots/week03-3-bpftool.png)
+
+*ภาพ: Terminal 3 — `bpftool prog show` / `bpftool map show` ขณะ bpftrace ทำงาน*
+
 - bpftrace สร้าง Map ชนิด `percpu_hash` ให้ `count()`/`sum()`/`hist()` เพื่อหลีกเลี่ยง lock ข้าม CPU แล้วรวมค่าตอนพิมพ์ — `max_entries 4096` มาจากค่าเริ่มต้น `BPFTRACE_MAX_MAP_KEYS`
 
 ---

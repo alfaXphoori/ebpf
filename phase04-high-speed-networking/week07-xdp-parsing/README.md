@@ -357,137 +357,44 @@ sudo ip netns del w07-server
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, bpftool 7.7, cilium/ebpf v0.16.0
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic x86_64`), clang 21, Go 1.26, bpftool 7.7, cilium/ebpf v0.16.0 — ภาพหน้าจอทั้งหมดรันบน `7.0.0-43-generic`; มีเพียง log ตอนเริ่มต้น/ปิดโปรแกรมแบบข้อความในหัวข้อ 4.2 ที่มาจาก `7.0.0-38`
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week07.sh`](../../scripts/screenshots/week07.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week07.sh`](../../scripts/screenshots/week07.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week07-1-unit-tests.png)
-
-*ภาพที่ 1: Terminal — make test (BPF_PROG_TEST_RUN)*
-
-![Terminal 2 — ping จาก client (w07-client)](screenshots/week07-2-client-ping.png)
-
-*ภาพที่ 2: Terminal 2 — ping จาก client (w07-client)*
-
-![Terminal 1 — sudo ip netns exec w07-server ./bin/xdp-firewall](screenshots/week07-3-firewall-dashboard.png)
-
-*ภาพที่ 3: Terminal 1 — sudo ip netns exec w07-server ./bin/xdp-firewall*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 ผลลัพธ์ Unit Tests (`make test`)
-```text
-===> Generating Go bindings from xdp_firewall.c via bpf2go...
-go generate ./...
-Compiled phase04-high-speed-networking/week07-xdp-parsing/bpf_bpfeb.o
-Stripped phase04-high-speed-networking/week07-xdp-parsing/bpf_bpfeb.o
-Wrote phase04-high-speed-networking/week07-xdp-parsing/bpf_bpfeb.go
-Compiled phase04-high-speed-networking/week07-xdp-parsing/bpf_bpfel.o
-Stripped phase04-high-speed-networking/week07-xdp-parsing/bpf_bpfel.o
-Wrote phase04-high-speed-networking/week07-xdp-parsing/bpf_bpfel.go
-===> Running BPF_PROG_TEST_RUN unit tests (main_test.go)...
-go test -exec sudo -v ./...
-=== RUN   TestFirewallVerdicts
-=== RUN   TestFirewallVerdicts/icmp_from_blocked_ip_is_dropped
-=== RUN   TestFirewallVerdicts/tcp_from_blocked_ip_is_dropped
-=== RUN   TestFirewallVerdicts/udp_from_blocked_ip_is_dropped
-=== RUN   TestFirewallVerdicts/icmp_from_allowed_ip_passes
-=== RUN   TestFirewallVerdicts/tcp_from_allowed_ip_passes
-=== RUN   TestFirewallVerdicts/udp_from_allowed_ip_passes
-=== RUN   TestFirewallVerdicts/blocked_ip_as_destination_passes
-=== RUN   TestFirewallVerdicts/blocked_ip_with_truncated_tcp_header_is_still_dropped
-=== RUN   TestFirewallVerdicts/blocked_ip_with_ihl_beyond_packet_end_is_still_dropped
-=== RUN   TestFirewallVerdicts/non-first_fragment_from_blocked_ip_is_dropped
-=== RUN   TestFirewallVerdicts/ethernet-only_frame_(truncated_ipv4)_passes
-=== RUN   TestFirewallVerdicts/ipv4_with_ihl_<_5_passes_to_kernel
-=== RUN   TestFirewallVerdicts/ipv6_passes_untouched
-=== RUN   TestFirewallVerdicts/arp_passes_untouched
---- PASS: TestFirewallVerdicts (0.00s)
-    --- PASS: TestFirewallVerdicts/icmp_from_blocked_ip_is_dropped (0.00s)
-    --- PASS: TestFirewallVerdicts/tcp_from_blocked_ip_is_dropped (0.00s)
-    --- PASS: TestFirewallVerdicts/udp_from_blocked_ip_is_dropped (0.00s)
-    --- PASS: TestFirewallVerdicts/icmp_from_allowed_ip_passes (0.00s)
-    --- PASS: TestFirewallVerdicts/tcp_from_allowed_ip_passes (0.00s)
-    --- PASS: TestFirewallVerdicts/udp_from_allowed_ip_passes (0.00s)
-    --- PASS: TestFirewallVerdicts/blocked_ip_as_destination_passes (0.00s)
-    --- PASS: TestFirewallVerdicts/blocked_ip_with_truncated_tcp_header_is_still_dropped (0.00s)
-    --- PASS: TestFirewallVerdicts/blocked_ip_with_ihl_beyond_packet_end_is_still_dropped (0.00s)
-    --- PASS: TestFirewallVerdicts/non-first_fragment_from_blocked_ip_is_dropped (0.00s)
-    --- PASS: TestFirewallVerdicts/ethernet-only_frame_(truncated_ipv4)_passes (0.00s)
-    --- PASS: TestFirewallVerdicts/ipv4_with_ihl_<_5_passes_to_kernel (0.00s)
-    --- PASS: TestFirewallVerdicts/ipv6_passes_untouched (0.00s)
-    --- PASS: TestFirewallVerdicts/arp_passes_untouched (0.00s)
-=== RUN   TestDropStatsCounters
---- PASS: TestDropStatsCounters (0.00s)
-=== RUN   TestProtoCounters
---- PASS: TestProtoCounters (0.00s)
-PASS
-ok  	ebpf-noob-to-hero/phase04-high-speed-networking/week07-xdp-parsing	0.007s
-```
+
+![Terminal — make test (BPF_PROG_TEST_RUN)](screenshots/week07-1-unit-tests.png)
+
+*ภาพ: Terminal — make test (BPF_PROG_TEST_RUN) ทุก test case ขึ้น `--- PASS` และปิดท้ายด้วย `ok`*
 
 ### 4.2 ผลลัพธ์การรัน XDP Firewall (`-iface w07-s -block-ip 10.10.1.10`)
+
+**Terminal 2 — ping จาก client, `ip link show` และ `bpftool map dump`**
+
+![Terminal 2 — ping จาก client (w07-client)](screenshots/week07-2-client-ping.png)
+
+*ภาพ: Terminal 2 — ping จาก IP ที่ถูกบล็อก (`100% packet loss`) และจาก IP ปกติ (`0% packet loss`), `ip link show w07-s` แสดง `prog/xdp ... name xdp_firewall_pr` และ `bpftool map dump name blocked_ips` แสดง `dropped_packets: 5`, `dropped_bytes: 490`*
+
+**Terminal 1 — Dashboard ของ XDP Firewall**
+
+![Terminal 1 — sudo ip netns exec w07-server ./bin/xdp-firewall](screenshots/week07-3-firewall-dashboard.png)
+
+*ภาพ: Terminal 1 — Dashboard แสดง ICMP = 8 และ 10.10.1.10 ถูก drop 5 แพ็กเก็ต / 490 ไบต์*
+
+Dashboard ล้างหน้าจอทุกครั้งที่ refresh จึงไม่เห็น log ตอนเริ่มต้นในภาพ ด้านล่างคือ log ตอนเริ่มต้นและตอนกด Ctrl+C จากการรันครั้งก่อน (บน `7.0.0-38`; ค่า Index ของ interface เปลี่ยนทุกครั้งที่สร้าง veth ใหม่):
 ```text
---- FIREWALL STARTUP (sudo ip netns exec w07-server ./bin/xdp-firewall -iface w07-s -block-ip 10.10.1.10) ---
-======================================================================
- eBPF High-Speed XDP Firewall & Packet Parser
-======================================================================
 2026/10/28 22:00:57 Successfully attached XDP filter to w07-s [Index: 1548]
 2026/10/28 22:00:57 Added 10.10.1.10 (Key: 0x0a010a0a) to XDP blocklist map
-
---- CLIENT PING FROM BLOCKED IP (ping -c 5 -W 1 -I 10.10.1.10 10.10.1.20) ---
-PING 10.10.1.20 (10.10.1.20) from 10.10.1.10 : 56(84) bytes of data.
-
---- 10.10.1.20 ping statistics ---
-5 packets transmitted, 0 received, 100% packet loss, time 4111ms
-
-
---- CLIENT PING FROM ALLOWED IP (ping -c 3 -W 1 -I 10.10.1.11 10.10.1.20) ---
-PING 10.10.1.20 (10.10.1.20) from 10.10.1.11 : 56(84) bytes of data.
-64 bytes from 10.10.1.20: icmp_seq=1 ttl=64 time=0.144 ms
-64 bytes from 10.10.1.20: icmp_seq=2 ttl=64 time=0.065 ms
-64 bytes from 10.10.1.20: icmp_seq=3 ttl=64 time=0.065 ms
-
---- 10.10.1.20 ping statistics ---
-3 packets transmitted, 3 received, 0% packet loss, time 2048ms
-rtt min/avg/max/mdev = 0.065/0.091/0.144/0.037 ms
-
---- IP LINK SHOW (sudo ip netns exec w07-server ip link show w07-s) ---
-1548: w07-s@if1549: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 xdp qdisc noqueue state UP mode DEFAULT group default qlen 1000
-    link/ether 86:8e:b7:07:68:ba brd ff:ff:ff:ff:ff:ff link-netns w07-client
-    prog/xdp id 9669 name xdp_firewall_pr tag 4d7642a5ffe79977 jited
-
---- BPFTOOL MAP DUMP (sudo bpftool map dump name blocked_ips) ---
-[{
-        "key": 167840266,
-        "value": {
-            "dropped_packets": 5,
-            "dropped_bytes": 490
-        }
-    }
-]
-
---- DASHBOARD AFTER Ctrl+C / SIGTERM ---
+...
 Received signal 'terminated'. Detaching XDP link and exiting cleanly...
-=================================================================================
- eBPF XDP Live Monitor | Interface: w07-s      | Host CPUs: 8 | Time: 22:01:08
-=================================================================================
- [ Protocol Activity (Per-CPU Array Sum) ]
-  PROTOCOL    CODE          TOTAL PACKETS
-  ---------------------------------------------
-  ICMP        1             8
-  TCP         6             0
-  UDP         17            0
-
- [ Blocked IP Drop Telemetry (BPF_MAP_TYPE_HASH) ]
-  IP ADDRESS          DROPPED PACKETS   DROPPED BYTES
-  -------------------------------------------------------------
-  10.10.1.10          5                 490
-=================================================================================
- Press Ctrl+C to detach XDP program and exit.
 ```
 
 ---

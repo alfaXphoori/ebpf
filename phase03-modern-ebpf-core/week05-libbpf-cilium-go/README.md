@@ -247,16 +247,16 @@ make run
 # หรือรันตรงๆ: sudo ./bin/exec-counter
 ```
 
-**ตัวอย่างหน้าจอผลลัพธ์** (บนเครื่องที่ว่าง ตัวเลขจะต่ำกว่านี้มาก; ผลเต็มอยู่ในหัวข้อ 4):
+**ตัวอย่างหน้าจอผลลัพธ์** (ตัวเลขขึ้นกับงานอื่นที่รันอยู่บนเครื่อง; ผลเต็มอยู่ในหัวข้อ 4.1):
 ```text
 ======================================================================
  eBPF Process Exec Monitor (Cilium ebpf-go + bpf2go)
 ======================================================================
-2026/10/28 22:26:58 Successfully hooked tracepoint 'sched/sched_process_exec'!
-2026/10/28 22:26:58 Monitoring active processes... Press Ctrl+C to terminate.
+2026/11/21 15:52:20 Successfully hooked tracepoint 'sched/sched_process_exec'!
+2026/11/21 15:52:20 Monitoring active processes... Press Ctrl+C to terminate.
 
-[22:26:59] Total exec events: 187      | Rate: 187  execs/sec
-[22:27:00] Total exec events: 377      | Rate: 190  execs/sec
+[15:52:21] Total exec events: 8        | Rate: 8    execs/sec
+[15:52:22] Total exec events: 14       | Rate: 6    execs/sec
 ```
 > **หมายเหตุเรื่องชื่อ "CO-RE"**: โปรแกรมสัปดาห์นี้ไม่ได้อ่าน field ของ struct เคอร์เนลเลย จึงยังไม่มี CO-RE relocation จริง (ไม่ได้ใช้ `vmlinux.h`/`BPF_CORE_READ`) แต่ได้ประโยชน์จากแนวทางเดียวกัน คือคอมไพล์ล่วงหน้าครั้งเดียวด้วย `bpf2go` แล้วฝัง bytecode ในไบนารี Go โดยไม่ต้องมี Clang/headers บนเครื่องปลายทาง
 
@@ -303,72 +303,43 @@ sudo bpftool map dump name exec_count
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-38-generic #38-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), Go 1.26, clang 21, cilium/ebpf v0.16.0 — เครื่องทดสอบมีงานอื่น (build/script วนลูป) รันอยู่ จึงมี exec ราว 190 ครั้ง/วินาที
+> **Environment**: Ubuntu 26.04 (`Linux 7.0.0-43-generic #43-Ubuntu SMP PREEMPT_DYNAMIC x86_64`, 8 CPUs), Go 1.26, clang 21, cilium/ebpf v0.16.0 — เครื่องทดสอบมีงานอื่นรันอยู่ อัตรา exec จึงแกว่งตั้งแต่ 6 ถึง 113 ครั้ง/วินาทีในภาพหัวข้อ 4.1
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week05.sh`](../../scripts/screenshots/week05.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week05.sh`](../../scripts/screenshots/week05.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make generate build](screenshots/week05-1-build.png)
-
-*ภาพที่ 1: Terminal — make generate build*
-
-![Terminal — make test (go test -exec sudo)](screenshots/week05-2-test.png)
-
-*ภาพที่ 2: Terminal — make test (go test -exec sudo)*
-
-![Terminal — sudo ./bin/exec-counter](screenshots/week05-3-run.png)
-
-*ภาพที่ 3: Terminal — sudo ./bin/exec-counter*
-
-![Terminal 2 — bpftool ขณะ exec-counter ทำงาน](screenshots/week05-4-bpftool.png)
-
-*ภาพที่ 4: Terminal 2 — bpftool ขณะ exec-counter ทำงาน*
-
-![Terminal 2 — ตรวจว่าจับ exec ได้ครบทุก CPU](screenshots/week05-5-all-cpus.png)
-
-*ภาพที่ 5: Terminal 2 — ตรวจว่าจับ exec ได้ครบทุก CPU*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
-### 4.1 การคอมไพล์ด้วย `bpf2go` (`make generate build`) และรัน `sudo timeout -s INT 6 ./bin/exec-counter`
-```text
-===> Generating Go bindings from counter.c via bpf2go...
-go generate ./...
-Compiled /mnt/sda/ebpf/phase03-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfel.o
-Stripped /mnt/sda/ebpf/phase03-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfel.o
-Wrote /mnt/sda/ebpf/phase03-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfel.go
-Compiled /mnt/sda/ebpf/phase03-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfeb.o
-Stripped /mnt/sda/ebpf/phase03-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfeb.o
-Wrote /mnt/sda/ebpf/phase03-modern-ebpf-core/week05-libbpf-cilium-go/bpf_bpfeb.go
-===> Building userspace binary bin/exec-counter...
-mkdir -p bin
-go build -v -o bin/exec-counter .
+### 4.1 การคอมไพล์ด้วย `bpf2go` (`make generate build`), `make test` และรัน `sudo timeout -s INT 6 ./bin/exec-counter`
 
-======================================================================
- eBPF Process Exec Monitor (Cilium ebpf-go + bpf2go)
-======================================================================
-2026/10/28 22:26:58 Successfully hooked tracepoint 'sched/sched_process_exec'!
-2026/10/28 22:26:58 Monitoring active processes... Press Ctrl+C to terminate.
+![Terminal — make generate build](screenshots/week05-1-build.png)
 
-[22:26:59] Total exec events: 187      | Rate: 187  execs/sec
-[22:27:00] Total exec events: 377      | Rate: 190  execs/sec
-[22:27:01] Total exec events: 572      | Rate: 195  execs/sec
-[22:27:02] Total exec events: 760      | Rate: 188  execs/sec
-[22:27:03] Total exec events: 950      | Rate: 190  execs/sec
+*ภาพ: Terminal — make generate build*
 
-Received signal 'interrupt'. Shutting down cleanly...
-Final cumulative exec event count: 1138
-eBPF program and tracepoint links detached successfully.
-```
+![Terminal — make test (go test -exec sudo)](screenshots/week05-2-test.png)
+
+*ภาพ: Terminal — make test (go test -exec sudo): `exec_count` เพิ่มจาก 0 เป็น 1*
+
+![Terminal — sudo ./bin/exec-counter](screenshots/week05-3-run.png)
+
+*ภาพ: Terminal — sudo timeout -s INT 6 ./bin/exec-counter*
+
+![Terminal 2 — bpftool ขณะ exec-counter ทำงาน](screenshots/week05-4-bpftool.png)
+
+*ภาพ: Terminal 2 — `bpftool prog list` / `bpftool map dump` ขณะ exec-counter ทำงาน*
 
 ### 4.2 ตรวจสอบว่าจับ exec ได้ครบทุก CPU
-```bash
-for c in 0 1 2 3 4 5 6 7; do taskset -c $c /bin/true; done
-```
-นำ PID ของทั้ง 8 โปรเซสไปค้นใน `trace_pipe` (บรรทัด `exec by PID <pid>`) พบครบ **8/8** สำหรับ `sched/sched_process_exec` (ขณะที่ hook เดิม `syscalls/sys_enter_execve` บนเคอร์เนลเดียวกันจับได้เฉพาะตัวที่รันบน CPU 0)
+
+![Terminal 2 — ตรวจว่าจับ exec ได้ครบทุก CPU](screenshots/week05-5-all-cpus.png)
+
+*ภาพ: Terminal 2 — รัน `/bin/true` ด้วย `taskset -c 0..7` แล้วค้น PID ใน `/sys/kernel/tracing/trace`*
+
+ทั้ง 8 PID ปรากฏครบ **8/8** สำหรับ `sched/sched_process_exec` — ได้ 16 บรรทัดเพราะแต่ละ PID exec สองครั้ง (ครั้งแรกเป็น `taskset` บน CPU ใดก็ได้ ครั้งที่สองเป็น `/bin/true` บน CPU ที่ระบุ `[000]`..`[007]`) ขณะที่ hook เดิม `syscalls/sys_enter_execve` บนเคอร์เนลเดียวกันจับได้เฉพาะตัวที่รันบน CPU 0
 
 ---
 

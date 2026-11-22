@@ -206,78 +206,37 @@ sudo strace -f -c -e trace=bpf,openat,read ./bin/task-iter -quiet -runs 1
 
 ## 4. ผลลัพธ์จากการทดลองจริง (Actual Lab Execution Output)
 
-> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-38-generic x86_64`), Intel Core i3-12100 — เครื่องมีงานอื่นรันอยู่ระหว่างทดลอง
+> **Environment**: Ubuntu 26.04 LTS (`Linux 7.0.0-43-generic x86_64`), Intel Core i3-12100 — ยกเว้นตารางนับ syscall แยกช่วงในหัวข้อ 4.3 ซึ่งมาจากการรันก่อนหน้าบน `Linux 7.0.0-38-generic` (ขณะเครื่องมีงานอื่นรันอยู่)
 
 <!-- screenshots:begin -->
 
 ### 📸 ภาพหน้าจอจากการรันจริง (Real Terminal Screenshots)
 
-> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week23.sh`](../../scripts/screenshots/week23.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา, latency จึงอาจต่างจากข้อความในหัวข้อย่อยด้านล่างเล็กน้อย
+> รันจริงบน `Linux 7.0.0-43-generic` (Ubuntu 26.04) เมื่อ 2026-11-21 ด้วยสคริปต์ [`scripts/screenshots/week23.sh`](../../scripts/screenshots/week23.sh) ทุกบรรทัดในภาพมาจากคำสั่งจริง (render เป็นภาพด้วย `scripts/screenshots/render.py`) ค่าอย่าง PID, เวลา และ latency จะเปลี่ยนทุกครั้งที่รัน
 
-![Terminal — make test (1 แถวต่อ 1 โปรเซส)](screenshots/week23-1-make-test.png)
-
-*ภาพที่ 1: Terminal — make test (1 แถวต่อ 1 โปรเซส)*
-
-![Terminal — sudo ./bin/task-iter (ตัดแถวกลางออก)](screenshots/week23-2-task-iter.png)
-
-*ภาพที่ 2: Terminal — sudo ./bin/task-iter (ตัดแถวกลางออก)*
-
-![Terminal — รันซ้ำ 3 ครั้ง (-quiet) และนับ syscall ด้วย strace -c](screenshots/week23-3-quiet-strace.png)
-
-*ภาพที่ 3: Terminal — รันซ้ำ 3 ครั้ง (-quiet) และนับ syscall ด้วย strace -c*
-
-![Terminal — เทียบกับ ps และ pin iterator แล้วอ่านด้วย cat (ขั้นตอนที่ 4-5)](screenshots/week23-4-ps-pin.png)
-
-*ภาพที่ 4: Terminal — เทียบกับ ps และ pin iterator แล้วอ่านด้วย cat (ขั้นตอนที่ 4-5)*
+ภาพหน้าจออยู่ในหัวข้อย่อยที่ตรงกันด้านล่าง แทน output แบบข้อความเดิม
 
 <!-- screenshots:end -->
 
 ### 4.1 `make test`
-```text
-=== RUN   TestTaskIterOneRowPerProcess
-    main_test.go:90: 161 processes listed; own pid 4117181 has 11 threads
---- PASS: TestTaskIterOneRowPerProcess (0.10s)
-PASS
-ok  	ebpf-noob-to-hero/phase10-cutting-edge-ebpf-technologies/week23-bpf-iterators	0.104s
-```
+
+![Terminal — make test (1 แถวต่อ 1 โปรเซส)](screenshots/week23-1-make-test.png)
+
+*ภาพ: `make test` — iterator คืน 1 แถวต่อ 1 โปรเซส*
 
 ### 4.2 `sudo ./bin/task-iter` (ตัดแถวกลางออก)
-```text
-======================================================================
- eBPF Kernel Task Iterator (iter/task) vs procfs walk
-======================================================================
-PID      UID      THREADS  VM_SIZE_KB   COMM            
-1        0        1        27192        systemd         
-1844     103      1        6888         avahi-daemon    
-1845     0        1        2888         chronyd-starter 
-1846     995      1        12312        dbus-daemon     
-1852     0        1        49444        networkd-dispat 
-1854     979      4        383560       polkitd         
-1868     0        4        312132       accounts-daemon 
-1870     0        1        9660         cron            
-1871     0        4        310580       switcheroo-cont 
-1876     0        1        19608        systemd-logind  
-...
-4120881  0        1        16112        sleep           
-4120882  0        1        16112        sleep           
-----------------------------------------------------------------------
-[iter/task ]  164 processes,    9405 bytes in 1 seq_file, best of 5: 120.236µs
-[procfs    ]  163 processes,  330 x /proc/<pid>/status files, best of 5: 2.672497ms
-(ตัวเลขขึ้นกับจำนวนโปรเซสและ load ของเครื่อง; procfs อ่านข้อมูลมากกว่าที่ iterator พิมพ์)
-```
+
+![Terminal — sudo ./bin/task-iter (ตัดแถวกลางออก)](screenshots/week23-2-task-iter.png)
+
+*ภาพ: `sudo ./bin/task-iter` (แสดง 15 บรรทัดแรกและ 6 บรรทัดสุดท้าย)*
 
 ### 4.3 รันซ้ำ 3 ครั้ง (`-quiet`) และนับ syscall
 
-```text
-[iter/task ]  168 processes,    9633 bytes in 1 seq_file, best of 5: 167.526µs
-[procfs    ]  164 processes,  333 x /proc/<pid>/status files, best of 5: 2.551551ms
-[iter/task ]  166 processes,    9519 bytes in 1 seq_file, best of 5: 145.925µs
-[procfs    ]  166 processes,  333 x /proc/<pid>/status files, best of 5: 2.462723ms
-[iter/task ]  166 processes,    9519 bytes in 1 seq_file, best of 5: 131.742µs
-[procfs    ]  166 processes,  333 x /proc/<pid>/status files, best of 5: 2.632362ms
-```
+![Terminal — รันซ้ำ 3 ครั้ง (-quiet) และนับ syscall ด้วย strace -c](screenshots/week23-3-quiet-strace.png)
 
-จาก `strace -f` ของการรัน `-runs 1` หนึ่งครั้ง (นับแยกช่วง):
+*ภาพ: รัน `task-iter -quiet` ซ้ำ 3 ครั้ง แล้วนับ syscall ด้วย `strace -f -c`*
+
+`strace -c` ในภาพเป็นผลรวมของทั้งสองวิธีบวก syscall ตอน Go runtime เริ่มทำงาน (`read` 1,185, `openat` 340, `bpf` 20 ครั้ง) และเวลาในรอบที่มี strace ช้าลงมากเพราะทุก syscall ถูกดัก ตารางด้านล่างเป็นการนับแยกช่วงจาก `strace -f -o` ของการรัน `-runs 1` หนึ่งครั้ง (จากการรันก่อนหน้าบน `Linux 7.0.0-38-generic` ตามวิธีในขั้นตอนที่ 6):
 
 | วิธี | syscall ที่ใช้ |
 |---|---|
@@ -285,9 +244,15 @@ PID      UID      THREADS  VM_SIZE_KB   COMM
 | procfs walk | `openat()` 321 ครั้ง + `read()` 1,089 ครั้ง (+ `close()`, `getdents64()`) |
 
 **การตีความ:**
-- บนเครื่องนี้ iterator เร็วกว่าการเดิน `/proc/<pid>/status` ราว **15–22 เท่า** (~120–170 µs เทียบ ~2.5–2.7 ms สำหรับ ~165 โปรเซส) — แต่ **ไม่ใช่การเปรียบเทียบงานที่เท่ากันทุกประการ**: `status` มีหลายสิบฟิลด์ (~60 บรรทัด) ที่เคอร์เนลต้องจัดรูป (รวมการนับหน่วยความจำบางส่วน) ขณะที่ iterator พิมพ์แค่ 5 ฟิลด์ ข้อได้เปรียบส่วนใหญ่จึงมาจาก "เลือกเฉพาะสิ่งที่ต้องการ + ไม่ต้อง open/close ไฟล์ต่อโปรเซส"
-- จำนวนโปรเซสของสองวิธีต่างกัน 1–4 เพราะวัดคนละจังหวะเวลา (โปรเซสอายุสั้นเกิด/ตายระหว่างวัด) — iterator ไม่ใช่ snapshot แบบ atomic ของทั้งระบบ
+- บนเครื่องนี้ iterator เร็วกว่าการเดิน `/proc/<pid>/status` ราว **20–22 เท่า** (~215–255 µs เทียบ ~4.4–5.6 ms สำหรับ ~160 โปรเซส ในหัวข้อ 4.2–4.3) — แต่ **ไม่ใช่การเปรียบเทียบงานที่เท่ากันทุกประการ**: `status` มีหลายสิบฟิลด์ (~60 บรรทัด) ที่เคอร์เนลต้องจัดรูป (รวมการนับหน่วยความจำบางส่วน) ขณะที่ iterator พิมพ์แค่ 5 ฟิลด์ ข้อได้เปรียบส่วนใหญ่จึงมาจาก "เลือกเฉพาะสิ่งที่ต้องการ + ไม่ต้อง open/close ไฟล์ต่อโปรเซส"
+- ในภาพจำนวนโปรเซสของสองวิธีตรงกัน แต่ถ้ามีโปรเซสอายุสั้นเกิด/ตายระหว่างวัด ตัวเลขอาจต่างกันได้เล็กน้อย (การรันก่อนหน้าต่างกัน 1–4) เพราะวัดคนละจังหวะเวลา — iterator ไม่ใช่ snapshot แบบ atomic ของทั้งระบบ
 - 309 µs ในผลลัพธ์ฉบับก่อนของ README เป็นการวัดครั้งเดียว (cold) ด้วยโค้ดเดิมที่ยังพิมพ์ทุก thread (ข้อความยาวกว่า ~3 เท่า) ตัวเลขชุดนี้ใช้ best-of-5 ของโค้ดที่แก้แล้ว จึงเทียบกันตรง ๆ ไม่ได้
+
+### 4.4 เทียบกับ `ps` และ pin iterator แล้วอ่านด้วย `cat` (ขั้นตอนที่ 4-5)
+
+![Terminal — เทียบกับ ps และ pin iterator แล้วอ่านด้วย cat (ขั้นตอนที่ 4-5)](screenshots/week23-4-ps-pin.png)
+
+*ภาพ: แถวของ PID 1 จาก iterator ตรงกับ `ps` (`NLWP 1`, `VSZ 27096`) และ iterator ที่ pin ไว้ใน bpffs อ่านซ้ำได้ด้วย `head`*
 
 ---
 
